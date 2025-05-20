@@ -1,41 +1,26 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
-const Person = require('./Models/person');
-require("dotenv")
+const personRoutes = require('./Routes/personRoutes');
+require("dotenv").config();
 
 const app = express();
-const PORT = process.env.PORT || 6001;
+const PORT = process.env.PORT || 3001 ;
 
 // Middleware
 app.use(bodyParser.json());
 
 // MongoDB Connection
-mongoose.connect('mongodb://localhost:27017/your_database_name', {
+mongoose.connect('mongodb+srv://dasabhi1910:iamf00L@cricket-bidding.dugejrq.mongodb.net/', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
 .then(() => console.log('MongoDB connected successfully.'))
 .catch((err) => console.error('MongoDB connection error:', err));
 
-// Test route
-app.get('/', (req, res) => {
-  res.send('Server is up and running!');
-});
 
-// Register route
-app.post('/register', async (req, res) => {
-  try {
-    const { username, email, password, role } = req.body;
+app.use("/",personRoutes);
 
-    const person = new Person({ username, email, password, role });
-    await person.save();
-
-    res.status(201).json({ message: 'User registered successfully!', user: { username, email, role: person.role } });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
 
 // Start server
 app.listen(PORT, () => {
