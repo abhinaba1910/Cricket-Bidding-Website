@@ -173,7 +173,7 @@ export default function AuctionsInfo() {
       ) : (
         <p className="text-gray-500">No {activeTab} auctions found.</p>
       )}
-<MobileStickyNav/>
+      <MobileStickyNav/>
     </div>
   )
 }

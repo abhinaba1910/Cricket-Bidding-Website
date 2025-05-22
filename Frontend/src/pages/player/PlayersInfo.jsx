@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { FiSearch, FiEye, FiEdit, FiPlus } from 'react-icons/fi'
+import MobileStickyNav from '../../components/layout/MobileStickyNav'
 
 const mockPlayers = [
   { id: '1', photo: 'https://placehold.co/60x60?text=VK', name: 'Virat Kohli',   rank: 'A+', role: 'Batsman',         batting: 'Right-hand bat', bowling: '',      country: 'India',      price: 2000000 },
@@ -39,7 +40,7 @@ export default function PlayersInfo() {
   }, [search, roleFilter, rankFilter])
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8 max-md:px-0">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8 max-md:px-0 max-md:pb-14">
       {/* Header + Filters */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
         <h1 className="text-2xl font-bold text-gray-900">Players</h1>
@@ -178,6 +179,7 @@ export default function PlayersInfo() {
           </tbody>
         </table>
       </div>
+      <MobileStickyNav/>
     </div>
   )
 }

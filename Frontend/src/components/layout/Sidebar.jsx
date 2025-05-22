@@ -1,23 +1,24 @@
 import React, { useState } from 'react';
 import { X, Home, Users, Award, Briefcase, Settings, TrendingUp } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-
+import { RiAuctionLine } from "react-icons/ri";
 const Sidebar = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   
   const navItems = [
     { name: 'Dashboard', icon: <Home className="w-5 h-5" />, href: '/dashboard' },
-    { name: 'Auctions', icon: <TrendingUp className="w-5 h-5" />, href: '/admin-auction-info' },
+    { name: 'All Auctions', icon: <TrendingUp className="w-5 h-5" />, href: '/admin-auction-info' },
+    { name: 'My Auctions', icon: <RiAuctionLine className="w-5 h-5" />, href: '/admins-my-auction-info' },
     { name: 'Teams', icon: <Briefcase className="w-5 h-5" />, href: '/admin-teams-info' },
     { name: 'Players', icon: <Users className="w-5 h-5" />, href: '/admin-players-info' },
   ];
   
   const adminItems = [
     { name: 'Manage Users', icon: <Users className="w-5 h-5" />, href: '#users' },
-    { name: 'Create Auction', icon: <TrendingUp className="w-5 h-5" />, href: '/create-auction' },
     { name: 'Create Teams', icon: <Briefcase className="w-5 h-5" />, href: '/create-team' },
     { name: 'Add Players', icon: <Users className="w-5 h-5" />, href: '/add-players' },
+    // { name: 'Add Players', icon: <Users className="w-5 h-5" />, href: '/add-players' },
     { name: 'Settings', icon: <Settings className="w-5 h-5" />, href: '#settings' },
   ];
 

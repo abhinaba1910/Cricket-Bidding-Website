@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react'
 import { FiSearch, FiEye, FiEdit, FiPlus } from 'react-icons/fi'
 import { motion, AnimatePresence } from 'framer-motion'
+import MobileStickyNav from '../../components/layout/MobileStickyNav'
 
 // --- MOCK DATA (replace with your API data) ---
 const mockTeams = [
@@ -67,7 +68,7 @@ export default function TeamsInfo() {
   }, [search])
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8 max-md:pb-14">
       {/* Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
         <h1 className="text-2xl font-bold text-gray-900">Teams</h1>
@@ -151,8 +152,10 @@ export default function TeamsInfo() {
               No teams match your search.
             </motion.p>
           )}
+          <MobileStickyNav/>
         </motion.div>
       </AnimatePresence>
+      
     </div>
   )
 }

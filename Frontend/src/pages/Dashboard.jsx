@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useAuction } from '../context/AuctionContext';
 import { usePlayer } from '../context/PlayerContext';
 import { useTeam } from '../context/TeamContext';
+import MobileStickyNav from '../components/layout/MobileStickyNav';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -42,7 +43,7 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="space-y-6 ">
+    <div className="space-y-6 max-md:pb-14">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
         
@@ -181,6 +182,9 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         )}
+      </div>
+      <div>
+      <MobileStickyNav/>
       </div>
     </div>
   );
