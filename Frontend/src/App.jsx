@@ -16,6 +16,9 @@ import CreateAuction from './pages/CreateAuction'
 import './App.css'
 import CreateTeam from './pages/team/CreateTeam'
 import AddPlayer from './pages/player/AddPlayer'
+import AuctionsInfo from './pages/auctions/AuctionsInfo'
+import TeamsInfo from './pages/team/TeamsInfo'
+import PlayersInfo from './pages/player/PlayersInfo'
 
 /**
  * This component handles:
@@ -75,6 +78,9 @@ function AppContent() {
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/create-team"  element={<CreateTeam />} />
                 <Route path="/add-players"  element={<AddPlayer />} />
+                <Route path="/admin-auction-info"     element={<AuctionsInfo />} />
+                <Route path="/admin-teams-info"     element={<TeamsInfo />} />
+                <Route path="/admin-players-info"     element={<PlayersInfo />} />
               </Routes>
             </Layout>
       }
