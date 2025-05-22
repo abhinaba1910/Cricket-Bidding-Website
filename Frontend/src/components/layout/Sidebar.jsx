@@ -7,17 +7,17 @@ const Sidebar = ({ isOpen, onClose }) => {
   const isAdmin = user?.role === 'admin';
   
   const navItems = [
-    { name: 'Dashboard', icon: <Home className="w-5 h-5" />, href: '#dashboard' },
-    { name: 'Auctions', icon: <TrendingUp className="w-5 h-5" />, href: '#auctions' },
-    { name: 'Teams', icon: <Briefcase className="w-5 h-5" />, href: '#teams' },
-    { name: 'Players', icon: <Users className="w-5 h-5" />, href: '#players' },
+    { name: 'Dashboard', icon: <Home className="w-5 h-5" />, href: '/dashboard' },
+    { name: 'Auctions', icon: <TrendingUp className="w-5 h-5" />, href: '/admin-auction-info' },
+    { name: 'Teams', icon: <Briefcase className="w-5 h-5" />, href: '/admin-teams-info' },
+    { name: 'Players', icon: <Users className="w-5 h-5" />, href: '/admin-players-info' },
   ];
   
   const adminItems = [
     { name: 'Manage Users', icon: <Users className="w-5 h-5" />, href: '#users' },
     { name: 'Create Auction', icon: <TrendingUp className="w-5 h-5" />, href: '/create-auction' },
-    { name: 'Add Players', icon: <Users className="w-5 h-5" />, href: '#add-players' },
-    { name: 'Create Teams', icon: <Briefcase className="w-5 h-5" />, href: '#create-teams' },
+    { name: 'Create Teams', icon: <Briefcase className="w-5 h-5" />, href: '/create-team' },
+    { name: 'Add Players', icon: <Users className="w-5 h-5" />, href: '/add-players' },
     { name: 'Settings', icon: <Settings className="w-5 h-5" />, href: '#settings' },
   ];
 
@@ -43,7 +43,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       >
         <div className="h-full flex flex-col">
           {/* Sidebar header */}
-          <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
+          <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200 md:hidden">
             <div className="flex-1 flex justify-center">
               <span className="text-xl font-bold text-primary-600">BidMaster</span>
             </div>
@@ -59,7 +59,15 @@ const Sidebar = ({ isOpen, onClose }) => {
           
           {/* Navigation */}
           <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
+
+                <div className="px-2 mb-3">
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                     Navigation
+                  </h3>
+
+            </div>
             {navItems.map((item) => (
+              
               <button
                 key={item.name}
                 className="group flex items-center px-2 py-2 text-base font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-primary-600 w-full text-left"
