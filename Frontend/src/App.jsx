@@ -1,35 +1,99 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React, { useState, useEffect } from 'react'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 
-function App() {
-  const [count, setCount] = useState(0)
+import { AuthProvider, useAuth } from './context/AuthContext'
+import { AuctionProvider }      from './context/AuctionContext'
+import { PlayerProvider }       from './context/PlayerContext'
+import { TeamProvider }         from './context/TeamContext'
+import { BidProvider }          from './context/BidContext'
+
+import SplashScreen from './components/splashScreen'
+import AuthPage     from './pages/authentication/AuthPage'
+import Layout       from './components/layout/Layout'
+import Dashboard    from './pages/Dashboard'
+import CreateAuction from './pages/CreateAuction'
+
+import './App.css'
+import CreateTeam from './pages/team/CreateTeam'
+import AddPlayer from './pages/player/AddPlayer'
+
+/**
+ * This component handles:
+ *  - waiting out the splash screen
+ *  - showing a loading spinner while auth state is resolving
+ *  - redirecting to login if not authenticated
+ *  - protecting the /create-auction route for admin users
+ */
+function AppContent() {
+  const { isAuthenticated, isLoading, user } = useAuth()
+  const [showSplash, setShowSplash] = useState(() => {
+    // Show splash only if not already shown in this session
+    return sessionStorage.getItem('splashShown') !== 'true'
+  })
+  useEffect(() => {
+    if (showSplash) {
+      const timer = setTimeout(() => {
+        setShowSplash(false)
+        sessionStorage.setItem('splashShown', 'true')
+      }, 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [showSplash])
+
+  if (showSplash) {
+    return <SplashScreen />
+  }
+
+  // auth is still checking?
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary-600"></div>
+      </div>
+    )
+  }
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <Router>
+      { !isAuthenticated
+          ? <Routes>
+              <Route path="/*" element={<AuthPage />} />
+            </Routes>
+          : <Layout>
+              <Routes>
+                <Route path="/"           element={<Dashboard />} />
+                <Route path="/dashboard"  element={<Dashboard />} />
+                <Route
+                  path="/create-auction"
+                  element={
+                    user?.role === 'admin'
+                      ? <CreateAuction />
+                      : <Navigate to="/dashboard" replace />
+                  }
+                />
+                {/* catch-all */}
+                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/create-team"  element={<CreateTeam />} />
+                <Route path="/add-players"  element={<AddPlayer />} />
+              </Routes>
+            </Layout>
+      }
+    </Router>
   )
 }
 
-export default App
+export default function App() {
+  return (
+    <AuthProvider>
+      <AuctionProvider>
+        <PlayerProvider>
+          <TeamProvider>
+            <BidProvider>
+              <AppContent />
+            </BidProvider>
+          </TeamProvider>
+        </PlayerProvider>
+      </AuctionProvider>
+    </AuthProvider>
+  )
+}
