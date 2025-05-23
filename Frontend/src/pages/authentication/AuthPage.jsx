@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import LoginForm from './LoginForm'
 import RegisterForm from './RegisterForm'
 import { Award } from 'lucide-react'
-
 function AuthPage() {
   const [showLogin, setShowLogin] = useState(true)
 
