@@ -171,53 +171,44 @@ import { Lock, User } from 'lucide-react'
 import Input from '../../components/ui/Input'
 import Button from '../../components/ui/Button'
 import api from '../../userManagement/Api'
-import { useNavigate } from 'react-router-dom'
 
 function LoginForm({ onSuccess, onToggleForm }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-  const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError('')
-
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+  
     try {
-      // For testing without backend, mock authentication:
-      // Replace this block with real API call when ready
-      if (username === 'admin' && password === 'password') {
-        const token = 'test-token'
-        const role = 'admin'
-        const email = 'admin@example.com'
-        localStorage.setItem('token', token)
-        localStorage.setItem('role', role)
-        localStorage.setItem('user', JSON.stringify({ username, email, role }))
-        onSuccess && onSuccess({ username, email, role })
-        navigate('/dashboard')
-      } else if (username === 'user' && password === 'password') {
-        const token = 'test-token'
-        const role = 'user'
-        const email = 'user@example.com'
-        localStorage.setItem('token', token)
-        localStorage.setItem('role', role)
-        localStorage.setItem('user', JSON.stringify({ username, email, role }))
-        onSuccess && onSuccess({ username, email, role })
-        navigate('/dashboard')
+      const response = await api.post('/login', { username, password });
+  
+      const { token, user } = response.data;
+      const { role, email, firstTime } = user;
+  
+      // Save to localStorage
+      localStorage.setItem('token', token);
+      localStorage.setItem('role', role);
+      localStorage.setItem('user', JSON.stringify({ username, email, role }));
+  
+      // If temp-admin and first login, redirect to set-password
+      if (role === 'temp-admin' && firstTime) {
+        window.location.href='/set-password';
       } else {
-        // Uncomment below for real API
-        // const response = await api.post('/login', { username, password })
-        // const { token, role, username: user, email } = response.data
-        throw new Error('Invalid credentials for testing')
+        window.location.href="/dashboard";
       }
+  
+      onSuccess?.(user);
     } catch (err) {
-      setError(err.message || 'Login failed')
+      setError(err.response?.data?.error || 'Login failed');
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
+  
 
   return (
     <div className="bg-white p-8 rounded-xl shadow-md max-w-md w-full mx-auto">

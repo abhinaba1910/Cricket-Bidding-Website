@@ -6,6 +6,11 @@ const AddTempAdmin = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
+  const isAdmin=localStorage.getItem("role");
+
+  if(isAdmin!=="admin"){
+    window.location.href="/dashboard";
+  }
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });

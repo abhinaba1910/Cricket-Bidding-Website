@@ -16,6 +16,7 @@ import AdminMyAuctionInfo from "./pages/auctions/AdminMyAuctionInfo";
 import AddTempAdmin from "./pages/adminPages/AddTempAdmin";
 
 import "./App.css";
+import SetPassword from "./pages/set-Password/SetPassword";
 
 function ProtectedLayout({ isAuthenticated }) {
   if (!isAuthenticated) return <AuthPage />;
@@ -62,6 +63,7 @@ function App() {
           path="/"
           element={<AuthPage onLoginSuccess={() => setIsAuthenticated(true)} />}
         />
+        <Route path="/set-password" element={<SetPassword/>} />
         <Route element={<ProtectedLayout isAuthenticated={isAuthenticated} />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/create-auction" element={<CreateAuction />} />

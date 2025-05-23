@@ -28,7 +28,11 @@ const personSchema = new mongoose.Schema({
   profilePic: {
     type: String, 
     default: '',  
-  }
+  },
+  firstTime: {
+    type: Boolean,
+    default: false, 
+  },
 });
 
 
@@ -42,14 +46,14 @@ personSchema.pre('save', async function (next) {
 
   if (person.role === 'admin') {
     const adminExists = await mongoose.models.Person.findOne({ role: 'admin' });
-
+  
     if (adminExists) {
       throw new Error('An admin already exists. Only one admin is allowed.');
     }
-  } else {
-    // Automatically assign 'user' role if not explicitly set
+  } else if (!person.role) {
+    // Only set 'user' if role is not explicitly defined
     person.role = 'user';
-  }
+  }  
 
   next();
 });

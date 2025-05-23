@@ -14,37 +14,61 @@ router.post("/register", upload.single("profilePic"), async (req, res) => {
   try {
     const { username, email, password, role } = req.body;
 
-    const existingUsername = await Person.findOne({ username });
+    console.log("Incoming registration data:", { username, email, role });
+    console.log("Uploaded file info:", req.file);
+
+    // Validation: Check for duplicates
+    const [existingUsername, existingEmail] = await Promise.all([
+      Person.findOne({ username }),
+      Person.findOne({ email }),
+    ]);
+
     if (existingUsername) {
       return res.status(400).json({ error: "Username is already taken." });
     }
 
-    const existingEmail = await Person.findOne({ email });
     if (existingEmail) {
       return res.status(400).json({ error: "Email is already registered." });
     }
+
+    // Get profilePic URL from Cloudinary
     const profilePicUrl = req.file?.path || "";
-    const person = new Person({
+
+    const newUser = new Person({
       username,
       email,
       password,
       role,
       profilePic: profilePicUrl,
     });
-    await person.save();
+
+    await newUser.save();
+
     res.status(201).json({
       message: "User registered successfully!",
       user: {
-        username,
-        email,
-        role: person.role,
-        profilePic: person.profilePic
+        username: newUser.username,
+        email: newUser.email,
+        role: newUser.role,
+        profilePic: newUser.profilePic,
       },
     });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    console.error("❌ Registration failed:", err);
+
+    // Check for multer error (like file size limit)
+    if (err.name === 'MulterError') {
+      return res.status(400).json({ error: `Multer error: ${err.message}` });
+    }
+
+    // Fallback
+    res.status(500).json({
+      error: err.message || "Server error during registration.",
+    });
   }
 });
+
+
 
 router.post("/login", async (req, res) => {
   try {
@@ -78,6 +102,7 @@ router.post("/login", async (req, res) => {
         username: user.username,
         email: user.email,
         role: user.role,
+        firstTime: user.firstTime,
       },
     });
   } catch (err) {
@@ -203,6 +228,7 @@ router.post('/add-temp-admin', AuthMiddleWare, async (req, res) => {
       email,
       password,
       role: 'temp-admin',
+      firstTime: true,
     });
 
     await newTempAdmin.save();
@@ -225,7 +251,7 @@ router.post('/set-password', AuthMiddleWare, async (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 6 characters.' });
     }
 
-    const user = await Person.findById(req.user._id);
+    const user = await Person.findById(req.user.id);
 
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
@@ -236,7 +262,8 @@ router.post('/set-password', AuthMiddleWare, async (req, res) => {
       return res.status(403).json({ error: 'Only temp-admins can use this route.' });
     }
 
-    user.password = newPassword; // Triggers the pre-save hash
+    user.password = newPassword;
+    user.firstTime = false; // Triggers the pre-save hash
     await user.save();
 
     res.status(200).json({ message: 'Password updated successfully. You can now log in normally.' });

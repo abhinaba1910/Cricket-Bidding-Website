@@ -8,11 +8,6 @@ function AuthPage() {
   const toggleForm = () => {
     setShowLogin(!showLogin)
   }
-
-  // const handleSuccess = () => {
-  //   // after successful login/register, go to dashboard hash route
-  //   window.location.href = '/add-temp-admin'
-  // }
   
 
   return (
