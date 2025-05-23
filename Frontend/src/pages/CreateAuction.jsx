@@ -229,27 +229,41 @@
 // }
 import React from 'react'
 import { FiChevronLeft } from 'react-icons/fi'
-import { Link } from 'react-router-dom' // Assuming you use react-router
+import { useNavigate, useLocation } from 'react-router-dom'
 import AuctioneerLogo from '../icons/auctioneer-logo'
 import CreateAuctionForm from '../components/auction/create-auction-form'
 
 export default function CreateAuctionPage() {
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  const handleBack = () => {
+    // If history length > 1, go back; else fallback to /dashboard
+    if (window.history.length > 1 && location.key !== 'default') {
+      navigate(-1)
+    } else {
+      navigate('/dashboard')
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#f9f9f9] py-8 max-md:px-1 md:px-8">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <header className="flex items-center justify-between mb-8">
-          <Link
-            to="/"
-            aria-label="Go back to homepage"
+          <button
+            onClick={handleBack}
+            aria-label="Go back"
             className="p-2 rounded border border-gray-300 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-600 transition"
           >
             <FiChevronLeft className="w-6 h-6 text-gray-700" />
-          </Link>
+          </button>
 
           <div className="flex items-center space-x-3">
-            <AuctioneerLogo className="" width={40} height={40} fill="#222" />
-            <h1 className="text-3xl font-bold text-gray-800 max-md:text-2xl">Create New Auction</h1>
+            <AuctioneerLogo width={40} height={40} fill="#222" />
+            <h1 className="text-3xl font-bold text-gray-800 max-md:text-2xl">
+              Create New Auction
+            </h1>
           </div>
 
           {/* Placeholder for symmetry */}
@@ -257,9 +271,7 @@ export default function CreateAuctionPage() {
         </header>
 
         {/* Main Content */}
-
-          <CreateAuctionForm />
-
+        <CreateAuctionForm />
 
         {/* Footer */}
         <footer>

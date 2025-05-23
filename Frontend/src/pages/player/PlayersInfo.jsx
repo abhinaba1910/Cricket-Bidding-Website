@@ -82,7 +82,7 @@ export default function PlayersInfo() {
           </select>
           {/* Add Player */}
           <a
-            href="/add-player"
+            href="/add-players"
             className="inline-flex items-center px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition"
           >
             <FiPlus className="mr-2" /> Add Player
