@@ -1,23 +1,61 @@
 import React, { useState } from 'react'
-import { Mail, Lock } from 'lucide-react'
+import { Mail, Lock, User } from 'lucide-react'
 import Input from '../../components/ui/Input'
 import Button from '../../components/ui/Button'
 import { useAuth } from '../../context/AuthContext'
+import api from '../../userManagement/Api'
+import { useNavigate } from 'react-router-dom'
 
 function LoginForm({ onSuccess, onToggleForm }) {
-  const { login, isLoading, error } = useAuth()
-  const [email, setEmail] = useState('')
+  // const { login, isLoading} = useAuth()
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [loading,setLoading]=useState(false);
+  const [error,setError]=useState("");
+  const navigate=useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    try {
-      await login(email, password)
-      if (onSuccess) onSuccess()
-    } catch (err) {
-      // Error handled by context
+
+  const { login } = useAuth(); // Don't forget this!
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setError("");
+
+  try {
+    const response = await api.post('/login', { username, password });
+
+    if (response.data.token && response.data.role) {
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('role', response.data.role);
+
+      await login({
+        username: response.data.username,
+        email: response.data.email,
+        role: response.data.role,
+      });
+
+      navigate('/add-temp-admin');
     }
+    console.log(response.data);
+  } catch (err) {
+    setError(err.response?.data?.error || 'Login failed');
+  } finally {
+    setLoading(false);
   }
+};
+  
+{loading && (
+  <div className="text-blue-600 text-sm p-2 bg-blue-50 rounded-md">
+    Logging in...
+  </div>
+)}
+
+{error && (
+  <div className="text-error-600 text-sm p-2 bg-error-50 rounded-md">
+    {error}
+  </div>
+)}
 
   return (
     <div className="bg-white p-8 rounded-xl shadow-md max-w-md w-full mx-auto">
@@ -28,12 +66,12 @@ function LoginForm({ onSuccess, onToggleForm }) {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
-          label="Email Address"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          leftIcon={<Mail className="h-5 w-5" />}
-          placeholder="Enter your email"
+          label="Username"
+          type="text"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          leftIcon={<User className="h-5 w-5" />}
+          placeholder="Enter your username"
           required
         />
 
@@ -47,11 +85,7 @@ function LoginForm({ onSuccess, onToggleForm }) {
           required
         />
 
-        {error && (
-          <div className="text-error-600 text-sm p-2 bg-error-50 rounded-md">
-            {error}
-          </div>
-        )}
+        
 
         <div className="flex items-center justify-between">
           <div className="flex items-center">
@@ -76,7 +110,7 @@ function LoginForm({ onSuccess, onToggleForm }) {
           </div>
         </div>
 
-        <Button type="submit" variant="primary" isLoading={isLoading} fullWidth size="lg">
+        <Button type="submit" variant="primary" fullWidth size="lg">
           Sign in
         </Button>
       </form>
@@ -94,7 +128,7 @@ function LoginForm({ onSuccess, onToggleForm }) {
         </p>
       </div>
 
-      <div className="mt-8">
+      {/* <div className="mt-8">
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-gray-300"></div>
@@ -108,7 +142,7 @@ function LoginForm({ onSuccess, onToggleForm }) {
           <button
             type="button"
             onClick={() => {
-              setEmail('admin@example.com')
+              setUsername('admin') // replace with your actual demo username
               setPassword('password')
             }}
             className="py-2 px-4 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100"
@@ -118,7 +152,7 @@ function LoginForm({ onSuccess, onToggleForm }) {
           <button
             type="button"
             onClick={() => {
-              setEmail('user@example.com')
+              setUsername('user') // replace with your actual demo username
               setPassword('password')
             }}
             className="py-2 px-4 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100"
@@ -126,9 +160,9 @@ function LoginForm({ onSuccess, onToggleForm }) {
             User Demo
           </button>
         </div>
-      </div>
+      </div> */}
     </div>
   )
 }
 
-export default LoginForm
+export default LoginForm;

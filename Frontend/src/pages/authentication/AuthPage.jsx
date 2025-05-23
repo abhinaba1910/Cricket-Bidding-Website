@@ -10,10 +10,11 @@ function AuthPage() {
     setShowLogin(!showLogin)
   }
 
-  const handleSuccess = () => {
-    // after successful login/register, go to dashboard hash route
-    window.location.href = '#/dashboard'
-  }
+  // const handleSuccess = () => {
+  //   // after successful login/register, go to dashboard hash route
+  //   window.location.href = '/add-temp-admin'
+  // }
+  
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -34,9 +35,9 @@ function AuthPage() {
 
         <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
           {showLogin ? (
-            <LoginForm onSuccess={handleSuccess} onToggleForm={toggleForm} />
+            <LoginForm  onToggleForm={toggleForm} />
           ) : (
-            <RegisterForm onSuccess={handleSuccess} onToggleForm={toggleForm} />
+            <RegisterForm  onToggleForm={toggleForm} />
           )}
         </div>
       </div>

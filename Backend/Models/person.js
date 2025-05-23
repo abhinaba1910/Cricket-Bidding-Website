@@ -22,7 +22,7 @@ const personSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['admin', 'user'],
+    enum: ['admin', 'temp-admin', 'user'],
     default: 'user',
   },
   profilePic: {
@@ -30,6 +30,7 @@ const personSchema = new mongoose.Schema({
     default: '',  
   }
 });
+
 
 personSchema.pre('save', async function (next) {
   const person = this;

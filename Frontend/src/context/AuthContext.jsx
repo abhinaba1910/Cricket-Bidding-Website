@@ -33,28 +33,12 @@ export const AuthProvider = ({ children }) => {
     setIsLoading(false);
   }, []);
 
-  const login = async (email, password) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      const foundUser = MOCK_USERS.find(u => u.email === email);
-
-      if (foundUser && password === 'password') {
-        setUser(foundUser);
-        localStorage.setItem('user', JSON.stringify(foundUser));
-      } else {
-        throw new Error('Invalid email or password');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
+  const login = async (userData) => {
+    setUser(userData);
+    localStorage.setItem('user', JSON.stringify(userData));
   };
+  
+
 
   const register = async (username, email, password, avatar) => {
     setIsLoading(true);

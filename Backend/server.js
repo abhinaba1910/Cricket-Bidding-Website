@@ -1,26 +1,46 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
-const personRoutes = require('./Routes/personRoutes');
+const express = require("express");
+const mongoose = require("mongoose");
+const bodyParser = require("body-parser");
+const personRoutes = require("./Routes/personRoutes");
 require("dotenv").config();
+const cors = require("cors");
+const compression = require("compression");
+const path = require("path");
 
 const app = express();
-const PORT = process.env.PORT || 3001 ;
+const PORT = process.env.PORT || 3001;
 
 // Middleware
-app.use(bodyParser.json());
+app.use(express.json());
 
 // MongoDB Connection
-mongoose.connect('mongodb+srv://dasabhi1910:iamf00L@cricket-bidding.dugejrq.mongodb.net/', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log('MongoDB connected successfully.'))
-.catch((err) => console.error('MongoDB connection error:', err));
+mongoose
+  .connect(
+    "mongodb+srv://dasabhi1910:iamf00L@cricket-bidding.dugejrq.mongodb.net/",
+    {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    }
+  )
+  .then(() => console.log("MongoDB connected successfully."))
+  .catch((err) => console.error("MongoDB connection error:", err));
 
-
-app.use("/",personRoutes);
-
+const allowedOrigins = ["http://localhost:5173"];
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not Allowed By Cors"));
+      }
+    },
+    credentials: true,
+  })
+);
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use("/", personRoutes);
 
 // Start server
 app.listen(PORT, () => {

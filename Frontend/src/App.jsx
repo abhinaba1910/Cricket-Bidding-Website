@@ -1,25 +1,31 @@
-import React, { useState, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import React, { useState, useEffect } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 
-import { AuthProvider, useAuth } from './context/AuthContext'
-import { AuctionProvider }      from './context/AuctionContext'
-import { PlayerProvider }       from './context/PlayerContext'
-import { TeamProvider }         from './context/TeamContext'
-import { BidProvider }          from './context/BidContext'
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import { AuctionProvider } from "./context/AuctionContext";
+import { PlayerProvider } from "./context/PlayerContext";
+import { TeamProvider } from "./context/TeamContext";
+import { BidProvider } from "./context/BidContext";
 
-import SplashScreen from './components/splashScreen'
-import AuthPage     from './pages/authentication/AuthPage'
-import Layout       from './components/layout/Layout'
-import Dashboard    from './pages/Dashboard'
-import CreateAuction from './pages/CreateAuction'
+import SplashScreen from "./components/splashScreen";
+import AuthPage from "./pages/authentication/AuthPage";
+import Layout from "./components/layout/Layout";
+import Dashboard from "./pages/Dashboard";
+import CreateAuction from "./pages/CreateAuction";
 
-import './App.css'
-import CreateTeam from './pages/team/CreateTeam'
-import AddPlayer from './pages/player/AddPlayer'
-import AuctionsInfo from './pages/auctions/AuctionsInfo'
-import TeamsInfo from './pages/team/TeamsInfo'
-import PlayersInfo from './pages/player/PlayersInfo'
-import AdminMyAuctionInfo from './pages/auctions/AdminMyAuctionInfo'
+import "./App.css";
+import CreateTeam from "./pages/team/CreateTeam";
+import AddPlayer from "./pages/player/AddPlayer";
+import AuctionsInfo from "./pages/auctions/AuctionsInfo";
+import TeamsInfo from "./pages/team/TeamsInfo";
+import PlayersInfo from "./pages/player/PlayersInfo";
+import AdminMyAuctionInfo from "./pages/auctions/AdminMyAuctionInfo";
+import AddTempAdmin from "./pages/adminPages/AddTempAdmin";
 
 /**
  * This component handles:
@@ -29,23 +35,23 @@ import AdminMyAuctionInfo from './pages/auctions/AdminMyAuctionInfo'
  *  - protecting the /create-auction route for admin users
  */
 function AppContent() {
-  const { isAuthenticated, isLoading, user } = useAuth()
+  const { isAuthenticated, isLoading, user } = useAuth();
   const [showSplash, setShowSplash] = useState(() => {
     // Show splash only if not already shown in this session
-    return sessionStorage.getItem('splashShown') !== 'true'
-  })
+    return sessionStorage.getItem("splashShown") !== "true";
+  });
   useEffect(() => {
     if (showSplash) {
       const timer = setTimeout(() => {
-        setShowSplash(false)
-        sessionStorage.setItem('splashShown', 'true')
-      }, 3000)
-      return () => clearTimeout(timer)
+        setShowSplash(false);
+        sessionStorage.setItem("splashShown", "true");
+      }, 3000);
+      return () => clearTimeout(timer);
     }
-  }, [showSplash])
+  }, [showSplash]);
 
   if (showSplash) {
-    return <SplashScreen />
+    return <SplashScreen />;
   }
 
   // auth is still checking?
@@ -54,40 +60,58 @@ function AppContent() {
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary-600"></div>
       </div>
-    )
+    );
   }
 
   return (
     <Router>
-      { !isAuthenticated
-          ? <Routes>
-              <Route path="/*" element={<AuthPage />} />
-            </Routes>
-          : <Layout>
-              <Routes>
-                <Route path="/"           element={<Dashboard />} />
-                <Route path="/dashboard"  element={<Dashboard />} />
-                <Route
-                  path="/create-auction"
-                  element={
-                    user?.role === 'admin'
-                      ? <CreateAuction />
-                      : <Navigate to="/dashboard" replace />
-                  }
-                />
-                {/* catch-all */}
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
-                <Route path="/create-team"  element={<CreateTeam />} />
-                <Route path="/add-players"  element={<AddPlayer />} />
-                <Route path="/admin-auction-info"     element={<AuctionsInfo />} />
-                <Route path="/admins-my-auction-info"     element={<AdminMyAuctionInfo />} />
-                <Route path="/admin-teams-info"     element={<TeamsInfo />} />
-                <Route path="/admin-players-info"     element={<PlayersInfo />} />
-              </Routes>
-            </Layout>
-      }
+      {!isAuthenticated ? (
+        <Routes>
+          <Route path="/*" element={<AuthPage />} />
+        </Routes>
+      ) : (
+        <Layout>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route
+              path="/create-auction"
+              element={
+                user?.role === "admin" ? (
+                  <CreateAuction />
+                ) : (
+                  <Navigate to="/dashboard" replace />
+                )
+              }
+            />
+            {/* <Route
+              path="/add-temp-admin"
+              element={
+                user?.role === "admin" ? (
+                  <AddTempAdmin />
+                ) : (
+                  <Navigate to="/dashboard" replace />
+                )
+              }
+            /> */}
+            <Route path="/add-temp-admin" element={<AddTempAdmin/>}/>
+
+            {/* catch-all */}
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/create-team" element={<CreateTeam />} />
+            <Route path="/add-players" element={<AddPlayer />} />
+            <Route path="/admin-auction-info" element={<AuctionsInfo />} />
+            <Route
+              path="/admins-my-auction-info"
+              element={<AdminMyAuctionInfo />}
+            />
+            <Route path="/admin-teams-info" element={<TeamsInfo />} />
+            <Route path="/admin-players-info" element={<PlayersInfo />} />
+          </Routes>
+        </Layout>
+      )}
     </Router>
-  )
+  );
 }
 
 export default function App() {
@@ -103,5 +127,5 @@ export default function App() {
         </PlayerProvider>
       </AuctionProvider>
     </AuthProvider>
-  )
+  );
 }
