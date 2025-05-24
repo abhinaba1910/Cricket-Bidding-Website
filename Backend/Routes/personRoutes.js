@@ -1,15 +1,30 @@
-const express = require("express");
-const router = express.Router();
-const Person = require("../Models/person");
-const jwt = require("jsonwebtoken");
-const AuthMiddleWare = require("../Auth/Authentication");
-const multer = require("multer");
-const { storage } = require("../Utils/cloudinary");
-const upload = multer({ storage });
-const crypto = require("crypto");
-const nodemailer = require("nodemailer");
+// const express = require("express");
+// const router = express.Router();
+// const Person = require("../Models/person");
+// const jwt = require("jsonwebtoken");
+// const AuthMiddleWare = require("../Auth/Authentication");
+// const multer = require("multer");
+// const { storage } = require("../Utils/cloudinary");
+// const upload = multer({ storage });
+// const crypto = require("crypto");
+// const nodemailer = require("nodemailer");
 
-const JWT_SECRET = process.env.JWT_SECRET;
+// const JWT_SECRET = process.env.JWT_SECRET;
+require('dotenv').config();             // ← if you haven't already put this in your main app entry
+const express      = require("express");
+const router       = express.Router();
+const Person       = require("../Models/person");
+const jwt          = require("jsonwebtoken");
+const AuthMiddleWare = require("../Auth/Authentication");
+
+const multer       = require("multer");
+const { storage }  = require("../Utils/cloudinary");    // ← import your CloudinaryStorage
+const upload       = multer({ storage });               // ← create the multer instance
+
+const crypto       = require("crypto");
+const nodemailer   = require("nodemailer");
+
+const JWT_SECRET   = process.env.JWT_SECRET;
 router.post("/register", upload.single("profilePic"), async (req, res) => {
   try {
     const { username, email, password, role } = req.body;
@@ -54,7 +69,7 @@ router.post("/register", upload.single("profilePic"), async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("❌ Registration failed:", err);
+console.error("❌ Registration failed:", err.stack || err);
 
     // Check for multer error (like file size limit)
     if (err.name === 'MulterError') {
@@ -72,7 +87,7 @@ router.post("/register", upload.single("profilePic"), async (req, res) => {
 router.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
-
+    console.log("Login attempt:", req.body);
     const user = await Person.findOne({ username });
     if (!user) {
       return res.status(400).json({ error: "Invalid username or password." });

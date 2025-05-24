@@ -161,13 +161,15 @@ function RegisterForm({ onToggleForm }) {
     // }
     console.log("👤 Avatar type in frontend:", avatar);
     console.log("🧾 Is it a File?", avatar instanceof File);
-
+for (let [key, val] of formData.entries()) {
+  console.log("📦 formData:", key, val);
+}
     setIsLoading(true);
 
     try {
-      const response = await api.post("/register", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const response = await api.post("/register", formData); 
+        // headers: { "Content-Type": "multipart/form-data" },
+      // });
 
       if (response.status === 201) {
         setSuccessMessage("Registration successful! Redirecting to login...");
@@ -181,6 +183,10 @@ function RegisterForm({ onToggleForm }) {
     } catch (err) {
       console.error("❌ Registration failed:", err.message);
       console.error(err.stack);
+      if (err.response) {
+    console.error("→ status:", err.response.status);
+    console.error("→ body:", err.response.data);
+  }
     } finally {
       setIsLoading(false);
     }
