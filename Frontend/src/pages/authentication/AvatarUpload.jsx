@@ -50,7 +50,7 @@ function AvatarUpload({ value, onChange, error }) {
               ${isDragActive ? 'border-primary-500 bg-primary-50' : 'border-gray-300 hover:border-primary-500'}
             `}
           >
-            <input {...getInputProps()} />
+            <input {...getInputProps({name: "profilePic"})} />
             <Upload className="h-6 w-6 mx-auto text-gray-400 mb-2" />
             <p className="text-sm text-gray-600">
               {isDragActive
