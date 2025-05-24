@@ -22,9 +22,10 @@ function AvatarUpload({ value, onChange, error }) {
     accept: {
       'image/*': ['.jpeg', '.jpg', '.png', '.gif']
     },
-    maxFiles: 1,
-    multiple: false
-  })
+    multiple: false,
+    // Removed max size limit
+  });
+  
 
   const handleRemove = () => {
     setPreviewUrl('')

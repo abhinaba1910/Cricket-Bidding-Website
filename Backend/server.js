@@ -2,6 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const personRoutes = require("./Routes/personRoutes");
+const playerRoutes=require("./Routes/playerRoutes");
 require("dotenv").config();
 const cors = require("cors");
 const compression = require("compression");
@@ -41,6 +42,7 @@ app.use(
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use("/", personRoutes);
+app.use("/", playerRoutes);
 
 // Start server
 app.listen(PORT, () => {

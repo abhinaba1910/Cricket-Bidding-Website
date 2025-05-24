@@ -6,8 +6,8 @@ const AuthMiddleWare = require("../Auth/Authentication");
 const multer = require("multer");
 const { storage } = require("../Utils/cloudinary");
 const upload = multer({ storage });
-const crypto = require('crypto');
-const nodemailer = require('nodemailer');
+const crypto = require("crypto");
+const nodemailer = require("nodemailer");
 
 const JWT_SECRET = process.env.JWT_SECRET;
 router.post("/register", upload.single("profilePic"), async (req, res) => {
@@ -69,7 +69,6 @@ router.post("/register", upload.single("profilePic"), async (req, res) => {
 });
 
 
-
 router.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -110,47 +109,45 @@ router.post("/login", async (req, res) => {
   }
 });
 
-
-router.get('/getInfo', AuthMiddleWare, async (req, res) => {
+router.get("/getInfo", AuthMiddleWare, async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const user = await Person.findById(userId).select('-password'); // exclude password
+    const user = await Person.findById(userId).select("-password"); // exclude password
 
     if (!user) {
-      return res.status(404).json({ error: 'User not found.' });
+      return res.status(404).json({ error: "User not found." });
     }
 
     res.status(200).json({
-      message: 'User fetched successfully.',
+      message: "User fetched successfully.",
       user,
     });
   } catch (err) {
-    res.status(500).json({ error: 'Something went wrong.' });
+    res.status(500).json({ error: "Something went wrong." });
   }
 });
 
-
-router.delete('/delete/:id', AuthMiddleWare, async (req, res) => {
+router.delete("/delete/:id", AuthMiddleWare, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied. Admins only.' });
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ error: "Access denied. Admins only." });
     }
 
     const userId = req.params.id;
 
     if (req.user.id === userId) {
-      return res.status(400).json({ error: 'Admin cannot delete themselves.' });
+      return res.status(400).json({ error: "Admin cannot delete themselves." });
     }
 
     const deletedUser = await Person.findByIdAndDelete(userId);
 
     if (!deletedUser) {
-      return res.status(404).json({ error: 'User not found.' });
+      return res.status(404).json({ error: "User not found." });
     }
 
     res.status(200).json({
-      message: 'User deleted successfully.',
+      message: "User deleted successfully.",
       user: {
         username: deletedUser.username,
         email: deletedUser.email,
@@ -158,29 +155,27 @@ router.delete('/delete/:id', AuthMiddleWare, async (req, res) => {
       },
     });
   } catch (err) {
-    res.status(500).json({ error: 'Something went wrong.' });
+    res.status(500).json({ error: "Something went wrong." });
   }
 });
 
-
-
-const FRONTEND_URL = 'http://localhost:5173/'; // ⬅️ Replace with your actual frontend
+const FRONTEND_URL = "http://localhost:5173/"; // ⬅️ Replace with your actual frontend
 
 // Utility to generate random password
 function generateRandomPassword(length = 10) {
-  return crypto.randomBytes(length).toString('hex').slice(0, length);
+  return crypto.randomBytes(length).toString("hex").slice(0, length);
 }
 
 // Utility to generate random username (optional, can use name-based)
 function generateUsername(name) {
   const suffix = Math.floor(Math.random() * 10000);
-  return `${name.toLowerCase().replace(/\s+/g, '')}${suffix}`;
+  return `${name.toLowerCase().replace(/\s+/g, "")}${suffix}`;
 }
 
 // Send email using nodemailer
 async function sendTempAdminEmail({ email, username, password }) {
   const transporter = nodemailer.createTransport({
-    service: 'gmail', // e.g., Gmail
+    service: "gmail", // e.g., Gmail
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
@@ -190,7 +185,7 @@ async function sendTempAdminEmail({ email, username, password }) {
   const mailOptions = {
     from: `"Your App" <${process.env.EMAIL_USER}>`,
     to: email,
-    subject: 'Temp Admin Access | Your App',
+    subject: "Temp Admin Access | Your App",
     html: `
       <p>Hello,</p>
       <p>You have been added as a <strong>Temp Admin</strong>.</p>
@@ -208,17 +203,17 @@ async function sendTempAdminEmail({ email, username, password }) {
 }
 
 // 📌 Route to create temp-admin
-router.post('/add-temp-admin', AuthMiddleWare, async (req, res) => {
+router.post("/add-temp-admin", AuthMiddleWare, async (req, res) => {
   try {
     const { name, email } = req.body;
 
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Only admin can add temp-admins.' });
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ error: "Only admin can add temp-admins." });
     }
 
     const existing = await Person.findOne({ email });
     if (existing) {
-      return res.status(400).json({ error: 'Email already exists.' });
+      return res.status(400).json({ error: "Email already exists." });
     }
 
     const username = generateUsername(name);
@@ -227,7 +222,7 @@ router.post('/add-temp-admin', AuthMiddleWare, async (req, res) => {
       username,
       email,
       password,
-      role: 'temp-admin',
+      role: "temp-admin",
       firstTime: true,
     });
 
@@ -235,41 +230,48 @@ router.post('/add-temp-admin', AuthMiddleWare, async (req, res) => {
 
     await sendTempAdminEmail({ email, username, password });
 
-    res.status(201).json({ message: 'Temp-admin created and email sent successfully.' });
+    res
+      .status(201)
+      .json({ message: "Temp-admin created and email sent successfully." });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to add temp-admin.' });
+    res.status(500).json({ error: "Failed to add temp-admin." });
   }
 });
 
-
-router.post('/set-password', AuthMiddleWare, async (req, res) => {
+router.post("/set-password", AuthMiddleWare, async (req, res) => {
   try {
     const { newPassword } = req.body;
 
     if (!newPassword || newPassword.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+      return res
+        .status(400)
+        .json({ error: "Password must be at least 6 characters." });
     }
 
     const user = await Person.findById(req.user.id);
 
     if (!user) {
-      return res.status(404).json({ error: 'User not found.' });
+      return res.status(404).json({ error: "User not found." });
     }
 
     // Optional: Only allow temp-admin to use this route
-    if (user.role !== 'temp-admin') {
-      return res.status(403).json({ error: 'Only temp-admins can use this route.' });
+    if (user.role !== "temp-admin") {
+      return res
+        .status(403)
+        .json({ error: "Only temp-admins can use this route." });
     }
 
     user.password = newPassword;
     user.firstTime = false; // Triggers the pre-save hash
     await user.save();
 
-    res.status(200).json({ message: 'Password updated successfully. You can now log in normally.' });
+    res.status(200).json({
+      message: "Password updated successfully. You can now log in normally.",
+    });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to set password.' });
+    res.status(500).json({ error: "Failed to set password." });
   }
 });
 

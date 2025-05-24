@@ -155,9 +155,12 @@ function RegisterForm({ onToggleForm }) {
     formData.append("password", password);
     formData.append("role", "user"); // Default role
 
-    if (avatar instanceof File) {
-      formData.append("profilePic", avatar);
-    }
+    formData.append("profilePic", avatar); // avatar must be a File
+    // if (avatar instanceof File) {
+    //   formData.append("profilePic", avatar);
+    // }
+    console.log("👤 Avatar type in frontend:", avatar);
+    console.log("🧾 Is it a File?", avatar instanceof File);
 
     setIsLoading(true);
 
@@ -176,7 +179,8 @@ function RegisterForm({ onToggleForm }) {
         setFormError("Registration failed. Please try again.");
       }
     } catch (err) {
-      setFormError(err.response?.data?.error || "Registration failed.");
+      console.error("❌ Registration failed:", err.message);
+      console.error(err.stack);
     } finally {
       setIsLoading(false);
     }

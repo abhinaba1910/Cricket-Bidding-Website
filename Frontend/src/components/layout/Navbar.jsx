@@ -309,7 +309,7 @@ function Navbar({ onOpenSidebar }) {
                 variant="primary"
                 size="sm"
                 className="ml-4"
-                onClick={() => navigate('/login')}
+                onClick={() => navigate('/')}
               >
                 Log in
               </Button>
