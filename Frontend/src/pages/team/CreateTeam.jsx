@@ -1,52 +1,75 @@
 // src/pages/CreateTeam.jsx
-import React, { useState } from 'react'
-import { useForm, Controller } from 'react-hook-form'
-import { FiChevronLeft } from 'react-icons/fi'
+import React, { useState } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { FiChevronLeft } from "react-icons/fi";
+import api from "../../userManagement/Api";
+import toast from "react-hot-toast"; // 👈 import toast
 
 export default function CreateTeam() {
-  const { register, control, handleSubmit, formState: { errors } } = useForm()
-  const [preview, setPreview] = useState(null)
+  const {
+    register,
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm();
+  const [preview, setPreview] = useState(null);
 
-  const onSubmit = data => {
-    console.log('Team data:', data)
-    // TODO: call your API to save the team
-  }
+  const onSubmit = async (data) => {
+    try {
+      const formData = new FormData();
+      formData.append("teamName", data.teamName);
+      formData.append("shortName", data.shortName);
+      formData.append("purse", data.purse);
+      formData.append("logoFile", data.logoFile);
+
+      const response = await api.post("/create-team", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      console.log("Team created:", response.data);
+      toast.success("Team created successfully!");
+    } catch (err) {
+      console.error("Error creating team:", err.response?.data || err.message);
+      const message =
+        err.response?.data?.error || "Failed to create team. Try again.";
+      toast.error(message);
+    }
+  };
 
   const handleFileChange = (e, onChange) => {
-    const file = e.target.files?.[0]
-    onChange(file)
-    if (!file) return setPreview(null)
-    const reader = new FileReader()
-    reader.onloadend = () => setPreview(reader.result)
-    reader.readAsDataURL(file)
-  }
+    const file = e.target.files?.[0];
+    onChange(file);
+    if (!file) return setPreview(null);
+    const reader = new FileReader();
+    reader.onloadend = () => setPreview(reader.result);
+    reader.readAsDataURL(file);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 md:px-8 max-md:px-0">
       <div className="max-w-2xl mx-auto bg-white shadow rounded-lg">
-
         {/* Header */}
         <div className="flex items-center border-b px-6 py-4">
           <a
             href="/dashboard"
             className="p-2 rounded hover:bg-gray-100 transition"
-            aria-label="Back to Dashboard"
           >
             <FiChevronLeft className="w-6 h-6 text-gray-700" />
           </a>
-          <h1 className="ml-4 text-2xl font-bold text-gray-800">Create New Team</h1>
+          <h1 className="ml-4 text-2xl font-bold text-gray-800">
+            Create New Team
+          </h1>
         </div>
 
         {/* Form */}
         <div className="p-6 space-y-8">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-
             {/* Team Name */}
             <div>
               <label className="block font-medium mb-1">Team Name</label>
               <input
-                {...register('teamName', { required: 'Team name is required' })}
-                placeholder="e.g., Warriors of the North"
+                {...register("teamName", { required: "Team name is required" })}
+                placeholder="e.g., Royal Challengers"
                 className="w-full border px-3 py-2 rounded"
               />
               {errors.teamName && (
@@ -58,10 +81,14 @@ export default function CreateTeam() {
 
             {/* Short Name */}
             <div>
-              <label className="block font-medium mb-1">Short Name / Code</label>
+              <label className="block font-medium mb-1">
+                Short Name / Code
+              </label>
               <input
-                {...register('shortName', { required: 'Short name is required' })}
-                placeholder="e.g., WON"
+                {...register("shortName", {
+                  required: "Short name is required",
+                })}
+                placeholder="e.g., RCB"
                 className="w-full border px-3 py-2 rounded"
               />
               {errors.shortName && (
@@ -73,16 +100,20 @@ export default function CreateTeam() {
 
             {/* Logo Upload */}
             <div>
-              <label className="block font-medium mb-1">Team Logo / Photo</label>
+              <label className="block font-medium mb-1">
+                Team Logo / Photo
+              </label>
               <Controller
                 name="logoFile"
                 control={control}
-                rules={{ required: 'Team logo is required' }}
+                rules={{ required: "Team logo is required" }}
                 render={({ field: { onChange } }) => (
                   <div className="space-y-2">
                     <div
                       className="w-32 h-32 border-2 border-dashed border-gray-300 rounded flex items-center justify-center cursor-pointer overflow-hidden"
-                      onClick={() => document.getElementById('logoInput').click()}
+                      onClick={() =>
+                        document.getElementById("logoInput").click()
+                      }
                     >
                       {preview ? (
                         <img
@@ -99,7 +130,7 @@ export default function CreateTeam() {
                       type="file"
                       accept="image/*"
                       className="hidden"
-                      onChange={e => handleFileChange(e, onChange)}
+                      onChange={(e) => handleFileChange(e, onChange)}
                     />
                   </div>
                 )}
@@ -111,14 +142,14 @@ export default function CreateTeam() {
               )}
             </div>
 
-            {/* Purse Amount */}
+            {/* Purse */}
             <div>
               <label className="block font-medium mb-1">Purse Amount</label>
               <input
-                {...register('purse', {
-                  required: 'Purse amount is required',
+                {...register("purse", {
+                  required: "Purse amount is required",
                   valueAsNumber: true,
-                  min: { value: 0, message: 'Must be non-negative' }
+                  min: { value: 0, message: "Must be non-negative" },
                 })}
                 type="number"
                 placeholder="e.g., 9000000"
@@ -144,5 +175,5 @@ export default function CreateTeam() {
         </div>
       </div>
     </div>
-  )
+  );
 }

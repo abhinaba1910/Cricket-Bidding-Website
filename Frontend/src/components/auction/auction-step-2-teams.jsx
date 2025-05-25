@@ -47,8 +47,9 @@ export default function AuctionStep2Teams({ onNext, onBack, allTeams }) {
   }));
 
   const filteredOptions = teamOptions.filter(opt =>
-    opt.label.toLowerCase().includes(searchQuery.toLowerCase())
+    opt.label?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  
 
   // Simple mobile detection (not perfect, for demo)
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;

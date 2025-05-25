@@ -44,8 +44,20 @@ router.post(
         bio,
       } = req.body;
 
+      // Check for duplicate player name for the same user
+      const existingPlayer = await Player.findOne({
+        createdBy: userId,
+        name: name.trim().toLowerCase(),
+      });
+
+      if (existingPlayer) {
+        return res.status(409).json({
+          error: "A player with this name already exists under your account. Please use a different name.",
+        });
+      }
+
       const player = new Player({
-        name,
+        name: name.trim(),
         country,
         dob,
         role,
@@ -61,9 +73,9 @@ router.post(
         wickets,
         strikeRate,
         previousTeams,
-        isCapped: isCapped === "true", // HTML form checkboxes return strings
+        isCapped: isCapped === "true", // convert checkbox string to boolean
         bio,
-        playerPic: req.file?.path || "", // Make sure multer sends this
+        playerPic: req.file?.path || "",
         createdBy: userId,
       });
 
@@ -76,6 +88,7 @@ router.post(
     }
   }
 );
+
 
 // GET /get-player (all players created by the logged-in user)
 router.get("/get-player", authMiddleware, async (req, res) => {

@@ -17,6 +17,7 @@ import AddTempAdmin from "./pages/adminPages/AddTempAdmin";
 
 import "./App.css";
 import SetPassword from "./pages/set-Password/SetPassword";
+import { Toaster } from "react-hot-toast";
 
 function ProtectedLayout({ isAuthenticated }) {
   if (!isAuthenticated) return <AuthPage />;
@@ -58,6 +59,7 @@ function App() {
 
   return (
     <Router>
+      <Toaster position="top-right" />
       <Routes>
         <Route
           path="/"

@@ -10,21 +10,21 @@
 // const nodemailer = require("nodemailer");
 
 // const JWT_SECRET = process.env.JWT_SECRET;
-require('dotenv').config();             // ← if you haven't already put this in your main app entry
-const express      = require("express");
-const router       = express.Router();
-const Person       = require("../Models/person");
-const jwt          = require("jsonwebtoken");
+require("dotenv").config(); // ← if you haven't already put this in your main app entry
+const express = require("express");
+const router = express.Router();
+const Person = require("../Models/person");
+const jwt = require("jsonwebtoken");
 const AuthMiddleWare = require("../Auth/Authentication");
 
-const multer       = require("multer");
-const { storage }  = require("../Utils/cloudinary");    // ← import your CloudinaryStorage
-const upload       = multer({ storage });               // ← create the multer instance
+const multer = require("multer");
+const { storage } = require("../Utils/cloudinary"); // ← import your CloudinaryStorage
+const upload = multer({ storage }); // ← create the multer instance
 
-const crypto       = require("crypto");
-const nodemailer   = require("nodemailer");
+const crypto = require("crypto");
+const nodemailer = require("nodemailer");
 
-const JWT_SECRET   = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET;
 router.post("/register", upload.single("profilePic"), async (req, res) => {
   try {
     const { username, email, password, role } = req.body;
@@ -69,10 +69,10 @@ router.post("/register", upload.single("profilePic"), async (req, res) => {
       },
     });
   } catch (err) {
-console.error("❌ Registration failed:", err.stack || err);
+    console.error("❌ Registration failed:", err.stack || err);
 
     // Check for multer error (like file size limit)
-    if (err.name === 'MulterError') {
+    if (err.name === "MulterError") {
       return res.status(400).json({ error: `Multer error: ${err.message}` });
     }
 
@@ -82,7 +82,6 @@ console.error("❌ Registration failed:", err.stack || err);
     });
   }
 });
-
 
 router.post("/login", async (req, res) => {
   try {
