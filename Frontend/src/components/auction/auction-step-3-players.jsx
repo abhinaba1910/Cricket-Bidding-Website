@@ -386,15 +386,18 @@ export default function AuctionStep3Players({ onSubmit, onBack, selectedTeamIds,
     'Wicket-keeper',
   ];
 
-  const filteredByTeam = selectedTeamIds.length
-    ? allPlayers.filter(p => selectedTeamIds.includes(p.teamId))
-    : allPlayers;
+  // const filteredByTeam = selectedTeamIds.length
+  //   ? allPlayers.filter(p => selectedTeamIds.includes(p.teamId))
+  //   : allPlayers;
 
-  const filteredPlayers = filteredByTeam.filter(p => {
+ 
+
+  const filteredPlayers = allPlayers.filter(p => {
     const gradeOK = selectedGrade === 'all' || p.grade === selectedGrade;
     const skillOK = selectedSkill === 'all' || (p.skills && p.skills.includes(selectedSkill));
     return gradeOK && skillOK;
   });
+  
 
   const playerOptions = filteredPlayers.map(player => ({
     value: player._id,

@@ -5,6 +5,7 @@ const bodyParser = require("body-parser");
 const personRoutes = require("./Routes/personRoutes");
 const playerRoutes=require("./Routes/playerRoutes");
 const teamRoutes=require("./Routes/teamRoutes");
+const auctionRoutes=require("./Routes/auctionRoutes");
 const cors = require("cors");
 const compression = require("compression");
 const path = require("path");
@@ -45,6 +46,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use("/", personRoutes);
 app.use("/", playerRoutes);
 app.use("/",teamRoutes);
+app.use("/",auctionRoutes);
 
 // Start server
 app.listen(PORT, () => {

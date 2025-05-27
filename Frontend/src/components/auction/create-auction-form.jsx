@@ -284,14 +284,14 @@ export default function CreateAuctionForm() {
   const [teams, setTeams] = useState([]);
   const [players, setPlayers] = useState([]);
 
+  // 📌 Use *full schema* validation at the end (on final submission)
   const methods = useForm({
-    resolver: zodResolver(stepSchemas[currentStep - 1]),
     mode: 'onTouched',
     defaultValues: {
       auctionName: '',
       shortName: '',
       auctionImage: undefined,
-      startDate: undefined,
+      startDate: '',
       startTime: '',
       description: '',
       selectedTeams: [],
@@ -299,7 +299,17 @@ export default function CreateAuctionForm() {
     },
   });
 
-  const { handleSubmit, trigger, watch, reset, getValues, clearErrors } = methods;
+  const {
+    handleSubmit,
+    trigger,
+    watch,
+    reset,
+    getValues,
+    setValue,
+    clearErrors,
+    formState: { errors }
+  } = methods;
+
   const selectedTeamIds = watch('selectedTeams');
 
   useEffect(() => {
@@ -322,8 +332,11 @@ export default function CreateAuctionForm() {
   const handleNext = async () => {
     const valid = await trigger();
     if (valid) {
-      if (currentStep < 3) setCurrentStep((s) => s + 1);
-      else handleSubmit(onSubmit)();
+      if (currentStep < 3) {
+        setCurrentStep((s) => s + 1);
+      } else {
+        handleSubmit(onSubmit)(); // 💡 final submission
+      }
     } else {
       setToast({ type: 'error', message: 'Fix errors before continuing' });
       setTimeout(() => setToast(null), 3000);
@@ -343,8 +356,13 @@ export default function CreateAuctionForm() {
       formData.append('description', data.description);
       formData.append('selectedTeams', JSON.stringify(data.selectedTeams));
       formData.append('selectedPlayers', JSON.stringify(data.selectedPlayers));
-      if (data.auctionImage && data.auctionImage[0]) {
+
+      if (data.auctionImage && data.auctionImage.length > 0) {
         formData.append('auctionImage', data.auctionImage[0]);
+      }
+
+      for (let pair of formData.entries()) {
+        console.log(`${pair[0]}: ${pair[1]}`);
       }
 
       await api.post('/create-auction', formData, {
@@ -358,29 +376,30 @@ export default function CreateAuctionForm() {
       setTimeout(() => setToast(null), 3000);
     } catch (err) {
       console.error('Create auction error:', err);
-      setToast({ type: 'error', message: err.response?.data?.error || 'Failed to create auction' });
+      setToast({
+        type: 'error',
+        message: err.response?.data?.error || 'Failed to create auction',
+      });
       setTimeout(() => setToast(null), 3000);
     }
   };
 
   useEffect(() => {
     clearErrors();
-  }, [currentStep, clearErrors]);
+  }, [currentStep]);
 
   const Toast = ({ type, message }) => (
-    <div
-      style={{
-        position: 'fixed',
-        top: 20,
-        right: 20,
-        padding: '10px 20px',
-        backgroundColor: type === 'error' ? '#f44336' : '#4caf50',
-        color: 'white',
-        borderRadius: 4,
-        zIndex: 1000,
-        fontWeight: 'bold',
-      }}
-    >
+    <div style={{
+      position: 'fixed',
+      top: 20,
+      right: 20,
+      padding: '10px 20px',
+      backgroundColor: type === 'error' ? '#f44336' : '#4caf50',
+      color: 'white',
+      borderRadius: 4,
+      zIndex: 1000,
+      fontWeight: 'bold',
+    }}>
       {message}
     </div>
   );
@@ -492,6 +511,7 @@ export default function CreateAuctionForm() {
             />
           )}
         </div>
+
         <div style={{ marginTop: 24, display: 'flex', justifyContent: 'space-between' }}>
           {currentStep > 1 && (
             <button
@@ -531,3 +551,4 @@ export default function CreateAuctionForm() {
     </FormProvider>
   );
 }
+
