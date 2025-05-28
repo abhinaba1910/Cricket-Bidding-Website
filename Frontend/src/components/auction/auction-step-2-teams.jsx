@@ -49,7 +49,6 @@
 //   const filteredOptions = teamOptions.filter(opt =>
 //     opt.label?.toLowerCase().includes(searchQuery.toLowerCase())
 //   );
-  
 
 //   // Simple mobile detection (not perfect, for demo)
 //   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
@@ -333,13 +332,8 @@
 //   );
 // }
 
-
-
-
-
-
-import React, { useState } from 'react';
-import { useFormContext, Controller } from 'react-hook-form';
+import React, { useState } from "react";
+import { useFormContext, Controller } from "react-hook-form";
 
 export default function AuctionStep2Teams({ onNext, onBack, allTeams }) {
   const {
@@ -348,13 +342,14 @@ export default function AuctionStep2Teams({ onNext, onBack, allTeams }) {
     watch,
   } = useFormContext();
 
-  const selectedTeamValues = watch('selectedTeams') || [];
+  const selectedTeamValues = watch("selectedTeams") || [];
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const teamOptions = allTeams.map(team => ({
+  const teamOptions = allTeams.map((team) => ({
     value: team._id, // Important: use _id from DB
-    label: team.name,
+    label: team.teamName,
+    srt: team.shortName,
     icon: team.logoUrl ? (
       <img
         src={team.logoUrl}
@@ -364,20 +359,20 @@ export default function AuctionStep2Teams({ onNext, onBack, allTeams }) {
           height: 20,
           borderRadius: 4,
           marginRight: 6,
-          objectFit: 'cover',
+          objectFit: "cover",
         }}
       />
     ) : (
       <span
         style={{
-          display: 'inline-block',
+          display: "inline-block",
           width: 20,
           height: 20,
           marginRight: 6,
-          backgroundColor: '#ccc',
+          backgroundColor: "#ccc",
           borderRadius: 4,
-          textAlign: 'center',
-          lineHeight: '20px',
+          textAlign: "center",
+          lineHeight: "20px",
           fontSize: 14,
         }}
       >
@@ -386,24 +381,41 @@ export default function AuctionStep2Teams({ onNext, onBack, allTeams }) {
     ),
   }));
 
-  const filteredOptions = teamOptions.filter(opt =>
+  const filteredOptions = teamOptions.filter((opt) =>
     opt.label?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
   return (
-    <div style={{ maxWidth: 600, margin: 'auto', padding: 12, fontFamily: 'Arial, sans-serif' }}>
+    <div
+      style={{
+        maxWidth: 600,
+        margin: "auto",
+        padding: 12,
+        fontFamily: "Arial, sans-serif",
+      }}
+    >
       <div style={{ marginBottom: 24 }}>
-        <label htmlFor="team-select" style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 6, display: 'block' }}>
+        <label
+          htmlFor="team-select"
+          style={{
+            fontWeight: "bold",
+            fontSize: 16,
+            marginBottom: 6,
+            display: "block",
+          }}
+        >
           Select Teams for Auction
         </label>
-        <p style={{ fontSize: 14, color: '#666' }}>Choose the teams that will participate in this auction.</p>
+        <p style={{ fontSize: 14, color: "#666" }}>
+          Choose the teams that will participate in this auction.
+        </p>
 
         <Controller
           name="selectedTeams"
           control={control}
-          rules={{ required: 'Please select at least one team.' }}
+          rules={{ required: "Please select at least one team." }}
           render={({ field }) => (
             <>
               {isMobile ? (
@@ -412,43 +424,57 @@ export default function AuctionStep2Teams({ onNext, onBack, allTeams }) {
                     type="button"
                     onClick={() => setMobileMenuOpen(true)}
                     style={{
-                      width: '100%',
-                      padding: '8px 12px',
+                      width: "100%",
+                      padding: "8px 12px",
                       borderRadius: 4,
-                      border: '1px solid #ccc',
-                      background: '#fff',
-                      textAlign: 'left',
-                      display: 'flex',
-                      flexWrap: 'wrap',
+                      border: "1px solid #ccc",
+                      background: "#fff",
+                      textAlign: "left",
+                      display: "flex",
+                      flexWrap: "wrap",
                       gap: 6,
-                      alignItems: 'center',
-                      cursor: 'pointer',
-                      justifyContent: 'space-between',
+                      alignItems: "center",
+                      cursor: "pointer",
+                      justifyContent: "space-between",
                     }}
                   >
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, flex: 1 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: 6,
+                        flex: 1,
+                      }}
+                    >
                       {selectedTeamValues.length > 0 ? (
                         teamOptions
-                          .filter(opt => selectedTeamValues.includes(opt.value))
-                          .map(opt => (
+                          .filter((opt) =>
+                            selectedTeamValues.includes(opt.value)
+                          )
+                          .map((opt) => (
                             <span
                               key={opt.value}
                               style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                backgroundColor: '#38a169',
-                                color: 'white',
+                                display: "flex",
+                                alignItems: "center",
+                                backgroundColor: "#38a169",
+                                color: "white",
                                 borderRadius: 12,
-                                padding: '4px 10px',
+                                padding: "4px 10px",
                                 fontSize: 12,
                               }}
                             >
                               {opt.icon}
-                              {opt.label}
+                              <span style={{ marginLeft: 4 }}>
+                                {opt.label}
+                                {opt.srt ? ` (${opt.srt})` : ""}
+                              </span>
                             </span>
                           ))
                       ) : (
-                        <span style={{ color: '#999' }}>Click to select teams...</span>
+                        <span style={{ color: "#999" }}>
+                          Click to select teams...
+                        </span>
                       )}
                     </div>
                     <span style={{ marginLeft: 12, fontSize: 18 }}>▼</span>
@@ -457,46 +483,48 @@ export default function AuctionStep2Teams({ onNext, onBack, allTeams }) {
                   {isMobileMenuOpen && (
                     <div
                       style={{
-                        position: 'fixed',
+                        position: "fixed",
                         bottom: 0,
                         left: 0,
                         right: 0,
-                        top: '30%',
-                        backgroundColor: 'white',
+                        top: "30%",
+                        backgroundColor: "white",
                         borderTopLeftRadius: 12,
                         borderTopRightRadius: 12,
-                        boxShadow: '0 -4px 8px rgba(0,0,0,0.2)',
+                        boxShadow: "0 -4px 8px rgba(0,0,0,0.2)",
                         padding: 16,
                         zIndex: 1000,
-                        overflowY: 'auto',
+                        overflowY: "auto",
                       }}
                     >
                       <input
                         type="text"
                         placeholder="Search for teams..."
                         value={searchQuery}
-                        onChange={e => setSearchQuery(e.target.value)}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                         style={{
-                          width: '100%',
+                          width: "100%",
                           padding: 8,
                           borderRadius: 4,
-                          border: '1px solid #ccc',
+                          border: "1px solid #ccc",
                           fontSize: 14,
                           marginBottom: 12,
                         }}
                       />
 
                       {filteredOptions.length ? (
-                        filteredOptions.map(opt => {
-                          const checked = selectedTeamValues.includes(opt.value);
+                        filteredOptions.map((opt) => {
+                          const checked = selectedTeamValues.includes(
+                            opt.value
+                          );
                           return (
                             <label
                               key={opt.value}
                               style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                padding: '6px 0',
-                                cursor: 'pointer',
+                                display: "flex",
+                                alignItems: "center",
+                                padding: "6px 0",
+                                cursor: "pointer",
                               }}
                             >
                               <input
@@ -504,7 +532,9 @@ export default function AuctionStep2Teams({ onNext, onBack, allTeams }) {
                                 checked={checked}
                                 onChange={() => {
                                   const next = checked
-                                    ? selectedTeamValues.filter(v => v !== opt.value)
+                                    ? selectedTeamValues.filter(
+                                        (v) => v !== opt.value
+                                      )
                                     : [...selectedTeamValues, opt.value];
                                   field.onChange(next);
                                 }}
@@ -516,7 +546,7 @@ export default function AuctionStep2Teams({ onNext, onBack, allTeams }) {
                           );
                         })
                       ) : (
-                        <div style={{ color: '#999' }}>No teams found.</div>
+                        <div style={{ color: "#999" }}>No teams found.</div>
                       )}
 
                       <button
@@ -524,15 +554,15 @@ export default function AuctionStep2Teams({ onNext, onBack, allTeams }) {
                         onClick={() => setMobileMenuOpen(false)}
                         style={{
                           marginTop: 12,
-                          width: '100%',
+                          width: "100%",
                           padding: 10,
                           borderRadius: 4,
-                          backgroundColor: '#38a169',
-                          color: 'white',
-                          fontWeight: 'bold',
+                          backgroundColor: "#38a169",
+                          color: "white",
+                          fontWeight: "bold",
                           fontSize: 16,
-                          border: 'none',
-                          cursor: 'pointer',
+                          border: "none",
+                          cursor: "pointer",
                         }}
                       >
                         Done
@@ -544,23 +574,23 @@ export default function AuctionStep2Teams({ onNext, onBack, allTeams }) {
                 <div
                   style={{
                     maxHeight: 300,
-                    overflowY: 'auto',
-                    border: '1px solid #ccc',
+                    overflowY: "auto",
+                    border: "1px solid #ccc",
                     borderRadius: 4,
                     padding: 8,
                   }}
                 >
-                  {teamOptions.map(opt => {
+                  {teamOptions.map((opt) => {
                     const checked = selectedTeamValues.includes(opt.value);
                     return (
                       <label
                         key={opt.value}
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          padding: '6px 0',
-                          cursor: 'pointer',
-                          userSelect: 'none',
+                          display: "flex",
+                          alignItems: "center",
+                          padding: "6px 0",
+                          cursor: "pointer",
+                          userSelect: "none",
                         }}
                       >
                         <input
@@ -568,7 +598,9 @@ export default function AuctionStep2Teams({ onNext, onBack, allTeams }) {
                           checked={checked}
                           onChange={() => {
                             const next = checked
-                              ? selectedTeamValues.filter(v => v !== opt.value)
+                              ? selectedTeamValues.filter(
+                                  (v) => v !== opt.value
+                                )
                               : [...selectedTeamValues, opt.value];
                             field.onChange(next);
                           }}
@@ -585,22 +617,24 @@ export default function AuctionStep2Teams({ onNext, onBack, allTeams }) {
           )}
         />
         {errors.selectedTeams && (
-          <div style={{ color: 'red', marginTop: 4, fontSize: 12 }}>
+          <div style={{ color: "red", marginTop: 4, fontSize: 12 }}>
             {errors.selectedTeams.message}
           </div>
         )}
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+      <div
+        style={{ display: "flex", justifyContent: "space-between", gap: 12 }}
+      >
         <button
           type="button"
           onClick={onBack}
           style={{
-            padding: '10px 20px',
+            padding: "10px 20px",
             borderRadius: 4,
-            border: '1px solid #ccc',
-            background: 'white',
-            cursor: 'pointer',
+            border: "1px solid #ccc",
+            background: "white",
+            cursor: "pointer",
             fontSize: 14,
           }}
         >
@@ -611,14 +645,14 @@ export default function AuctionStep2Teams({ onNext, onBack, allTeams }) {
           type="button"
           onClick={onNext}
           style={{
-            padding: '10px 20px',
+            padding: "10px 20px",
             borderRadius: 4,
-            border: 'none',
-            backgroundColor: '#38a169',
-            color: 'white',
+            border: "none",
+            backgroundColor: "#38a169",
+            color: "white",
             fontSize: 14,
-            fontWeight: 'bold',
-            cursor: 'pointer',
+            fontWeight: "bold",
+            cursor: "pointer",
           }}
         >
           Save and Next →

@@ -36,59 +36,35 @@ const personSchema = new mongoose.Schema({
 });
 
 
-// personSchema.pre('save', async function (next) {
-//   const person = this;
-
-//   if (person.isModified('password')) {
-//     const salt = await bcrypt.genSalt(10);
-//     person.password = await bcrypt.hash(person.password, salt);
-//   }
-
-//   if (person.role === 'admin') {
-//     const adminExists = await mongoose.models.Person.findOne({ role: 'admin' });
-  
-//     if (adminExists) {
-//       throw new Error('An admin already exists. Only one admin is allowed.');
-//     }
-//   } else if (!person.role) {
-//     // Only set 'user' if role is not explicitly defined
-//     person.role = 'user';
-//   }  
-
-//   next();
-// });
-
-
-
 personSchema.pre('save', async function (next) {
   const person = this;
 
   try {
-    // 🔐 Only hash password if it's new or modified
+    // Hash password if new or modified
     if (person.isModified('password')) {
       const salt = await bcrypt.genSalt(10);
       person.password = await bcrypt.hash(person.password, salt);
     }
 
-    // ✅ Only enforce admin uniqueness if *trying* to create an admin
-    if (person.role === 'admin') {
-      const adminExists = await mongoose.models.Person.findOne({ role: 'admin' });
+    // Check for admin uniqueness only on new documents or when role is modified
+    if (person.isModified('role') && person.role === 'admin') {
+      const existingAdmin = await mongoose.models.Person.findOne({ role: 'admin' });
 
-      if (adminExists) {
+      if (existingAdmin && existingAdmin._id.toString() !== person._id.toString()) {
         const error = new Error('An admin already exists. Only one admin is allowed.');
         error.name = 'AdminExistsError';
-        return next(error); // ❗ Correctly pass to next() for Express to catch
+        return next(error);
       }
     }
 
-    // ✅ Default role fallback
+    // Default role fallback
     if (!person.role) {
       person.role = 'user';
     }
 
     next();
   } catch (error) {
-    next(error); // Let Express error middleware handle it
+    next(error);
   }
 });
 

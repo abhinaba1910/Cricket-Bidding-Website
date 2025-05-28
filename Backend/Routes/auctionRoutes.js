@@ -124,4 +124,53 @@ router.get('/get-auction', AuthMiddleWare, async (req, res) => {
   }
 });
 
+
+
+router.get('/get-all-auctions', AuthMiddleWare, async (req, res) => {
+  try {
+    const auctions = await Auction.find()
+      .populate('selectedPlayers')
+      .populate('selectedTeams')
+      .sort({ startDate: -1 });
+
+    const now = new Date();
+
+    const processedAuctions = auctions.map(auction => {
+      const playerCount = auction.selectedPlayers.length;
+      const teamCount = auction.selectedTeams.length;
+
+      const auctionDate = new Date(auction.startDate);
+      const auctionDateOnly = new Date(auctionDate.toDateString());
+      const nowDateOnly = new Date(now.toDateString());
+
+      let status = '';
+      if (auctionDateOnly > nowDateOnly) {
+        status = 'upcoming';
+      } else if (auctionDateOnly.getTime() === nowDateOnly.getTime()) {
+        status = 'live';
+      } else {
+        status = 'completed';
+      }
+
+      return {
+        id: auction._id,
+        name: auction.auctionName,
+        logo: auction.auctionImage,
+        date: auctionDate.toISOString().split('T')[0],
+        time: auctionDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        players: playerCount,
+        teams: teamCount,
+        // joinCode: auction.shortName,
+        status
+      };
+    });
+
+    res.json({ auctions: processedAuctions });
+  } catch (err) {
+    console.error('Error fetching all auctions:', err);
+    res.status(500).json({ error: 'Failed to fetch auctions.' });
+  }
+});
+
+
 module.exports = router;

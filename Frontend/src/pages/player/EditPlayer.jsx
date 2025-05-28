@@ -48,7 +48,7 @@ export default function EditPlayer() {
           isCapped: p.isCapped,
           bio: p.bio,
         });
-        setPreview(p.photoUrl);  // show existing photo
+        setPreview(p.playerPic);  // show existing photo
       } catch (err) {
         console.error("Failed to load player", err);
         toast.error("Could not load player data");
@@ -74,7 +74,7 @@ export default function EditPlayer() {
 
       await api.put(`/update-player/${id}`, formData); // 🔗 TODO: adjust endpoint
       toast.success("Player updated successfully!");
-      navigate(-1);
+      setTimeout(() => navigate(-1), 1000);
     } catch (err) {
       console.error("Failed to update player", err);
       toast.error(err.response?.data?.error || "Update failed");

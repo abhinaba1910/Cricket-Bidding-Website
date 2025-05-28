@@ -352,28 +352,30 @@ export default function CreateAuctionForm() {
       const formData = new FormData();
       formData.append('auctionName', data.auctionName);
       formData.append('shortName', data.shortName);
-      // formData.append('startDate', data.startDate);
-      const datePart = data.startDate.toISOString().split('T')[0];
-    const isoDateTime = `${datePart}T${data.startTime}`;
-    formData.append('startDate', new Date(isoDateTime).toISOString());
+  
+      // Properly construct date + time
+      const date = new Date(data.startDate);
+      const [hours, minutes] = data.startTime.split(':').map(Number);
+      date.setHours(hours);
+      date.setMinutes(minutes);
+      date.setSeconds(0);
+      date.setMilliseconds(0);
+      formData.append('startDate', date.toISOString());
+  
       formData.append('description', data.description);
       formData.append('selectedTeams', JSON.stringify(data.selectedTeams));
       formData.append('selectedPlayers', JSON.stringify(data.selectedPlayers));
-
+  
       if (data.auctionImage && data.auctionImage.length > 0) {
         formData.append('auctionImage', data.auctionImage[0]);
       }
-
-      for (let pair of formData.entries()) {
-        console.log(`${pair[0]}: ${pair[1]}`);
-      }
-
+  
       await api.post('/create-auction', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
-
+  
       setToast({ type: 'success', message: 'Auction Created!' });
       setCurrentStep(4);
       setTimeout(() => setToast(null), 3000);
@@ -386,6 +388,7 @@ export default function CreateAuctionForm() {
       setTimeout(() => setToast(null), 3000);
     }
   };
+  
 
   useEffect(() => {
     clearErrors();

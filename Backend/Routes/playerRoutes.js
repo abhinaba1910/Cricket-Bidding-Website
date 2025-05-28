@@ -110,4 +110,108 @@ router.get("/get-player", authMiddleware, async (req, res) => {
   }
 });
 
+
+
+
+// GET /get-player/:id
+router.get('/get-player/:id', authMiddleware, async (req, res) => {
+  try {
+    // Only allow admins and temp-admins to view specific player
+    if (req.user.role !== 'admin' && req.user.role !== 'temp-admin') {
+      return res.status(403).json({ error: 'Access denied. Only admins can view player details.' });
+    }
+
+    const player = await Player.findById(req.params.id);
+
+    if (!player) {
+      return res.status(404).json({ error: 'Player not found.' });
+    }
+
+    res.status(200).json(player);
+  } catch (err) {
+    console.error('Error fetching player:', err);
+    res.status(500).json({ error: 'Server error while fetching player.' });
+  }
+});
+
+
+router.put(
+  "/update-player/:id",
+  authMiddleware,
+  upload.single("photoFile"),
+  async (req, res) => {
+    try {
+      const playerId = req.params.id;
+
+      // Validate player existence
+      const player = await Player.findById(playerId);
+      if (!player) {
+        return res.status(404).json({ error: "Player not found" });
+      }
+
+      // Only allow the creator (admin or temp-admin) to update
+      if (player.createdBy.toString() !== req.user.id) {
+        return res.status(403).json({ error: "Unauthorized to edit this player" });
+      }
+
+      // Build update object
+      const {
+        name,
+        country,
+        dob,
+        role,
+        battingStyle,
+        bowlingStyle,
+        basePrice,
+        grade,
+        points,
+        availability,
+        playerId: customPlayerId,
+        matchesPlayed,
+        runs,
+        wickets,
+        strikeRate,
+        previousTeams,
+        isCapped,
+        bio,
+      } = req.body;
+
+      const updateFields = {
+        name,
+        country,
+        dob,
+        role,
+        battingStyle,
+        bowlingStyle,
+        basePrice,
+        grade,
+        points,
+        availability,
+        playerId: customPlayerId,
+        matchesPlayed,
+        runs,
+        wickets,
+        strikeRate,
+        previousTeams,
+        isCapped: isCapped === "true", // convert from string
+        bio,
+      };
+
+      // Handle new photo upload
+      if (req.file && req.file.path) {
+        updateFields.playerPic = req.file.path;
+      }
+
+      const updatedPlayer = await Player.findByIdAndUpdate(playerId, updateFields, {
+        new: true,
+      });
+
+      res.json(updatedPlayer);
+    } catch (err) {
+      console.error("Update player error:", err);
+      res.status(500).json({ error: "Server error while updating player" });
+    }
+  }
+);
+
 module.exports = router;

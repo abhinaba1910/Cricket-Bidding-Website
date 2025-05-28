@@ -57,7 +57,7 @@
 //   const playerOptions = filteredPlayers.map(player => ({
 //     value: player.id,
 //     label: player.name,
-//     imageUrl: player.imageUrl,
+//     playerPic: player.playerPic,
 //   }));
 
 //   // Filter by search query
@@ -186,8 +186,8 @@
 //                     onChange={() => togglePlayer(field, opt.value)}
 //                     style={styles.checkbox}
 //                   />
-//                   {opt.imageUrl ? (
-//                     <img src={opt.imageUrl} alt={opt.label} style={styles.playerImage} />
+//                   {opt.playerPic ? (
+//                     <img src={opt.playerPic} alt={opt.label} style={styles.playerImage} />
 //                   ) : (
 //                     <div style={{ ...styles.playerImage, backgroundColor: '#ccc' }} />
 //                   )}
@@ -271,8 +271,8 @@
 //                           .filter(opt => field.value.includes(opt.value))
 //                           .map(opt => (
 //                             <span key={opt.value} style={styles.badge}>
-//                               {opt.imageUrl ? (
-//                                 <img src={opt.imageUrl} alt={opt.label} style={{ ...styles.playerImage, width: 18, height: 18 }} />
+//                               {opt.playerPic ? (
+//                                 <img src={opt.playerPic} alt={opt.label} style={{ ...styles.playerImage, width: 18, height: 18 }} />
 //                               ) : (
 //                                 <div style={{ width: 18, height: 18, backgroundColor: '#ccc', borderRadius: '50%' }} />
 //                               )}
@@ -301,8 +301,8 @@
 //                         onChange={() => togglePlayer(field, opt.value)}
 //                         style={styles.checkbox}
 //                       />
-//                       {opt.imageUrl ? (
-//                         <img src={opt.imageUrl} alt={opt.label} style={styles.playerImage} />
+//                       {opt.playerPic ? (
+//                         <img src={opt.playerPic} alt={opt.label} style={styles.playerImage} />
 //                       ) : (
 //                         <div style={{ ...styles.playerImage, backgroundColor: '#ccc' }} />
 //                       )}
@@ -402,9 +402,10 @@ export default function AuctionStep3Players({ onSubmit, onBack, selectedTeamIds,
   const playerOptions = filteredPlayers.map(player => ({
     value: player._id,
     label: player.name,
-    imageUrl: player.imageUrl,
+    playerPic: player.playerPic,
   }));
 
+  console.log(playerOptions)
   const displayedOptions = playerOptions.filter(opt =>
     opt.label.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -477,8 +478,8 @@ export default function AuctionStep3Players({ onSubmit, onBack, selectedTeamIds,
                 onChange={() => togglePlayer(field, opt.value)}
                 style={styles.checkbox}
               />
-              {opt.imageUrl ? (
-                <img src={opt.imageUrl} alt={opt.label} style={styles.playerImage} />
+              {opt.playerPic ? (
+                <img src={opt.playerPic} alt={opt.label} style={styles.playerImage} />
               ) : (
                 <div style={{ ...styles.playerImage, backgroundColor: '#ccc' }} />
               )}
@@ -544,8 +545,8 @@ export default function AuctionStep3Players({ onSubmit, onBack, selectedTeamIds,
                     {field.value.length > 0
                       ? playerOptions.filter(opt => field.value.includes(opt.value)).map(opt => (
                         <span key={opt.value} style={styles.badge}>
-                          {opt.imageUrl ? (
-                            <img src={opt.imageUrl} alt={opt.label} style={{ width: 18, height: 18, borderRadius: '50%' }} />
+                          {opt.playerPic ? (
+                            <img src={opt.playerPic} alt={opt.label} style={{ width: 18, height: 18, borderRadius: '50%' }} />
                           ) : (
                             <div style={{ width: 18, height: 18, backgroundColor: '#ccc', borderRadius: '50%' }} />
                           )}
@@ -570,8 +571,8 @@ export default function AuctionStep3Players({ onSubmit, onBack, selectedTeamIds,
                         onChange={() => togglePlayer(field, opt.value)}
                         style={styles.checkbox}
                       />
-                      {opt.imageUrl ? (
-                        <img src={opt.imageUrl} alt={opt.label} style={styles.playerImage} />
+                      {opt.playerPic ? (
+                        <img src={opt.playerPic} alt={opt.label} style={styles.playerImage} />
                       ) : (
                         <div style={{ ...styles.playerImage, backgroundColor: '#ccc' }} />
                       )}

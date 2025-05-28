@@ -123,22 +123,46 @@ router.post("/login", async (req, res) => {
   }
 });
 
-router.get("/getInfo", AuthMiddleWare, async (req, res) => {
+router.get('/get-profile', AuthMiddleWare, async (req, res) => {
   try {
-    const userId = req.user.id;
-
-    const user = await Person.findById(userId).select("-password"); // exclude password
-
+    const user = await Person.findById(req.user.id).select('-password'); // Exclude password
     if (!user) {
-      return res.status(404).json({ error: "User not found." });
+      return res.status(404).json({ error: 'User not found.' });
+    }
+    res.status(200).json(user);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error while fetching profile.' });
+  }
+});
+
+// PUT /update-profile/:id
+router.put('/update-profile/:id', AuthMiddleWare, upload.single('avatar'), async (req, res) => {
+  try {
+    if (req.user.id !== req.params.id) {
+      return res.status(403).json({ error: 'Unauthorized profile update attempt.' });
     }
 
-    res.status(200).json({
-      message: "User fetched successfully.",
-      user,
-    });
+    const { name, email, password } = req.body;
+    const updates = {};
+
+    if (name) updates.username = name;
+    if (email) updates.email = email;
+    if (password) updates.password = password; // Will be hashed by schema's pre-save hook
+    if (req.file && req.file.path) {
+      updates.profilePic = req.file.path;
+    }
+
+    let user = await Person.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    Object.assign(user, updates);
+    await user.save(); // This triggers the pre-save hook for password hashing
+
+    const updatedUser = await Person.findById(req.params.id).select('-password');
+    res.status(200).json(updatedUser);
   } catch (err) {
-    res.status(500).json({ error: "Something went wrong." });
+    console.error('Update error:', err);
+    res.status(500).json({ error: 'Error updating profile.' });
   }
 });
 
