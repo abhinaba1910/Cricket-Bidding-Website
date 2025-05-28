@@ -352,7 +352,10 @@ export default function CreateAuctionForm() {
       const formData = new FormData();
       formData.append('auctionName', data.auctionName);
       formData.append('shortName', data.shortName);
-      formData.append('startDate', data.startDate);
+      // formData.append('startDate', data.startDate);
+      const datePart = data.startDate.toISOString().split('T')[0];
+    const isoDateTime = `${datePart}T${data.startTime}`;
+    formData.append('startDate', new Date(isoDateTime).toISOString());
       formData.append('description', data.description);
       formData.append('selectedTeams', JSON.stringify(data.selectedTeams));
       formData.append('selectedPlayers', JSON.stringify(data.selectedPlayers));
@@ -512,7 +515,7 @@ export default function CreateAuctionForm() {
           )}
         </div>
 
-        <div style={{ marginTop: 24, display: 'flex', justifyContent: 'space-between' }}>
+        {/* <div style={{ marginTop: 24, display: 'flex', justifyContent: 'space-between' }}>
           {currentStep > 1 && (
             <button
               type="button"
@@ -544,7 +547,7 @@ export default function CreateAuctionForm() {
           >
             {currentStep === 3 ? 'Create Auction' : 'Next'}
           </button>
-        </div>
+        </div> */}
 
         {toast && <Toast type={toast.type} message={toast.message} />}
       </form>

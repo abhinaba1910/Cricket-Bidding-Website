@@ -14,10 +14,16 @@ import TeamsInfo from "./pages/team/TeamsInfo";
 import PlayersInfo from "./pages/player/PlayersInfo";
 import AdminMyAuctionInfo from "./pages/auctions/AdminMyAuctionInfo";
 import AddTempAdmin from "./pages/adminPages/AddTempAdmin";
+import AdminProfilePage from "./pages/profile/AdminProfilePage";
+// import ViewPlayer from "./pages/player/ViewPlayer";
 
 import "./App.css";
 import SetPassword from "./pages/set-Password/SetPassword";
 import { Toaster } from "react-hot-toast";
+import ViewPlayer from "./pages/player/ViewPlayer";
+import EditPlayer from "./pages/player/EditPlayer";
+import ViewTeam from "./pages/team/ViewTeam";
+import EditTeam from "./pages/team/EditTeam";
 
 function ProtectedLayout({ isAuthenticated }) {
   if (!isAuthenticated) return <AuthPage />;
@@ -76,6 +82,14 @@ function App() {
           <Route path="/admins-my-auction-info" element={<AdminMyAuctionInfo />} />
           <Route path="/admin-teams-info" element={<TeamsInfo />} />
           <Route path="/admin-players-info" element={<PlayersInfo />} />
+          <Route path="/admin-profile" element={<AdminProfilePage />} />
+          <Route path="/admin/player/:id" element={<ViewPlayer />} />
+          <Route path="/admin/player/:id/edit" element={<EditPlayer />} />
+          <Route path="/admin/teams/:id" element={<ViewTeam />} />
+          <Route path="/admin/teams/:id/edit" element={<EditTeam />} />
+          {/* <Route path="/admin/teams/view" element={<ViewTeam />} /> */}
+          {/* <Route path="/admin/teams/edit" element={<EditTeam />} /> */}
+          
         </Route>
       </Routes>
     </Router>
