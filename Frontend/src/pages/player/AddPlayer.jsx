@@ -179,48 +179,69 @@ export default function AddPlayer() {
 
             {/* Role Section */}
             <section>
-              <h2 className="text-xl font-semibold mb-4">Player Type & Role</h2>
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-medium mb-1">Primary Role</label>
-                  <select
-                    {...register("role", { required: "Role is required" })}
-                    className="w-full border px-3 py-2 rounded"
-                  >
-                    <option value="">Select role...</option>
-                    <option value="Batsman">Batsman</option>
-                    <option value="Bowler">Bowler</option>
-                    <option value="All-Rounder">All-Rounder</option>
-                    <option value="Wicket-Keeper">Wicket-Keeper</option>
-                  </select>
-                  {errors.role && (
-                    <p className="text-red-600 text-sm mt-1">
-                      {errors.role.message}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block font-medium mb-1">
-                    Batting Style
-                  </label>
-                  <input
-                    {...register("battingStyle")}
-                    placeholder="e.g., Right-hand bat"
-                    className="w-full border px-3 py-2 rounded"
-                  />
-                </div>
-                <div>
-                  <label className="block font-medium mb-1">
-                    Bowling Style
-                  </label>
-                  <input
-                    {...register("bowlingStyle")}
-                    placeholder="e.g., Right-arm fast"
-                    className="w-full border px-3 py-2 rounded"
-                  />
-                </div>
-              </div>
-            </section>
+  <h2 className="text-xl font-semibold mb-4">Player Type & Role</h2>
+  <div className="grid sm:grid-cols-2 gap-4">
+    <div>
+      <label className="block font-medium mb-1">Primary Role</label>
+      <select
+        {...register("role", { required: "Role is required" })}
+        className="w-full border px-3 py-2 rounded"
+      >
+        <option value="">Select role...</option>
+        {["Batsman", "Bowler", "All-Rounder", "Wicket-Keeper"].map((role) => (
+          <option key={role} value={role}>
+            {role}
+          </option>
+        ))}
+      </select>
+      {errors.role && (
+        <p className="text-red-600 text-sm mt-1">{errors.role.message}</p>
+      )}
+    </div>
+
+    <div>
+      <label className="block font-medium mb-1">Batting Style</label>
+      <select
+        {...register("battingStyle")}
+        className="w-full border px-3 py-2 rounded"
+      >
+        <option value="">Select batting style...</option>
+        {["Right Handed Batsman", "Left Handed Batsman"].map((style) => (
+          <option key={style} value={style}>
+            {style}
+          </option>
+        ))}
+      </select>
+    </div>
+
+    <div>
+      <label className="block font-medium mb-1">Bowling Style</label>
+      <select
+        {...register("bowlingStyle")}
+        className="w-full border px-3 py-2 rounded"
+      >
+        <option value="">Select bowling style...</option>
+        {[
+          "Right Arm Fast",
+          "Left Arm Fast",
+          "Right Arm Medium",
+          "Left Arm Medium",
+          "Right Arm Off Break",
+          "Left Arm Orthodox",
+          "Right Arm Leg Break",
+          "Chinaman",
+          "Left Arm Fast Medium",
+          "Right Arm Fast Medium",
+        ].map((style) => (
+          <option key={style} value={style}>
+            {style}
+          </option>
+        ))}
+      </select>
+    </div>
+  </div>
+</section>
+
 
             {/* Auction/Bidding Details */}
             <section>

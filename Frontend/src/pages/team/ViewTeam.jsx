@@ -1,8 +1,7 @@
-// src/pages/ViewTeam.jsx
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FiChevronLeft } from "react-icons/fi";
-import api from "../../userManagement/Api"; 
+import api from "../../userManagement/Api";
 import toast from "react-hot-toast";
 
 export default function ViewTeam() {
@@ -14,12 +13,13 @@ export default function ViewTeam() {
   useEffect(() => {
     async function loadTeam() {
       try {
-        // 🔗 TODO: fetch team data from backend
-        // const res = await api.get(`/get-team/${id}`);
-        // setTeam(res.data);
+        const res = await api.get(`/get-team/${id}`);
+        setTeam(res.data);
       } catch (err) {
         console.error("Failed to load team:", err);
-        toast.error("Could not load team data");
+        const errorMsg =
+          err.response?.data?.error || "Could not load team data";
+        toast.error(errorMsg);
       } finally {
         setLoading(false);
       }
@@ -71,15 +71,19 @@ export default function ViewTeam() {
         {/* Details */}
         <div className="p-6 md:w-2/3 space-y-4">
           <h2 className="text-2xl font-bold text-gray-900">{team.teamName}</h2>
-          <p className="text-sm text-gray-600">ID: {team._id}</p>
+          {/* <p className="text-sm text-gray-600">ID: {team._id}</p> */}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <h4 className="text-sm font-semibold text-gray-700">Short Name</h4>
+              <h4 className="text-sm font-semibold text-gray-700">
+                Short Name
+              </h4>
               <p className="mt-1 text-gray-800">{team.shortName}</p>
             </div>
             <div>
-              <h4 className="text-sm font-semibold text-gray-700">Purse Amount</h4>
+              <h4 className="text-sm font-semibold text-gray-700">
+                Purse Amount
+              </h4>
               <p className="mt-1 text-gray-800">
                 ₹{Number(team.purse).toLocaleString()}
               </p>
@@ -88,14 +92,15 @@ export default function ViewTeam() {
 
           {team.description && (
             <div>
-              <h4 className="text-sm font-semibold text-gray-700">Description</h4>
+              <h4 className="text-sm font-semibold text-gray-700">
+                Description
+              </h4>
               <p className="mt-1 text-gray-800 whitespace-pre-line">
                 {team.description}
               </p>
             </div>
           )}
 
-          {/* Example additional data */}
           {team.founded && (
             <div>
               <h4 className="text-sm font-semibold text-gray-700">Founded</h4>
@@ -104,7 +109,7 @@ export default function ViewTeam() {
           )}
 
           <button
-            onClick={() => navigate(`/teams/${id}/edit`)}
+            onClick={() => navigate(`/admin/teams/${team._id}/edit`)}
             className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
           >
             Edit Team
@@ -114,3 +119,4 @@ export default function ViewTeam() {
     </div>
   );
 }
+

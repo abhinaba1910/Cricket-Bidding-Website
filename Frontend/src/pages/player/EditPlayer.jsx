@@ -31,7 +31,7 @@ export default function EditPlayer() {
         reset({
           name: p.name,
           country: p.country,
-          dob: p.dob?.split("T")[0],       // format for <input type=date>
+          dob: p.dob?.split("T")[0], // format for <input type=date>
           role: p.role,
           battingStyle: p.battingStyle,
           bowlingStyle: p.bowlingStyle,
@@ -48,7 +48,7 @@ export default function EditPlayer() {
           isCapped: p.isCapped,
           bio: p.bio,
         });
-        setPreview(p.playerPic);  // show existing photo
+        setPreview(p.playerPic); // show existing photo
       } catch (err) {
         console.error("Failed to load player", err);
         toast.error("Could not load player data");
@@ -105,9 +105,7 @@ export default function EditPlayer() {
           >
             <FiChevronLeft className="w-6 h-6 text-gray-700" />
           </button>
-          <h1 className="ml-4 text-2xl font-bold text-gray-800">
-            Edit Player
-          </h1>
+          <h1 className="ml-4 text-2xl font-bold text-gray-800">Edit Player</h1>
         </div>
 
         {/* Form */}
@@ -236,21 +234,62 @@ export default function EditPlayer() {
                   <label className="block font-medium mb-1">
                     Batting Style
                   </label>
-                  <input
-                    {...register("battingStyle")}
-                    placeholder="e.g., Right-hand bat"
+                  <select
+                    {...register("battingStyle", {
+                      required: "Batting style is required",
+                    })}
                     className="w-full border px-3 py-2 rounded"
-                  />
+                  >
+                    <option value="">Select batting style...</option>
+                    <option value="Right Handed Batsman">
+                      Right Handed Batsman
+                    </option>
+                    <option value="Left Handed Batsman">
+                      Left Handed Batsman
+                    </option>
+                  </select>
+                  {errors.battingStyle && (
+                    <p className="text-red-600 text-sm mt-1">
+                      {errors.battingStyle.message}
+                    </p>
+                  )}
                 </div>
+
                 <div>
                   <label className="block font-medium mb-1">
                     Bowling Style
                   </label>
-                  <input
-                    {...register("bowlingStyle")}
-                    placeholder="e.g., Right-arm fast"
+                  <select
+                    {...register("bowlingStyle", {
+                      required: "Bowling style is required",
+                    })}
                     className="w-full border px-3 py-2 rounded"
-                  />
+                  >
+                    <option value="">Select bowling style...</option>
+                    <option value="Right Arm Fast">Right Arm Fast</option>
+                    <option value="Left Arm Fast">Left Arm Fast</option>
+                    <option value="Right Arm Medium">Right Arm Medium</option>
+                    <option value="Left Arm Medium">Left Arm Medium</option>
+                    <option value="Right Arm Offbreak">
+                      Right Arm Offbreak
+                    </option>
+                    <option value="Left Arm Orthodox">Left Arm Orthodox</option>
+                    <option value="Right Arm Legbreak">
+                      Right Arm Legbreak
+                    </option>
+                    <option value="Left Arm Chinaman">Left Arm Chinaman</option>
+                    <option value="Right Arm Fast Medium">
+                      Right Arm Fast Medium
+                    </option>
+                    <option value="Left Arm Fast Medium">
+                      Left Arm Fast Medium
+                    </option>
+                  </select>
+                  {errors.bowlingStyle && (
+                    <p className="text-red-600 text-sm mt-1">
+                      {errors.bowlingStyle.message}
+                    </p>
+                  )}
                 </div>
               </div>
             </section>
@@ -291,9 +330,7 @@ export default function EditPlayer() {
 
             {/* Performance */}
             <section>
-              <h2 className="text-xl font-semibold mb-4">
-                Performance Stats
-              </h2>
+              <h2 className="text-xl font-semibold mb-4">Performance Stats</h2>
               <div className="grid sm:grid-cols-2 gap-4">
                 <input
                   {...register("matchesPlayed", { valueAsNumber: true })}

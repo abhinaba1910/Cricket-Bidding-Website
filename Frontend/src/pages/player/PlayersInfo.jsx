@@ -3,15 +3,22 @@ import { FiSearch, FiEye, FiEdit, FiPlus } from "react-icons/fi";
 import MobileStickyNav from "../../components/layout/MobileStickyNav";
 import api from "../../userManagement/Api";
 
-const allRoles = [
-  "Batsman (Right-hand bat)",
-  "Batsman (Left-hand bat)",
-  "Bowler (Right-arm fast)",
-  "Bowler (Left-arm fast)",
-  "Bowler (Right-arm medium)",
-  "Bowler (Left-arm medium)",
-  "All-Rounder",
-  "Wicket-Keeper",
+// Filters that match actual backend structure
+const allRoles = ["Batsman", "Bowler", "All-Rounder", "Wicket-Keeper"];
+
+const allBattingStyles = ["Right Handed Batsman", "Left Handed Batsman"];
+
+const allBowlingStyles = [
+  "Right Arm Fast",
+  "Left Arm Fast",
+  "Right Arm Medium",
+  "Left Arm Medium",
+  "Right Arm Off Break",
+  "Left Arm Orthodox",
+  "Right Arm Leg Break",
+  "Chinaman",
+  "Left Arm Fast Medium",
+  "Right Arm Fast Medium",
 ];
 
 const allRanks = ["A+", "A", "B", "C"];
@@ -19,6 +26,8 @@ const allRanks = ["A+", "A", "B", "C"];
 export default function PlayersInfo() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
+  const [battingFilter, setBattingFilter] = useState("");
+  const [bowlingFilter, setBowlingFilter] = useState("");
   const [rankFilter, setRankFilter] = useState("");
   const [players, setPlayers] = useState([]);
 
@@ -41,20 +50,27 @@ export default function PlayersInfo() {
       const matchesSearch =
         p.name.toLowerCase().includes(term) ||
         p.country.toLowerCase().includes(term);
-      const matchesRole =
-        !roleFilter || p.role.toLowerCase().includes(roleFilter.toLowerCase());
+
+      const matchesRole = !roleFilter || p.role === roleFilter;
+      const matchesBatting = !battingFilter || p.battingStyle === battingFilter;
+      const matchesBowling = !bowlingFilter || p.bowlingStyle === bowlingFilter;
       const matchesRank = !rankFilter || p.grade === rankFilter;
-      return matchesSearch && matchesRole && matchesRank;
+
+      return (
+        matchesSearch &&
+        matchesRole &&
+        matchesBatting &&
+        matchesBowling &&
+        matchesRank
+      );
     });
-  }, [players, search, roleFilter, rankFilter]);
+  }, [players, search, roleFilter, battingFilter, bowlingFilter, rankFilter]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8 max-md:px-0 max-md:pb-14">
-      {/* Header + Filters */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
         <h1 className="text-2xl font-bold text-gray-900">Players</h1>
         <div className="flex-1 md:flex-none flex flex-wrap gap-2 w-full md:w-auto">
-          {/* Search */}
           <div className="relative flex-1 md:flex-none">
             <FiSearch className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-400" />
             <input
@@ -65,20 +81,46 @@ export default function PlayersInfo() {
               className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring"
             />
           </div>
-          {/* Role Filter */}
+
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
             className="border rounded-lg px-3 py-2 focus:outline-none"
           >
-            <option value="">All Types</option>
+            <option value="">All Roles</option>
             {allRoles.map((r) => (
-              <option key={r} value={r.split(" ")[0]}>
+              <option key={r} value={r}>
                 {r}
               </option>
             ))}
           </select>
-          {/* Rank Filter */}
+
+          <select
+            value={battingFilter}
+            onChange={(e) => setBattingFilter(e.target.value)}
+            className="border rounded-lg px-3 py-2 focus:outline-none"
+          >
+            <option value="">All Batting Styles</option>
+            {allBattingStyles.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={bowlingFilter}
+            onChange={(e) => setBowlingFilter(e.target.value)}
+            className="border rounded-lg px-3 py-2 focus:outline-none"
+          >
+            <option value="">All Bowling Styles</option>
+            {allBowlingStyles.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
+
           <select
             value={rankFilter}
             onChange={(e) => setRankFilter(e.target.value)}
@@ -91,7 +133,7 @@ export default function PlayersInfo() {
               </option>
             ))}
           </select>
-          {/* Add Player */}
+
           <a
             href="/add-players"
             className="inline-flex items-center px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition"
@@ -141,9 +183,8 @@ export default function PlayersInfo() {
                   >
                     <FiEye className="mr-1" /> View
                   </a>
-
                   <a
-                    href={`admin/player/${p._id}/edit`}
+                    href={`/admin/player/${p._id}/edit`}
                     className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition"
                   >
                     <FiEdit className="mr-1" /> Edit
@@ -176,7 +217,7 @@ export default function PlayersInfo() {
             {filtered.map((p) => (
               <tr
                 key={p._id}
-                className="odd:bg-gray-50 even:bg-white hover:bg-gray-100 transition rounded-lg"
+                className="hover:bg-gray-100 transition rounded-lg"
               >
                 <td className="px-3 py-4">
                   <p className="font-medium text-gray-900">{p.name}</p>

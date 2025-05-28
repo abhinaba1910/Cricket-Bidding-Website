@@ -70,7 +70,6 @@ router.post(
   }
 );
 
-// Get all teams for logged-in user
 router.get("/get-teams", authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== "admin" && req.user.role !== "temp-admin") {
@@ -86,5 +85,53 @@ router.get("/get-teams", authMiddleware, async (req, res) => {
     res.status(500).json({ error: "Failed to fetch teams." });
   }
 });
+
+
+router.get("/get-team/:id", authMiddleware, async (req, res) => {
+  try {
+    const team = await Team.findById(req.params.id).lean();
+
+    if (!team) {
+      return res.status(404).json({ error: "Team not found" });
+    }
+
+    if (team.createdBy.toString() !== req.user.id) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    res.json(team);
+  } catch (error) {
+    console.error("Error fetching team:", error);
+    res.status(500).json({ error: "Server error while fetching team" });
+  }
+});
+
+router.put('/update-team/:id', authMiddleware, upload.single('logoFile'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { teamName, shortName, purse } = req.body;
+    const userId = req.user.id;
+
+    const team = await Team.findById(id);
+    if (!team) return res.status(404).json({ error: 'Team not found' });
+    if (team.createdBy.toString() !== userId)
+      return res.status(403).json({ error: 'Unauthorized to update this team' });
+
+    team.teamName = teamName || team.teamName;
+    team.shortName = shortName || team.shortName;
+    team.purse = purse || team.purse;
+
+    if (req.file && req.file.path) {
+      team.logoUrl = req.file.path;
+    }
+
+    await team.save();
+    res.json({ message: 'Team updated successfully', team });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update team' });
+  }
+});
+
 
 module.exports = router;

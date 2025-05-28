@@ -1,9 +1,8 @@
-// src/pages/CreateTeam.jsx
 import React, { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { FiChevronLeft } from "react-icons/fi";
 import api from "../../userManagement/Api";
-import toast from "react-hot-toast"; // 👈 import toast
+import toast from "react-hot-toast";
 
 export default function CreateTeam() {
   const {
@@ -11,10 +10,13 @@ export default function CreateTeam() {
     control,
     handleSubmit,
     formState: { errors },
+    reset,
   } = useForm();
   const [preview, setPreview] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const onSubmit = async (data) => {
+    setLoading(true);
     try {
       const formData = new FormData();
       formData.append("teamName", data.teamName);
@@ -28,11 +30,17 @@ export default function CreateTeam() {
 
       console.log("Team created:", response.data);
       toast.success("Team created successfully!");
+
+      // Reset form and preview image
+      reset();
+      setPreview(null);
     } catch (err) {
       console.error("Error creating team:", err.response?.data || err.message);
       const message =
         err.response?.data?.error || "Failed to create team. Try again.";
       toast.error(message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -166,9 +174,12 @@ export default function CreateTeam() {
             <div className="text-right">
               <button
                 type="submit"
-                className="px-6 py-2 bg-teal-600 text-white rounded hover:bg-teal-700"
+                disabled={loading}
+                className={`px-6 py-2 rounded text-white ${
+                  loading ? "bg-teal-400 cursor-not-allowed" : "bg-teal-600 hover:bg-teal-700"
+                }`}
               >
-                Create Team
+                {loading ? "Creating..." : "Create Team"}
               </button>
             </div>
           </form>

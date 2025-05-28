@@ -140,16 +140,21 @@ router.get('/get-all-auctions', AuthMiddleWare, async (req, res) => {
       const teamCount = auction.selectedTeams.length;
 
       const auctionDate = new Date(auction.startDate);
-      const auctionDateOnly = new Date(auctionDate.toDateString());
-      const nowDateOnly = new Date(now.toDateString());
 
       let status = '';
-      if (auctionDateOnly > nowDateOnly) {
+      if (auctionDate > now) {
         status = 'upcoming';
-      } else if (auctionDateOnly.getTime() === nowDateOnly.getTime()) {
-        status = 'live';
       } else {
-        status = 'completed';
+        // Assuming each auction lasts for a few hours (e.g. 3 hours),
+        // you can set a duration and mark it as 'live' during that window.
+        const liveDurationMs = 3 * 60 * 60 * 1000; // 3 hours in ms
+        const endTime = new Date(auctionDate.getTime() + liveDurationMs);
+
+        if (now >= auctionDate && now <= endTime) {
+          status = 'live';
+        } else {
+          status = 'completed';
+        }
       }
 
       return {
@@ -160,7 +165,6 @@ router.get('/get-all-auctions', AuthMiddleWare, async (req, res) => {
         time: auctionDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         players: playerCount,
         teams: teamCount,
-        // joinCode: auction.shortName,
         status
       };
     });
@@ -171,6 +175,7 @@ router.get('/get-all-auctions', AuthMiddleWare, async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch auctions.' });
   }
 });
+
 
 
 module.exports = router;

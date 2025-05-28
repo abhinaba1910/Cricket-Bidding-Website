@@ -100,7 +100,7 @@ export default function TeamsInfo() {
                     {team.teamName}
                   </h3>
                   <p className="text-sm text-gray-500 text-center mb-4">
-                    ID: {team._id}
+                    {/* ID: {team._id} */}
                   </p>
                   <div className="text-sm text-gray-700 space-y-1 flex-1">
                     <p>
