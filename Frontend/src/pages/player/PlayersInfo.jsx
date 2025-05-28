@@ -328,10 +328,10 @@ export default function PlayersInfo() {
                 <td className="px-4 py-2">{p.country}</td>
                 <td className="px-4 py-2">₹{p.basePrice?.toLocaleString() || 0}</td>
                 <td className="px-4 py-2 space-x-2">
-                  <a href={`/players/${p._id}`} className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-800 rounded hover:bg-gray-200 transition">
+                  <a href={`/admin/player/${players._id}`} className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-800 rounded hover:bg-gray-200 transition">
                     <FiEye className="mr-1"/> View
                   </a>
-                  <a href={`/players/${p._id}/edit`} className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition">
+                  <a href={`admin/player/${p._id}/edit`} className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition">
                     <FiEdit className="mr-1"/> Edit
                   </a>
                 </td>

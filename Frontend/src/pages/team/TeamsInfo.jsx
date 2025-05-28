@@ -113,13 +113,13 @@ export default function TeamsInfo() {
                   </div>
                   <div className="mt-4 flex gap-2">
                     <a
-                      href={`/teams/${team._id}`}
+                      href={`/admin/teams/${team._id}`}
                       className="flex-1 inline-flex items-center justify-center px-3 py-2 bg-gray-100 text-gray-800 rounded hover:bg-gray-200 transition"
                     >
                       <FiEye className="mr-1" /> View
                     </a>
                     <a
-                      href={`/teams/${team._id}/edit`}
+                      href={`/admin/teams/${team._id}/edit`}
                       className="flex-1 inline-flex items-center justify-center px-3 py-2 bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition"
                     >
                       <FiEdit className="mr-1" /> Edit

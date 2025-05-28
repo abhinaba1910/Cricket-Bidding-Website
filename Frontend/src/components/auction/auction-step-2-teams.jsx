@@ -591,7 +591,7 @@ export default function AuctionStep2Teams({ onNext, onBack, allTeams }) {
         )}
       </div>
 
-      {/* <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
         <button
           type="button"
           onClick={onBack}
@@ -623,7 +623,7 @@ export default function AuctionStep2Teams({ onNext, onBack, allTeams }) {
         >
           Save and Next →
         </button>
-      </div> */}
+      </div>
     </div>
   );
 }
