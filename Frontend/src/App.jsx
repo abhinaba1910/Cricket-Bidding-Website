@@ -25,6 +25,7 @@ import EditPlayer from "./pages/player/EditPlayer";
 import ViewTeam from "./pages/team/ViewTeam";
 import EditTeam from "./pages/team/EditTeam";
 import AutoLogout from "./AutoLogout";
+import AdminBiddingDashboard from "./pages/bidding/AdminBiddingDashboard";
 
 function ProtectedLayout({ isAuthenticated }) {
   if (!isAuthenticated) return <AuthPage />;
@@ -89,8 +90,7 @@ function App() {
           <Route path="/admin/player/:id/edit" element={<EditPlayer />} />
           <Route path="/admin/teams/:id" element={<ViewTeam />} />
           <Route path="/admin/teams/:id/edit" element={<EditTeam />} />
-          {/* <Route path="/admin/teams/view" element={<ViewTeam />} /> */}
-          {/* <Route path="/admin/teams/edit" element={<EditTeam />} /> */}
+          <Route path="/admin/admin-bidding-dashboard" element={<AdminBiddingDashboard />} />
           
         </Route>
       </Routes>
