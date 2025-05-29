@@ -121,7 +121,7 @@ export default function AuctionsInfo() {
                     <h3 className="text-lg font-medium text-gray-900">
                       {a.name}
                     </h3>
-                    <p className="text-xs text-gray-500">ID: {a.id}</p>
+                    {/* <p className="text-xs text-gray-500">ID: {a.id}</p> */}
                   </div>
                   <span
                     className={`px-2 py-1 text-xs font-semibold rounded ${

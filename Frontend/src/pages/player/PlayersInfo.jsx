@@ -149,7 +149,7 @@ export default function PlayersInfo() {
           <thead className="bg-gray-100">
             <tr>
               <th className="px-4 py-3">Photo</th>
-              <th className="px-4 py-3">ID</th>
+              {/* <th className="px-4 py-3">ID</th> */}
               <th className="px-4 py-3">Name</th>
               <th className="px-4 py-3">Rank</th>
               <th className="px-4 py-3">Role</th>
@@ -168,8 +168,8 @@ export default function PlayersInfo() {
                     className="w-10 h-10 rounded-full"
                   />
                 </td>
-                <td className="px-4 py-2 font-medium">{p.playerId || p._id}</td>
-                <td className="px-4 py-2">{p.name}</td>
+                {/* <td className="px-4 py-2 font-medium">{p.playerId || p._id}</td> */}
+                <td className="px-4 py-2">{p.name} {p.playerId}</td>
                 <td className="px-4 py-2">{p.grade || "—"}</td>
                 <td className="px-4 py-2">{p.role}</td>
                 <td className="px-4 py-2">{p.country}</td>

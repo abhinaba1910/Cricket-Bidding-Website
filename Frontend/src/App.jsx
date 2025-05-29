@@ -24,6 +24,7 @@ import ViewPlayer from "./pages/player/ViewPlayer";
 import EditPlayer from "./pages/player/EditPlayer";
 import ViewTeam from "./pages/team/ViewTeam";
 import EditTeam from "./pages/team/EditTeam";
+import AutoLogout from "./AutoLogout";
 
 function ProtectedLayout({ isAuthenticated }) {
   if (!isAuthenticated) return <AuthPage />;
@@ -66,6 +67,7 @@ function App() {
   return (
     <Router>
       <Toaster position="top-right" />
+      <AutoLogout/>
       <Routes>
         <Route
           path="/"

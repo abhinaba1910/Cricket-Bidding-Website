@@ -244,25 +244,6 @@
 
 // export default Dashboard;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import React, { useState, useEffect } from "react";
 import { Users, TrendingUp, Briefcase, Clock, PlusCircle } from "lucide-react";
 import Card, { CardContent, CardHeader } from "../components/ui/Card";
@@ -334,17 +315,18 @@ const Dashboard = () => {
     <div className="space-y-6 max-md:pb-14">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        {isAdmin && (
-          <Button
-            variant="primary"
-            leftIcon={<PlusCircle className="h-4 w-4" />}
-            onClick={() => (window.location.href = "/add-temp-admin")}
-          >
-            Add Temp Admin
-          </Button>
-        )}
+
         {(isAdmin || isTempAdmin) && (
           <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 max-md:hidden">
+            {isAdmin && (
+              <Button
+                variant="primary"
+                leftIcon={<PlusCircle className="h-4 w-4" />}
+                onClick={() => (window.location.href = "/add-temp-admin")}
+              >
+                Add Temp Admin
+              </Button>
+            )}
             <Button
               variant="primary"
               leftIcon={<PlusCircle className="h-4 w-4" />}
