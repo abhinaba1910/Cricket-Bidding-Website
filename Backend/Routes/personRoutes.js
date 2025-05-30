@@ -1,16 +1,3 @@
-// const express = require("express");
-// const router = express.Router();
-// const Person = require("../Models/person");
-// const jwt = require("jsonwebtoken");
-// const AuthMiddleWare = require("../Auth/Authentication");
-// const multer = require("multer");
-// const { storage } = require("../Utils/cloudinary");
-// const upload = multer({ storage });
-// const crypto = require("crypto");
-// const nodemailer = require("nodemailer");
-
-// const JWT_SECRET = process.env.JWT_SECRET;
-require("dotenv").config(); // ← if you haven't already put this in your main app entry
 const express = require("express");
 const router = express.Router();
 const Person = require("../Models/person");
@@ -24,6 +11,7 @@ const upload = multer({ storage }); // ← create the multer instance
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 
+require("dotenv").config(); 
 const JWT_SECRET = process.env.JWT_SECRET;
 router.post("/register", upload.single("profilePic"), async (req, res) => {
   try {
