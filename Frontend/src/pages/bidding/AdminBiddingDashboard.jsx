@@ -1,7 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function AdminBiddingDashboard() {
+  const navigate = useNavigate();
+  const location = useLocation();                       // <— import useLocation
+  const incoming = location.state?.selectedPlayers || [];
+
   // --- sample data ---
   const sampleAuction = {
     lastSold:      { name: 'N. Sciver-Brunt', price: '5 CR', team: 'Mumbai' },
@@ -23,25 +28,45 @@ export default function AdminBiddingDashboard() {
   };
 
   // --- local state & handlers ---
-  const [status, setStatus] = useState('live');
-  const [showEdit, setShowEdit] = useState(false);
-  const [bidAmount, setBidAmount] = useState(sampleAuction.currentBid.amount);
-  const [fullScreen, setFullScreen] = useState(false);
+  
+  const [status, setStatus]             = useState('live');
+  const [showEdit, setShowEdit]         = useState(false);
+  const [bidAmount, setBidAmount]       = useState(sampleAuction.currentBid.amount);
+  const [fullScreen, setFullScreen]     = useState(false);
+  const [selectionMode, setSelectionMode] = useState('automatic');
+  const [role, setRole]                 = useState('Batsman');
+  
+
+  // ** NEW EFFECT ** watch for incoming picks
+  useEffect(() => {
+    if (incoming.length > 0) {
+      setSelectionMode('manual');
+    }
+  }, [incoming]);
 
   const toggleFullScreen   = () => setFullScreen(fs => !fs);
   const onStopBidding      = () => setStatus('paused');
-  const onResumeBidding    = () => setStatus('live');
+  // const onResumeBidding    = () => setStatus('live');
   const onSell             = () => setStatus('selling');
   const onMoveToUnsell     = () => setStatus('live');
-  const onPauseAuction     = onStopBidding;
+
+  // const onPauseAuction     = onStopBidding;
   const onEditBid          = () => setShowEdit(true);
   const onApplyBid         = () => setShowEdit(false);
   const onResetBid         = () => {
     setBidAmount(sampleAuction.currentBid.amount);
     setShowEdit(false);
   };
+  // Toggle between live and paused
+const togglePause = () => {
+  setStatus(prev => prev === 'live' ? 'paused' : 'live');
+};
 
-  // --- container classes toggle full-screen vs normal ---
+
+  const handleManualSelect = () => {
+    navigate('/admin/admin-manual-player-selection');
+  };
+
   const containerClasses = [
     ' p-4 text-white bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900',
     fullScreen
@@ -50,12 +75,12 @@ export default function AdminBiddingDashboard() {
   ].join(' ');
 
   return (
-    <div className={containerClasses+ " pt-2 md:pt-4"}>
+    <div className={containerClasses + " pt-2 md:pt-4"}>
       {/* Full-screen toggle */}
       <div className="flex justify-end mb-3">
         <button
           onClick={toggleFullScreen}
-          className="px-3 py-1 bg-black bg-opacity-50 rounded hover:bg-opacity-75 text-xs sm:text-sm"
+          className="px-3 py-1 bg-black bg-opacity-50 rounded-full hover:bg-opacity-75 text-xs sm:text-sm transition-all duration-200"
         >
           {fullScreen ? 'Exit Full Screen' : 'Full Screen'}
         </button>
@@ -68,190 +93,346 @@ export default function AdminBiddingDashboard() {
           <div>
             {[['Last Sold', sampleAuction.lastSold], ['Most Expensive', sampleAuction.mostExpensive]].map(
                 ([title, info]) => (
-                    <div key={title} className="bg-white bg-opacity-10 rounded p-3 mt-2 text-sm">
-                  <h4 className="uppercase text-xs font-medium">{title}</h4>
-                  <p className="font-semibold text-sm">{info.name}</p>
-                  <p className="text-xs">{info.price} — {info.team}</p>
-                </div>
-              )
+                    <motion.div 
+                      key={title} 
+                      className="bg-gradient-to-r from-indigo-900/50 to-blue-800/50 rounded-xl p-3 mt-2 text-sm shadow-lg"
+                      whileHover={{ scale: 1.02 }}
+                      transition={{ type: "spring", stiffness: 300 }}
+                    >
+                      <h4 className="uppercase text-xs font-medium tracking-wider">{title}</h4>
+                      <p className="font-semibold text-sm mt-1">{info.name}</p>
+                      <p className="text-xs opacity-80">{info.price} — {info.team}</p>
+                    </motion.div>
+                  )
             )}
           </div>
 
           {/* Bottom item only on desktop */}
-          <div className="bg-white bg-opacity-10 rounded-lg p-4 text-center">
+          <motion.div 
+            className="bg-gradient-to-br from-indigo-800 to-blue-700 rounded-xl p-4 text-center shadow-xl"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
             <h2 className="font-bold text-lg sm:text-xl">{sampleAuction.currentLot.name}</h2>
-            <p className="text-sm">{sampleAuction.currentLot.role}</p>
-            <p className="mt-1 text-xs">Bat: {sampleAuction.currentLot.batting}</p>
-            <p className="text-xs">Ball: {sampleAuction.currentLot.bowling}</p>
-            <p className="mt-2 text-base font-semibold">
+            <p className="text-sm bg-blue-600/30 inline-block px-2 py-1 rounded-full mt-1">
+              {sampleAuction.currentLot.role}
+            </p>
+            <div className="mt-3 flex justify-center gap-4">
+              <div>
+                <span className="text-xs opacity-75">Bat</span>
+                <p className="text-sm">{sampleAuction.currentLot.batting}</p>
+              </div>
+              <div>
+                <span className="text-xs opacity-75">Ball</span>
+                <p className="text-sm">{sampleAuction.currentLot.bowling}</p>
+              </div>
+            </div>
+            <p className="mt-3 text-base font-semibold bg-blue-900/50 py-1 rounded-lg">
               Base Price: {sampleAuction.currentLot.basePrice}
             </p>
-          </div>
+          </motion.div>
         </div>
 
         {/* === Center Section === */}
         <div className="md:col-span-2 flex flex-col items-center space-y-4">
           {/* Top Buttons */}
           <div className="flex flex-wrap gap-2 justify-center">
-            <button className="px-3 py-2 bg-blue-500 rounded hover:bg-blue-600 text-xs sm:text-sm">
-              Player List
-            </button>
-            <button className="px-3 py-2 bg-blue-500 rounded hover:bg-blue-600 text-xs sm:text-sm">
-              Teams
-            </button>
-          </div>
+  <motion.button 
+    onClick={() => navigate('/bidding/players-list')}
+    className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-blue-500 rounded-xl hover:from-indigo-700 hover:to-blue-600 text-xs sm:text-sm shadow-md"
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.95 }}
+  >
+    Player List
+  </motion.button>
+
+  <motion.button 
+    onClick={() => navigate('/admin/bidding-teams-list')}
+    className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-blue-500 rounded-xl hover:from-indigo-700 hover:to-blue-600 text-xs sm:text-sm shadow-md"
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.95 }}
+  >
+    Teams
+  </motion.button>
+  <motion.button
+  onClick={togglePause}
+  className={`w-24 rounded-xl py-2 text-xs sm:text-sm shadow-md transition md:hidden ${
+    status === 'live'
+      ? 'bg-amber-500 hover:bg-amber-600 text-white md:hidden'
+      : 'bg-green-500 hover:bg-green-600 text-white md:hidden'
+  }`}
+  whileHover={{ scale: 1.02 }}
+  whileTap={{ scale: 0.98 }}
+>
+  {status === 'live' ? 'Pause Auction' : 'Resume Auction'}
+</motion.button>
+  
+</div>
+
           <div className="flex flex-wrap gap-2 justify-center">
-            <button
+            
+            <motion.button
               onClick={onEditBid}
-              className="px-3 py-2 bg-blue-500 rounded hover:bg-blue-600 text-xs sm:text-sm"
+              className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-blue-500 rounded-xl hover:from-indigo-700 hover:to-blue-600 text-xs sm:text-sm shadow-md"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
               Edit Bid
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               onClick={onResetBid}
-              className="px-3 py-2 bg-red-500 rounded hover:bg-red-600 text-xs sm:text-sm"
+              className="px-4 py-2 bg-gradient-to-r from-red-600 to-orange-500 rounded-xl hover:from-red-700 hover:to-orange-600 text-xs sm:text-sm shadow-md"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
               Reset Bid
-            </button>
+            </motion.button>
           </div>
 
           {/* Avatar & Current Bid */}
-          <div className="bg-white bg-opacity-10 rounded-lg p-4 text-center w-full max-w-md">
-            <div className="mx-auto mb-4 rounded-full bg-gray-700 w-24 h-24 sm:w-32 sm:h-32" />
+          <motion.div 
+            className="bg-gradient-to-br from-indigo-800/50 to-blue-700/50 rounded-xl p-6 text-center w-full max-w-md shadow-xl"
+            initial={{ scale: 0.95 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", stiffness: 300 }}
+          >
+            <div className="mx-auto mb-4 rounded-full bg-gray-700 w-24 h-24 sm:w-32 sm:h-32 flex items-center justify-center">
+              <span className="text-4xl">👤</span>
+            </div>
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="inline-block rounded-lg bg-white px-5 py-3 font-bold text-xl sm:text-2xl text-black"
+              transition={{ delay: 0.3, type: "spring" }}
+              className="inline-block rounded-xl bg-gradient-to-r from-amber-500 to-yellow-300 px-6 py-3 font-bold text-xl sm:text-2xl text-black shadow-lg"
             >
               {bidAmount}
             </motion.div>
-          </div>
+          </motion.div>
 
           {/* MOBILE ONLY: Player Details and Bid Team Info side-by-side */}
           <div className="md:hidden w-full max-w-md grid grid-cols-2 gap-3">
             {/* Player Details Card */}
-            <div className="bg-white bg-opacity-10 rounded-lg p-3 text-center">
+            <div className="bg-gradient-to-r from-indigo-900/50 to-blue-800/50 rounded-xl p-3 text-center">
               <h2 className="font-bold text-sm truncate">{sampleAuction.currentLot.name}</h2>
-              <p className="text-xs">{sampleAuction.currentLot.role}</p>
-              <p className="mt-1 text-[10px]">Bat: {sampleAuction.currentLot.batting}</p>
-              <p className="text-[10px]">Ball: {sampleAuction.currentLot.bowling}</p>
-              <p className="mt-1 text-xs font-semibold">
+              <p className="text-xs bg-blue-600/30 inline-block px-2 py-0.5 rounded-full">
+                {sampleAuction.currentLot.role}
+              </p>
+              <p className="mt-1 text-[10px] opacity-75">Bat: {sampleAuction.currentLot.batting}</p>
+              <p className="text-[10px] opacity-75">Ball: {sampleAuction.currentLot.bowling}</p>
+              <p className="mt-1 text-xs font-semibold bg-blue-900/30 py-0.5 rounded">
                 Base: {sampleAuction.currentLot.basePrice}
               </p>
             </div>
             
             {/* Bid Team Info Card */}
-            <div className="bg-white bg-opacity-10 rounded-lg p-3 text-center flex flex-col justify-center">
-              <img
-                src={sampleAuction.currentBid.teamLogo}
-                alt="team logo"
-                className="mx-auto mb-1 h-8"
-              />
-              <p className="text-[10px]">Bid By</p>
+            <div className="bg-gradient-to-r from-indigo-900/50 to-blue-800/50 rounded-xl p-3 text-center flex flex-col justify-center">
+              <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 mx-auto" />
+              <p className="text-[10px] opacity-75 mt-1">Bid By</p>
               <h3 className="text-xs font-semibold truncate">
                 {sampleAuction.currentBid.team}
               </h3>
             </div>
           </div>
-          
-          <button
+          <div className='flex gap-4 mt-4'>
+
+          <motion.button
             onClick={onSell}
-            className="w-32 px-4 py-2 bg-green-600 rounded hover:bg-green-700 text-xs sm:text-sm"
-          >
+            className="w-32 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-500 rounded-xl hover:from-green-700 hover:to-emerald-600 text-sm  sm:text-sm shadow-lg"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            >
             Sell
-          </button>
+          </motion.button>
+          <motion.button
+              onClick={onMoveToUnsell}
+              className=" md:hidden px-4 py-2 bg-gradient-to-r from-red-600 to-orange-500 rounded-xl hover:from-orange-700 hover:to-red-600 text-sm shadow-lg"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              >
+              Move to Unsell
+            </motion.button>
+              </div>
         </div>
 
         {/* === Right Sidebar (desktop only) === */}
-        <div className="hidden md:flex space-y-4 md:col-span-1 md:h-full md:flex-col md:justify-between">
-          <div className='space-y-1'>
-            {status === 'live' ? (
-              <button
-                onClick={onStopBidding}
-                className="w-full px-4 py-2 bg-red-500 rounded hover:bg-red-600 text-xs sm:text-sm"
-              >
-                Stop Bidding
-              </button>
-            ) : (
-              <button
-                onClick={onResumeBidding}
-                className="w-full px-4 py-2 bg-green-500 rounded hover:bg-green-600 text-xs sm:text-sm"
-              >
-                Resume Bidding
-              </button>
-            )}
-            
-            <button
+<div className="hidden md:flex space-y-4 md:col-span-1 md:h-full md:flex-col md:justify-between">
+          <div className='space-y-3'>
+            <div className="bg-gradient-to-r from-indigo-900/50 to-blue-800/50 rounded-xl p-4 shadow-lg">
+              <h3 className="text-sm font-semibold mb-3 text-center">Player Selection</h3>
+              
+              {/* Toggle Switch */}
+              <div className="relative h-10 w-full bg-indigo-800/30 rounded-full overflow-hidden">
+                <motion.div 
+                  className={`absolute top-0 h-full w-1/2 rounded-full z-0 ${
+                    selectionMode === 'automatic' 
+                      ? 'bg-gradient-to-r from-emerald-500 to-cyan-400' 
+                      : 'bg-gradient-to-r from-amber-500 to-orange-400'
+                  }`}
+                  animate={{ left: selectionMode === 'automatic' ? '0' : '50%' }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                />
+
+                <button
+                  onClick={() => setSelectionMode('automatic')}
+                  className={`relative h-full w-1/2 z-10 text-sm font-medium ${
+                    selectionMode === 'automatic' ? 'text-white' : 'text-gray-300'
+                  }`}
+                >
+                  Auto
+                </button>
+
+                <button
+                  onClick={() => {
+                    setSelectionMode('manual');
+                    handleManualSelect();
+                  }}
+                  className={`relative h-full w-1/2 z-10 text-sm font-medium ${
+                    selectionMode === 'manual' ? 'text-white' : 'text-gray-300'
+                  }`}
+                >
+                  Manual
+                </button>
+              </div>
+
+              {/* Role Selector */}
+              {selectionMode === 'automatic' && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  transition={{ duration: 0.3 }}
+                  className="mt-3"
+                >
+                  <label className="text-xs block mb-1 opacity-80">Select Role:</label>
+                  <select
+                    value={role}
+                    onChange={e => setRole(e.target.value)}
+                    className="w-full rounded-full bg-indigo-800/50 border border-indigo-600 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="Batsman">Batsman</option>
+                    <option value="Bowler">Bowler</option>
+                    <option value="All-Rounder">All-Rounder</option>
+                    <option value="Wicket-Keeper">Wicket-Keeper</option>
+                  </select>
+                </motion.div>
+              )}
+            </div>
+
+            <motion.button
               onClick={onMoveToUnsell}
-              className="w-full px-4 py-2 bg-purple-600 rounded hover:bg-purple-700 text-xs sm:text-sm"
+              className="w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-500 rounded-xl hover:from-purple-700 hover:to-indigo-600 text-sm shadow-lg"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
             >
               Move to Unsell
-            </button>
-            <button
-              onClick={onPauseAuction}
-              className="w-full px-4 py-2 bg-yellow-600 rounded hover:bg-yellow-700 text-xs sm:text-sm"
-            >
-              Pause Auction
-            </button>
+            </motion.button>
+            <motion.button
+  onClick={togglePause}
+  className={`w-full px-4 py-2 rounded text-xs sm:text-sm shadow-md transition ${
+    status === 'live'
+      ? 'bg-amber-500 hover:bg-amber-600 text-white'
+      : 'bg-green-500 hover:bg-green-600 text-white'
+  }`}
+  whileHover={{ scale: 1.02 }}
+  whileTap={{ scale: 0.98 }}
+>
+  {status === 'live' ? 'Pause Auction' : 'Resume Auction'}
+</motion.button>
+
           </div>
 
-          <div className="bg-white bg-opacity-10 rounded-lg p-4 text-center">
-            <img
-              src={sampleAuction.currentBid.teamLogo}
-              alt="team logo"
-              className="mx-auto mb-2 h-12 sm:h-16"
-            />
-            <p className="text-xs sm:text-sm">Bid By</p>
-            <h3 className="text-sm sm:text-base font-semibold">
+          <motion.div 
+            className="bg-gradient-to-r from-indigo-900/50 to-blue-800/50 rounded-xl p-4 text-center shadow-lg"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 mx-auto" />
+            <p className="text-xs sm:text-sm opacity-75 mt-2">Bid By</p>
+            <h3 className="text-sm sm:text-base font-semibold mt-1">
               {sampleAuction.currentBid.team}
             </h3>
-          </div>
+          </motion.div>
         </div>
       </div>
 
       {/* === Mobile-only Bottom Section === */}
       <div className="md:hidden mt-4 space-y-4">
-        {/* Action Buttons Row */}
-        <div className="grid grid-cols-2 gap-2">
-          {status === 'live' ? (
-            <button
-              onClick={onStopBidding}
-              className="w-full px-3 py-2 bg-red-500 rounded hover:bg-red-600 text-xs"
-            >
-              Stop Bidding
-            </button>
-          ) : (
-            <button
-              onClick={onResumeBidding}
-              className="w-full px-3 py-2 bg-green-500 rounded hover:bg-green-600 text-xs"
-            >
-              Resume Bidding
-            </button>
-          )}
+        {/* Enhanced Selection Mode Toggle */}
+        <div className="bg-gradient-to-r from-indigo-900/50 to-blue-800/50 rounded-xl p-4 shadow-lg">
+          <h3 className="text-sm font-semibold mb-3 text-center">Player Selection</h3>
           
-          <button
-            onClick={onMoveToUnsell}
-            className="w-full px-3 py-2 bg-purple-600 rounded hover:bg-purple-700 text-xs"
-          >
-            Move to Unsell
-          </button>
-          <button
-            onClick={onPauseAuction}
-            className="w-full px-3 py-2 bg-yellow-600 rounded hover:bg-yellow-700 text-xs"
-          >
-            Pause Auction
-          </button>
+          <div className="relative h-10 w-full bg-indigo-800/30 rounded-full overflow-hidden">
+            <motion.div 
+              className={`absolute top-0 h-full w-1/2 rounded-full z-0 ${
+                selectionMode === 'automatic' 
+                  ? 'bg-gradient-to-r from-emerald-500 to-cyan-400' 
+                  : 'bg-gradient-to-r from-amber-500 to-orange-400'
+              }`}
+              animate={{ 
+                left: selectionMode === 'automatic' ? '0' : '50%',
+              }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            />
+            
+            <button
+              onClick={() => setSelectionMode('automatic')}
+              className={`relative h-full w-1/2 z-10 text-sm font-medium ${
+                selectionMode === 'automatic' ? 'text-white' : 'text-gray-300'
+              }`}
+            >
+              Auto
+            </button>
+            
+            
+            <button
+              onClick={() => {
+                setSelectionMode('manual');
+                handleManualSelect();
+              }}
+              className={`relative h-full w-1/2 z-10 text-sm font-medium ${
+                selectionMode === 'manual' ? 'text-white' : 'text-gray-300'
+              }`}
+            >
+              Manual
+            </button>
+          </div>
+          
+          {selectionMode === 'automatic' && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              transition={{ duration: 0.3 }}
+              className="mt-3"
+            >
+              <label className="text-xs block mb-1 opacity-80">Select Role:</label>
+              <select
+                value={role}
+                onChange={e => setRole(e.target.value)}
+                className="w-full rounded-full bg-indigo-800/50 border border-indigo-600 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="Batsman">Batsman</option>
+                <option value="Bowler">Bowler</option>
+                <option value="All-Rounder">All-Rounder</option>
+                <option value="Wicket-Keeper">Wicket-Keeper</option>
+              </select>
+            </motion.div>
+          )}
         </div>
 
         {/* Last Sold & Most Expensive (Mobile) */}
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           {[['Last Sold', sampleAuction.lastSold], ['Most Expensive', sampleAuction.mostExpensive]].map(
             ([title, info]) => (
-              <div key={title} className="flex-1 bg-white bg-opacity-10 rounded p-2 text-xs">
-                <h4 className="uppercase text-[10px] font-medium">{title}</h4>
-                <p className="font-semibold text-xs truncate">{info.name}</p>
-                <p className="text-[10px]">{info.price} — {info.team}</p>
-              </div>
+              <motion.div 
+                key={title} 
+                className="flex-1 bg-gradient-to-r from-indigo-900/50 to-blue-800/50 rounded-xl p-2 text-xs shadow-md"
+                whileHover={{ scale: 1.02 }}
+              >
+                <h4 className="uppercase text-[10px] font-medium opacity-80">{title}</h4>
+                <p className="font-semibold text-xs truncate mt-1">{info.name}</p>
+                <p className="text-[10px] opacity-75">{info.price} — {info.team}</p>
+              </motion.div>
             )
           )}
         </div>
@@ -259,31 +440,44 @@ export default function AdminBiddingDashboard() {
 
       {/* --- Edit Bid Modal --- */}
       {showEdit && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 px-4">
-          <div className="w-full max-w-sm space-y-4 rounded-lg bg-white p-6 text-black">
-            <h2 className="text-lg font-bold">Edit Bid</h2>
+        <motion.div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 px-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <motion.div 
+            className="w-full max-w-sm space-y-4 rounded-xl bg-gradient-to-br from-gray-800 to-gray-900 p-6 text-white shadow-2xl"
+            initial={{ scale: 0.9, y: 20 }}
+            animate={{ scale: 1, y: 0 }}
+            transition={{ type: "spring" }}
+          >
+            <h2 className="text-lg font-bold text-center">Edit Bid</h2>
             <input
               type="text"
               value={bidAmount}
               onChange={(e) => setBidAmount(e.target.value)}
-              className="w-full rounded-lg border px-3 py-2"
+              className="w-full rounded-xl bg-gray-700 border border-gray-600 px-4 py-3 text-center text-xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <div className="flex gap-2">
-              <button
+            <div className="flex gap-3">
+              <motion.button
                 onClick={onApplyBid}
-                className="flex-1 rounded bg-green-500 px-4 py-2 hover:bg-green-600 text-sm"
+                className="flex-1 rounded-xl bg-gradient-to-r from-green-600 to-emerald-500 px-4 py-2 hover:from-green-700 hover:to-emerald-600 text-sm font-medium shadow-md"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
                 Apply
-              </button>
-              <button
+              </motion.button>
+              <motion.button
                 onClick={() => setShowEdit(false)}
-                className="flex-1 rounded bg-red-500 px-4 py-2 hover:bg-red-600 text-sm"
+                className="flex-1 rounded-xl bg-gradient-to-r from-gray-600 to-gray-500 px-4 py-2 hover:from-gray-700 hover:to-gray-600 text-sm font-medium shadow-md"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
                 Cancel
-              </button>
+              </motion.button>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
     </div>
   );

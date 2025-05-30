@@ -26,6 +26,10 @@ import ViewTeam from "./pages/team/ViewTeam";
 import EditTeam from "./pages/team/EditTeam";
 import AutoLogout from "./AutoLogout";
 import AdminBiddingDashboard from "./pages/bidding/AdminBiddingDashboard";
+import ManualPlayerSelection from "./pages/bidding/ManualPlayerSelection";
+import BiddingPlayerList from "./pages/bidding/BiddingPlayerList";
+import AdminBiddingTeamsList from "./pages/bidding/AdminBiddingTeamsList";
+import AdminBiddingTeamView from "./pages/bidding/AdminBiddingTeamView";
 
 function ProtectedLayout({ isAuthenticated }) {
   if (!isAuthenticated) return <AuthPage />;
@@ -91,6 +95,10 @@ function App() {
           <Route path="/admin/teams/:id" element={<ViewTeam />} />
           <Route path="/admin/teams/:id/edit" element={<EditTeam />} />
           <Route path="/admin/admin-bidding-dashboard" element={<AdminBiddingDashboard />} />
+          <Route path="/admin/admin-manual-player-selection" element={<ManualPlayerSelection />} />
+          <Route path="/admin/bidding-teams-list" element={<AdminBiddingTeamsList />} />
+          <Route path="/admin/bidding-teams-view/:id" element={<AdminBiddingTeamView />} />
+          <Route path="/bidding/players-list" element={<BiddingPlayerList/>} />
           
         </Route>
       </Routes>
