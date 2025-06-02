@@ -30,7 +30,9 @@ import ManualPlayerSelection from "./pages/bidding/ManualPlayerSelection";
 import BiddingPlayerList from "./pages/bidding/BiddingPlayerList";
 import AdminBiddingTeamsList from "./pages/bidding/AdminBiddingTeamsList";
 import AdminBiddingTeamView from "./pages/bidding/AdminBiddingTeamView";
-
+// import UserBiddngPortalDesktop from "./pages/userBidding/UserBiddngPortalDesktop";
+// import UserBiddingDashboardMobile from "./pages/userBidding/UserBiddingPortalMobile";
+import UserBiddingRoute from "./pages/userBidding/UserBiddingRoute";
 function ProtectedLayout({ isAuthenticated }) {
   if (!isAuthenticated) return <AuthPage />;
   return (
@@ -79,6 +81,10 @@ function App() {
           element={<AuthPage onLoginSuccess={() => setIsAuthenticated(true)} />}
         />
         <Route path="/set-password" element={<SetPassword/>} />
+        {/* <Route path="/user-bidding-portal" element={<UserBiddngPortalDesktop/>} /> */}
+        {/* <Route path="/user-bidding-portal" element={<UserBiddingDashboardMobile/>} /> */}
+        <Route path="/user-bidding-portal" element={<UserBiddingRoute />}/>
+
         <Route element={<ProtectedLayout isAuthenticated={isAuthenticated} />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/create-auction" element={<CreateAuction />} />
