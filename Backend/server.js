@@ -7,6 +7,7 @@ const playerRoutes=require("./Routes/playerRoutes");
 const teamRoutes=require("./Routes/teamRoutes");
 const auctionRoutes=require("./Routes/auctionRoutes");
 const dashboardRoutes=require("./Routes/dasboardRoutes");
+const biddingRoutes=require("./Routes/biddingRoutes");
 const cors = require("cors");
 const compression = require("compression");
 const path = require("path");
@@ -49,6 +50,7 @@ app.use("/", playerRoutes);
 app.use("/",teamRoutes);
 app.use("/",auctionRoutes);
 app.use("/",dashboardRoutes);
+app.use("/",biddingRoutes);
 
 // Start server
 app.listen(PORT, () => {

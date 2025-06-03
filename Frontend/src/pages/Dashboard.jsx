@@ -263,6 +263,7 @@ const Dashboard = () => {
       setPlayersCount(res.data.totalPlayers);
       setTeamsCount(res.data.totalTeams);
       setAuctions(res.data.auctions);
+      console.log(res.data.auctions);
     } catch (error) {
       console.error("Failed to load dashboard stats:", error);
     }
@@ -310,6 +311,24 @@ const Dashboard = () => {
       href: "#teams",
     },
   ];
+
+  const formatTime12Hour = (timeStr) => {
+    const [hour, minute] = timeStr.split(":");
+    const date = new Date();
+    date.setHours(Number(hour), Number(minute));
+    return date.toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
+  const formatCountdown = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}m ${secs}s`;
+  };
+  
 
   return (
     <div className="space-y-6 max-md:pb-14">
@@ -396,12 +415,11 @@ const Dashboard = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center text-sm text-gray-500 mb-4">
-                    <Clock className="h-4 w-4 mr-1" />
-                    <span>
-                      Ends {new Date(auction.endTime).toLocaleString()}
-                    </span>
-                  </div>
+                  {auction.countdownRemaining > 0 && (
+                    <div className="text-sm text-gray-500 mb-4">
+                      ⏳ Ends in {formatCountdown(auction.countdownRemaining)}
+                    </div>
+                  )}
                   <Button
                     variant="primary"
                     fullWidth
@@ -453,12 +471,17 @@ const Dashboard = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center text-sm text-gray-500 mb-4">
-                    <Clock className="h-4 w-4 mr-1" />
-                    <span>
-                      Starts {new Date(auction.startTime).toLocaleString()}
-                    </span>
+                  <div className="text-sm text-gray-500 mb-2">
+                    🕒 Starts at: {formatTime12Hour(auction.time)} on{" "}
+                    {auction.date}
                   </div>
+
+                  {auction.countdownRemaining > 0 && (
+                    <div className="text-sm text-yellow-600 mb-4">
+                      ⏳ Countdown:{" "}
+                      {formatCountdown(auction.countdownRemaining)}
+                    </div>
+                  )}
                   <Button
                     variant="outline"
                     fullWidth

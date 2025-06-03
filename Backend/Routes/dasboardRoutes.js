@@ -52,36 +52,91 @@ const Team = require('../Models/team');
 
 
 
+// router.get('/dashboard-stats', authMiddleware, async (req, res) => {
+//   try {
+//     const userId = req.user.id;
+
+//     const [totalPlayers, totalTeams, auctions] = await Promise.all([
+//       Player.countDocuments({ createdBy: userId }),
+//       Team.countDocuments({ createdBy: userId }),
+//       Auction.find({ createdBy: userId }),
+//     ]);
+
+//     const now = new Date();
+
+//     const formattedAuctions = auctions.map((auction) => {
+//       const start = new Date(auction.startDate);
+//       const nowDate = now.toISOString().split('T')[0];
+//       const startDate = start.toISOString().split('T')[0];
+
+//       let status = 'upcoming';
+
+//       if (now >= start && nowDate === startDate) {
+//         status = 'live';
+//       } else if (nowDate > startDate) {
+//         status = 'completed';
+//       }
+
+//       return {
+//         id: auction._id,
+//         name: auction.auctionName,
+//         startTime: start,
+//         status,
+//       };
+//     });
+
+//     res.status(200).json({
+//       totalPlayers,
+//       totalTeams,
+//       totalAuctions: auctions.length,
+//       auctions: formattedAuctions,
+//     });
+//   } catch (err) {
+//     console.error('Dashboard stats error:', err);
+//     res.status(500).json({ error: 'Internal server error' });
+//   }
+// });
+
 router.get('/dashboard-stats', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
+    const now = new Date();
 
     const [totalPlayers, totalTeams, auctions] = await Promise.all([
       Player.countDocuments({ createdBy: userId }),
       Team.countDocuments({ createdBy: userId }),
-      Auction.find({ createdBy: userId }),
+      Auction.find({ createdBy: userId })
+        // .populate('selectedPlayers', 'name photo')
+        // .populate('selectedTeams', 'name logo')
+        // .sort({ createdAt: -1 }),
     ]);
 
-    const now = new Date();
-
     const formattedAuctions = auctions.map((auction) => {
-      const start = new Date(auction.startDate);
-      const nowDate = now.toISOString().split('T')[0];
-      const startDate = start.toISOString().split('T')[0];
+      const startDate = new Date(auction.startDate);
+      const date = startDate.toISOString().split('T')[0];
+      const time = startDate.toTimeString().split(':').slice(0, 2).join(':');
 
-      let status = 'upcoming';
+      let countdownRemaining = 0;
 
-      if (now >= start && nowDate === startDate) {
-        status = 'live';
-      } else if (nowDate > startDate) {
-        status = 'completed';
+      // Same logic as /get-all-auctions
+      if (auction.status === 'upcoming' && auction.countdownStartedAt) {
+        const deadline = new Date(auction.countdownStartedAt).getTime() + 60 * 60 * 1000; // 60 minutes
+        countdownRemaining = Math.max(0, Math.floor((deadline - now.getTime()) / 1000));
       }
 
       return {
         id: auction._id,
         name: auction.auctionName,
-        startTime: start,
-        status,
+        // shortName: auction.shortName,
+        logo: auction.auctionImage,
+        description: auction.description,
+        date,
+        time,
+        status: auction.status,
+        countdownRemaining,
+        // selectedTeams: auction.selectedTeams,
+        // selectedPlayers: auction.selectedPlayers,
+        createdAt: auction.createdAt,
       };
     });
 
@@ -96,7 +151,6 @@ router.get('/dashboard-stats', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
 
 
 

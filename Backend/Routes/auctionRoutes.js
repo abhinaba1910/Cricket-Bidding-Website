@@ -97,23 +97,53 @@ router.get('/get-auction', AuthMiddleWare, async (req, res) => {
       .populate('selectedPlayers', 'name photo')
       .sort({ createdAt: -1 });
 
+    const now = new Date();
+
+    for (const auction of auctions) {
+      const startTime = new Date(auction.startDate);
+      const deadline = new Date(startTime.getTime() + 60 * 60 * 1000); // 60 min window
+
+      if (auction.status === 'upcoming') {
+        if (now >= startTime && now <= deadline) {
+          // Countdown running
+          auction.countdownStartedAt = startTime;
+          await auction.save();
+        } else if (now > deadline) {
+          // Time expired without starting → complete auction
+          auction.status = 'completed';
+          auction.countdownStartedAt = null;
+          await auction.save();
+        }
+      }
+    }
+
+    // Prepare response with countdownRemaining (in seconds)
     const normalizedAuctions = auctions.map(a => {
       const start = new Date(a.startDate);
-      const date = start.toISOString().split('T')[0]; // 'YYYY-MM-DD'
-      const time = start.toTimeString().split(':').slice(0, 2).join(':'); // 'HH:mm'
+      const date = start.toISOString().split('T')[0];
+      const time = start.toTimeString().split(':').slice(0, 2).join(':');
+
+      let countdownRemaining = 0;
+      if (a.status === 'upcoming' && a.countdownStartedAt) {
+        const nowMs = Date.now();
+        const deadlineMs = new Date(a.countdownStartedAt).getTime() + 60 * 60 * 1000;
+        countdownRemaining = Math.max(0, Math.floor((deadlineMs - nowMs) / 1000)); // seconds left
+      }
 
       return {
         id: a._id,
-        name: a.auctionName || '',
-        shortName: a.shortName || '',
-        logo: a.auctionImage || '',
-        description: a.description || '',
+        name: a.auctionName,
+        shortName: a.shortName,
+        logo: a.auctionImage,
+        description: a.description,
         date,
         time,
-        selectedTeams: a.selectedTeams || [],
-        selectedPlayers: a.selectedPlayers || [],
-        joinCode: a.shortName || '', // You can rename this if needed
+        status: a.status,
+        selectedTeams: a.selectedTeams,
+        selectedPlayers: a.selectedPlayers,
+        joinCode: a.shortName,
         createdAt: a.createdAt,
+        countdownRemaining, // new field for frontend timer
       };
     });
 
@@ -126,46 +156,206 @@ router.get('/get-auction', AuthMiddleWare, async (req, res) => {
 
 
 
+router.patch('/start-auction/:id', AuthMiddleWare, async (req, res) => {
+  try {
+    const auction = await Auction.findById(req.params.id);
+    if (!auction) {
+      return res.status(404).json({ error: 'Auction not found' });
+    }
+
+    // Check if user is allowed to start the auction
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    const isOwner = auction.createdBy.toString() === userId.toString();
+    const isAdmin = userRole === 'admin' || userRole === 'temp-admin';
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ error: 'You are not authorized to start this auction' });
+    }
+
+    // Time and status checks
+    const now = new Date();
+    const startTime = new Date(auction.startDate);
+    const deadline = new Date(startTime.getTime() + 60 * 60 * 1000);
+
+    if (auction.status === 'upcoming' && now >= startTime && now <= deadline) {
+      auction.status = 'live';
+      auction.countdownStartedAt = null; // stop countdown timer
+      await auction.save();
+      return res.json({ message: 'Auction started successfully', status: auction.status });
+    } else if (now > deadline) {
+      return res.status(400).json({ error: 'Time window expired. Auction cannot be started.' });
+    } else if (auction.status !== 'upcoming') {
+      return res.status(400).json({ error: `Cannot start auction. Current status is '${auction.status}'.` });
+    } else {
+      return res.status(400).json({ error: 'Auction cannot be started yet. Too early.' });
+    }
+  } catch (err) {
+    console.error('Start auction error:', err);
+    res.status(500).json({ error: 'Server error starting auction' });
+  }
+});
+
+
+// router.get('/get-auction/:id', AuthMiddleWare, async (req, res) => {
+//   try {
+//     const auctionId = req.params.id;
+//     const user = req.user; // set by verifyToken middleware
+
+//     // Only allow admin or temp-admin
+//     if (user.role !== 'admin' && user.role !== 'temp-admin') {
+//       return res.status(403).json({ message: 'Access denied: Unauthorized role.' });
+//     }
+
+//     // Find the auction and populate team/player info if needed
+//     const auction = await Auction.findById(auctionId)
+//       .populate('selectedTeams')
+//       .populate('selectedPlayers');
+
+//     if (!auction) {
+//       return res.status(404).json({ message: 'Auction not found.' });
+//     }
+
+//     // Ensure the auction was created by the logged-in user
+//     if (auction.createdBy.toString() !== user.id) {
+//       return res.status(403).json({ message: 'Access denied: Not the creator of this auction.' });
+//     }
+
+//     return res.status(200).json(auction);
+//   } catch (error) {
+//     console.error('Error fetching auction:', error);
+//     return res.status(500).json({ message: 'Server error while fetching auction.' });
+//   }
+// });
+
+
+router.get('/get-auction/:id', AuthMiddleWare, async (req, res) => {
+  try {
+    const auctionId = req.params.id;
+    const user = req.user;
+
+    if (user.role !== 'admin' && user.role !== 'temp-admin') {
+      return res.status(403).json({ message: 'Access denied: Unauthorized role.' });
+    }
+
+    const auction = await Auction.findById(auctionId)
+      .populate('selectedTeams')
+      .populate('selectedPlayers')
+      .populate('currentPlayerOnBid') // populate current player
+      .populate('currentBid.team') // populate current bid team
+      .populate('biddingHistory.player') // populate sold player
+      .populate('biddingHistory.team');  // populate team for bid history
+
+    if (!auction) {
+      return res.status(404).json({ message: 'Auction not found.' });
+    }
+
+    if (auction.createdBy.toString() !== user.id) {
+      return res.status(403).json({ message: 'Access denied: Not the creator of this auction.' });
+    }
+
+    // Last sold player
+    const lastSold = auction.biddingHistory.length > 0
+      ? auction.biddingHistory[auction.biddingHistory.length - 1]
+      : null;
+
+    // Most expensive player
+    const mostExpensive = auction.biddingHistory.reduce((max, entry) => {
+      return (entry.bidAmount > (max?.bidAmount || 0)) ? entry : max;
+    }, null);
+
+    return res.status(200).json({
+      auctionId: auction._id,
+      auctionName: auction.auctionName,
+      shortName: auction.shortName,
+      auctionImage: auction.auctionImage,
+      description: auction.description,
+      startDate: auction.startDate,
+      status: auction.status,
+      countdownStartedAt: auction.countdownStartedAt,
+      isPaused: auction.isPaused,
+
+      selectedTeams: auction.selectedTeams,
+      selectedPlayers: auction.selectedPlayers,
+
+      currentPlayerOnBid: auction.currentPlayerOnBid || null,
+      currentBid: auction.currentBid || null,
+
+      lastSoldPlayer: lastSold || null,
+      mostExpensivePlayer: mostExpensive || null,
+    });
+
+  } catch (error) {
+    console.error('Error fetching auction:', error);
+    return res.status(500).json({ message: 'Server error while fetching auction.' });
+  }
+});
+
+router.patch('/end-auction/:id', AuthMiddleWare, async (req, res) => {
+  try {
+    const auction = await Auction.findById(req.params.id);
+    if (!auction) return res.status(404).json({ error: 'Auction not found' });
+
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    const isOwner = auction.createdBy.toString() === userId.toString();
+    const isAdmin = userRole === 'admin' || userRole === 'temp-admin';
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ error: 'You are not authorized to start this auction' });
+    }
+
+    if (auction.status === 'live') {
+      auction.status = 'completed';
+      await auction.save();
+      return res.json({ message: 'Auction ended successfully', status: 'completed' });
+    } else {
+      return res.status(400).json({ error: 'Only live auctions can be ended' });
+    }
+  } catch (err) {
+    console.error('End auction error:', err);
+    res.status(500).json({ error: 'Server error ending auction' });
+  }
+});
+
+
+
 router.get('/get-all-auctions', AuthMiddleWare, async (req, res) => {
   try {
     const auctions = await Auction.find()
-      .populate('selectedPlayers')
-      .populate('selectedTeams')
-      .sort({ startDate: -1 });
+      .populate('selectedPlayers', 'name photo')
+      .populate('selectedTeams', 'name logo')
+      .sort({ createdAt: -1 });
 
     const now = new Date();
 
     const processedAuctions = auctions.map(auction => {
-      const playerCount = auction.selectedPlayers.length;
-      const teamCount = auction.selectedTeams.length;
+      const startDate = new Date(auction.startDate);
+      const date = startDate.toISOString().split('T')[0];
+      const time = startDate.toTimeString().split(':').slice(0, 2).join(':');
 
-      const auctionDate = new Date(auction.startDate);
-
-      let status = '';
-      if (auctionDate > now) {
-        status = 'upcoming';
-      } else {
-        // Assuming each auction lasts for a few hours (e.g. 3 hours),
-        // you can set a duration and mark it as 'live' during that window.
-        const liveDurationMs = 3 * 60 * 60 * 1000; // 3 hours in ms
-        const endTime = new Date(auctionDate.getTime() + liveDurationMs);
-
-        if (now >= auctionDate && now <= endTime) {
-          status = 'live';
-        } else {
-          status = 'completed';
-        }
+      let countdownRemaining = 0;
+      if (auction.status === 'upcoming' && auction.countdownStartedAt) {
+        const deadlineMs = new Date(auction.countdownStartedAt).getTime() + 60 * 60 * 1000; // 60 mins
+        countdownRemaining = Math.max(0, Math.floor((deadlineMs - now.getTime()) / 1000));
       }
 
       return {
         id: auction._id,
         name: auction.auctionName,
+        shortName: auction.shortName,
         logo: auction.auctionImage,
-        date: auctionDate.toISOString().split('T')[0],
-        time: auctionDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        players: playerCount,
-        teams: teamCount,
-        status
+        description: auction.description,
+        date,
+        time,
+        status: auction.status,
+        selectedTeams: auction.selectedTeams,
+        selectedPlayers: auction.selectedPlayers,
+        joinCode: auction.shortName,
+        createdAt: auction.createdAt,
+        countdownRemaining, // for frontend timer if countdown started
       };
     });
 
@@ -176,6 +366,33 @@ router.get('/get-all-auctions', AuthMiddleWare, async (req, res) => {
   }
 });
 
+router.post("/join-auction/:id", async (req, res) => {
+  const { id } = req.params;
+  const { joinCode } = req.body;
+
+  try {
+    const auction = await Auction.findById(id);
+
+    if (!auction) {
+      return res.status(404).json({ message: "Auction not found" });
+    }
+
+    if (auction.status !== "live") {
+      return res.status(400).json({ message: "Auction is not live yet" });
+    }
+
+    if (auction.shortName !== joinCode) {
+      return res.status(401).json({ message: "Invalid join code" });
+    }
+
+    // Optionally, you could log who joined or track participants here
+
+    res.status(200).json({ message: "Successfully joined the auction" });
+  } catch (error) {
+    console.error("Error joining auction:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
 
 
 module.exports = router;

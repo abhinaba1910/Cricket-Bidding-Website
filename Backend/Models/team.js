@@ -18,11 +18,21 @@ const teamSchema = new mongoose.Schema({
     required: true,
     min: 0,
   },
+  remaining:{
+    type:Number,
+    min: 0,
+  },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Person',
     required: true,
   },
+  players: [
+    {
+      player: { type: mongoose.Schema.Types.ObjectId, ref: 'Player' },
+      price: { type: Number, required: true },
+    }
+  ],
 }, { timestamps: true });
 
 module.exports = mongoose.model('Team', teamSchema);

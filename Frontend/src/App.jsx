@@ -100,11 +100,11 @@ function App() {
           <Route path="/admin/player/:id/edit" element={<EditPlayer />} />
           <Route path="/admin/teams/:id" element={<ViewTeam />} />
           <Route path="/admin/teams/:id/edit" element={<EditTeam />} />
-          <Route path="/admin/admin-bidding-dashboard" element={<AdminBiddingDashboard />} />
+          <Route path="/admin/admin-bidding-dashboard/:id" element={<AdminBiddingDashboard />} />
           <Route path="/admin/admin-manual-player-selection" element={<ManualPlayerSelection />} />
-          <Route path="/admin/bidding-teams-list" element={<AdminBiddingTeamsList />} />
+          <Route path="/admin/bidding-teams-list/:id" element={<AdminBiddingTeamsList />} />
           <Route path="/admin/bidding-teams-view/:id" element={<AdminBiddingTeamView />} />
-          <Route path="/bidding/players-list" element={<BiddingPlayerList/>} />
+          <Route path="/bidding/players-list/:id" element={<BiddingPlayerList/>} />
           
         </Route>
       </Routes>
