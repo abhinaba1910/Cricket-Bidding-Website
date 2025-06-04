@@ -58,54 +58,61 @@ export default function AdminBiddingDashboard() {
     }
 
     // Fetch auction by ID
-// …inside useEffect…
-const fetchAuction = async () => {
-  try {
-    // No need to read localStorage.getItem("token") or set headers manually
-    const res = await api.get(`/get-auction/${id}`);
-    const data = res.data;
-    console.log(data);
+    // …inside useEffect…
+    const fetchAuction = async () => {
+      try {
+        // No need to read localStorage.getItem("token") or set headers manually
+        const res = await api.get(`/get-auction/${id}`);
+        const data = res.data;
+        console.log(data);
 
-    // Merge the returned data into your existing state, falling back to SAMPLE_AUCTION
-    setAuctionData(prev => ({
-      ...prev,
-      lastSold: {
-        name: data.lastSoldPlayer?.name || prev.lastSold.name,
-        price: data.lastSoldPlayer?.bidAmount || prev.lastSold.price,
-        team: data.lastSoldPlayer?.team?.shortName || prev.lastSold.team,
-      },
-      mostExpensive: {
-        name: data.mostExpensivePlayer?.name || prev.mostExpensive.name,
-        price: data.mostExpensivePlayer?.bidAmount || prev.mostExpensive.price,
-        team: data.mostExpensivePlayer?.team?.shortName || prev.mostExpensive.team,
-      },
-      currentLot: {
-        id: data.currentPlayerOnBid?._id || prev.currentLot.id,
-        name: data.currentPlayerOnBid?.name || prev.currentLot.name,
-        role: data.currentPlayerOnBid?.role || prev.currentLot.role,
-        batting: data.currentPlayerOnBid?.battingStyle || prev.currentLot.batting,
-        bowling: data.currentPlayerOnBid?.bowlingStyle || prev.currentLot.bowling,
-        basePrice: data.currentPlayerOnBid?.basePrice || prev.currentLot.basePrice,
-        avatarUrl: data.currentPlayerOnBid?.photo || prev.currentLot.avatarUrl,
-      },
-      currentBid: {
-        amount: data.currentBid?.amount || prev.currentBid.amount,
-        team: data.currentBid?.team?.teamName || prev.currentBid.team,
-        teamLogo: data.currentBid?.team?.logoUrl || prev.currentBid.teamLogo,
-      },
-    }));
+        // Merge the returned data into your existing state, falling back to SAMPLE_AUCTION
+        setAuctionData((prev) => ({
+          ...prev,
+          lastSold: {
+            name: data.lastSoldPlayer?.name || prev.lastSold.name,
+            price: data.lastSoldPlayer?.bidAmount || prev.lastSold.price,
+            team: data.lastSoldPlayer?.team?.shortName || prev.lastSold.team,
+          },
+          mostExpensive: {
+            name: data.mostExpensivePlayer?.name || prev.mostExpensive.name,
+            price:
+              data.mostExpensivePlayer?.bidAmount || prev.mostExpensive.price,
+            team:
+              data.mostExpensivePlayer?.team?.shortName ||
+              prev.mostExpensive.team,
+          },
+          currentLot: {
+            id: data.currentPlayerOnBid?._id || prev.currentLot.id,
+            name: data.currentPlayerOnBid?.name || prev.currentLot.name,
+            role: data.currentPlayerOnBid?.role || prev.currentLot.role,
+            batting:
+              data.currentPlayerOnBid?.battingStyle || prev.currentLot.batting,
+            bowling:
+              data.currentPlayerOnBid?.bowlingStyle || prev.currentLot.bowling,
+            basePrice:
+              data.currentPlayerOnBid?.basePrice || prev.currentLot.basePrice,
+            avatarUrl:
+              data.currentPlayerOnBid?.photo || prev.currentLot.avatarUrl,
+          },
+          currentBid: {
+            amount: data.currentBid?.amount || prev.currentBid.amount,
+            team: data.currentBid?.team?.teamName || prev.currentBid.team,
+            teamLogo:
+              data.currentBid?.team?.logoUrl || prev.currentBid.teamLogo,
+          },
+        }));
 
-    // Update bidAmount if backend provided a value
-    if (data.currentBid?.amount) {
-      setBidAmount(data.currentBid.amount);
-    }
-  } catch (err) {
-    console.error("Error while fetching auction:", err);
-  }
-};
+        // Update bidAmount if backend provided a value
+        if (data.currentBid?.amount) {
+          setBidAmount(data.currentBid.amount);
+        }
+      } catch (err) {
+        console.error("Error while fetching auction:", err);
+      }
+    };
 
-fetchAuction();
-
+    fetchAuction();
   }, [id, incoming]);
 
   // 4) HANDLERS / UI TOGGLES
@@ -150,6 +157,11 @@ fetchAuction();
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:h-[calc(85vh-4rem)]">
         {/* === Left Sidebar (desktop only) === */}
         <div className="hidden md:flex flex-col space-y-4 md:h-full md:justify-between">
+          <div>
+            <motion.button className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-blue-500 rounded-xl hover:from-indigo-700 hover:to-blue-600 text-xs sm:text-sm shadow-md">
+              Start Bidding
+            </motion.button>
+          </div>
           <div>
             {[
               ["Last Sold", auctionData.lastSold],
