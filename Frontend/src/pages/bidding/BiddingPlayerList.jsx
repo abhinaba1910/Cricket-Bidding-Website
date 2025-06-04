@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { FiSearch, FiArrowLeft, FiEye } from "react-icons/fi";
-import { useNavigate } from "react-router-dom";
+import { useNavigate,useParams } from "react-router-dom";
 import api from "../../userManagement/Api";
 
 const allRoles = ["Batsman", "Bowler", "All-Rounder", "Wicket-Keeper"];
@@ -14,6 +14,7 @@ const allRanks = ["A+", "A", "B", "C"];
 
 export default function BiddingPlayerList() {
   const navigate = useNavigate();
+  const { id } = useParams(); // Assuming you have an auction ID in the URL
 
   // filter state
   const [search, setSearch] = useState("");
@@ -60,7 +61,7 @@ export default function BiddingPlayerList() {
         {/* Back + Tab */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <button
-            onClick={() => navigate("/admin/admin-bidding-dashboard")}
+onClick={() => navigate(`/admin/admin-bidding-dashboard/${id}`)}
             className="flex items-center px-3 py-2 bg-gray-200 rounded-full hover:bg-gray-300"
           >
             <FiArrowLeft className="mr-2 text-gray-700" /> Back

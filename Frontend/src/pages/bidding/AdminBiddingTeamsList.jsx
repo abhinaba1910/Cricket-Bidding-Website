@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { FiSearch, FiEye, FiArrowLeft } from "react-icons/fi";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import api from "../../userManagement/Api";
 
 export default function AdminBiddingTeamsList() {
+  const { id } = useParams();
   const navigate = useNavigate();
   const [teams, setTeams] = useState([]);
   const [search, setSearch] = useState("");
@@ -35,7 +36,7 @@ export default function AdminBiddingTeamsList() {
       {/* Back + Title */}
       <div className="flex items-center justify-between mb-6">
         <button
-          onClick={() => navigate("/admin/admin-bidding-dashboard")}
+onClick={() => navigate(`/admin/admin-bidding-dashboard/${id}`)}
           className="flex items-center px-3 py-2 bg-gray-200 rounded-full hover:bg-gray-300"
         >
           <FiArrowLeft className="mr-2 text-gray-700" />

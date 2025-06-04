@@ -1,73 +1,133 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
+import api from "../../userManagement/Api";
+
+// 1) SAMPLE FALLBACK DATA
+//    This object lives in state until/if the backend returns real data.
+//    Any values you haven’t wired yet can remain here.
+const SAMPLE_AUCTION = {
+  lastSold: { name: "N. Sciver-Brunt", price: "5 CR", team: "Mumbai" },
+  mostExpensive: { name: "N. Sciver-Brunt", price: "5 CR", team: "Mumbai" },
+  currentLot: {
+    id: "lot1",
+    name: "Sabbineni Meghana",
+    role: "Batter",
+    batting: "RHB",
+    bowling: "Right Arm Medium",
+    basePrice: "30L",
+    avatarUrl: null,
+  },
+  currentBid: {
+    amount: "35L",
+    team: "Chennai Super Kings",
+    teamLogo: "/logos/csk.png",
+  },
+};
 
 export default function AdminBiddingDashboard() {
   const navigate = useNavigate();
-  const location = useLocation(); // <— import useLocation
+  const location = useLocation();
   const incoming = location.state?.selectedPlayers || [];
-  const { id }=useParams();
+  const { id } = useParams();
 
-  // --- sample data ---
-  const sampleAuction = {
-    lastSold: { name: "N. Sciver-Brunt", price: "5 CR", team: "Mumbai" },
-    mostExpensive: { name: "N. Sciver-Brunt", price: "5 CR", team: "Mumbai" },
-    currentLot: {
-      id: "lot1",
-      name: "Sabbineni Meghana",
-      role: "Batter",
-      batting: "RHB",
-      bowling: "Right Arm Medium",
-      basePrice: "30L",
-      avatarUrl: null,
-    },
-    currentBid: {
-      amount: "35L",
-      team: "Chennai Super Kings",
-      teamLogo: "/logos/csk.png",
-    },
-  };
+  // 2) STATE: hold ALL auction‐related fields in a single object
+  //    Initialize with SAMPLE so the UI doesn’t break if the fetch is still pending.
+  const [auctionData, setAuctionData] = useState(SAMPLE_AUCTION);
 
-  // --- local state & handlers ---
-
+  // status / UI state
   const [status, setStatus] = useState("live");
   const [showEdit, setShowEdit] = useState(false);
-  const [bidAmount, setBidAmount] = useState(sampleAuction.currentBid.amount);
+  const [bidAmount, setBidAmount] = useState(SAMPLE_AUCTION.currentBid.amount);
   const [fullScreen, setFullScreen] = useState(false);
   const [selectionMode, setSelectionMode] = useState("automatic");
   const [role, setRole] = useState("Batsman");
 
-  // ** NEW EFFECT ** watch for incoming picks
+  // 3) FETCH from BACKEND on mount
   useEffect(() => {
+    // If “incoming” picks exist, switch to manual mode
     if (incoming.length > 0) {
       setSelectionMode("manual");
     }
-  }, [incoming]);
 
+    // Grab token from localStorage (or wherever you store it)
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.warn("No auth token found. Cannot fetch auction.");
+      return;
+    }
+
+    // Fetch auction by ID
+// …inside useEffect…
+const fetchAuction = async () => {
+  try {
+    // No need to read localStorage.getItem("token") or set headers manually
+    const res = await api.get(`/get-auction/${id}`);
+    const data = res.data;
+
+    // Merge the returned data into your existing state, falling back to SAMPLE_AUCTION
+    setAuctionData(prev => ({
+      ...prev,
+      lastSold: {
+        name: data.lastSoldPlayer?.name || prev.lastSold.name,
+        price: data.lastSoldPlayer?.bidAmount || prev.lastSold.price,
+        team: data.lastSoldPlayer?.team?.shortName || prev.lastSold.team,
+      },
+      mostExpensive: {
+        name: data.mostExpensivePlayer?.name || prev.mostExpensive.name,
+        price: data.mostExpensivePlayer?.bidAmount || prev.mostExpensive.price,
+        team: data.mostExpensivePlayer?.team?.shortName || prev.mostExpensive.team,
+      },
+      currentLot: {
+        id: data.currentPlayerOnBid?._id || prev.currentLot.id,
+        name: data.currentPlayerOnBid?.name || prev.currentLot.name,
+        role: data.currentPlayerOnBid?.role || prev.currentLot.role,
+        batting: data.currentPlayerOnBid?.battingStyle || prev.currentLot.batting,
+        bowling: data.currentPlayerOnBid?.bowlingStyle || prev.currentLot.bowling,
+        basePrice: data.currentPlayerOnBid?.basePrice || prev.currentLot.basePrice,
+        avatarUrl: data.currentPlayerOnBid?.photo || prev.currentLot.avatarUrl,
+      },
+      currentBid: {
+        amount: data.currentBid?.amount || prev.currentBid.amount,
+        team: data.currentBid?.team?.teamName || prev.currentBid.team,
+        teamLogo: data.currentBid?.team?.logoUrl || prev.currentBid.teamLogo,
+      },
+    }));
+
+    // Update bidAmount if backend provided a value
+    if (data.currentBid?.amount) {
+      setBidAmount(data.currentBid.amount);
+    }
+  } catch (err) {
+    console.error("Error while fetching auction:", err);
+  }
+};
+
+fetchAuction();
+
+  }, [id, incoming]);
+
+  // 4) HANDLERS / UI TOGGLES
   const toggleFullScreen = () => setFullScreen((fs) => !fs);
   const onStopBidding = () => setStatus("paused");
-  // const onResumeBidding    = () => setStatus('live');
   const onSell = () => setStatus("selling");
   const onMoveToUnsell = () => setStatus("live");
-
-  // const onPauseAuction     = onStopBidding;
   const onEditBid = () => setShowEdit(true);
   const onApplyBid = () => setShowEdit(false);
   const onResetBid = () => {
-    setBidAmount(sampleAuction.currentBid.amount);
+    setBidAmount(auctionData.currentBid.amount);
     setShowEdit(false);
   };
-  // Toggle between live and paused
   const togglePause = () => {
     setStatus((prev) => (prev === "live" ? "paused" : "live"));
   };
-
   const handleManualSelect = () => {
     navigate("/admin/admin-manual-player-selection");
   };
 
+  // 5) RENDER. Everywhere you previously used SAMPLE_AUCTION, use auctionData instead.
   const containerClasses = [
-    " p-4 text-white bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900",
+    "p-4 text-white bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900",
     fullScreen
       ? "fixed inset-0 z-[9999] overflow-auto"
       : "relative mx-auto max-w-7xl",
@@ -91,8 +151,8 @@ export default function AdminBiddingDashboard() {
         <div className="hidden md:flex flex-col space-y-4 md:h-full md:justify-between">
           <div>
             {[
-              ["Last Sold", sampleAuction.lastSold],
-              ["Most Expensive", sampleAuction.mostExpensive],
+              ["Last Sold", auctionData.lastSold],
+              ["Most Expensive", auctionData.mostExpensive],
             ].map(([title, info]) => (
               <motion.div
                 key={title}
@@ -119,23 +179,23 @@ export default function AdminBiddingDashboard() {
             transition={{ delay: 0.2 }}
           >
             <h2 className="font-bold text-lg sm:text-xl">
-              {sampleAuction.currentLot.name}
+              {auctionData.currentLot.name}
             </h2>
             <p className="text-sm bg-blue-600/30 inline-block px-2 py-1 rounded-full mt-1">
-              {sampleAuction.currentLot.role}
+              {auctionData.currentLot.role}
             </p>
             <div className="mt-3 flex justify-center gap-4">
               <div>
                 <span className="text-xs opacity-75">Bat</span>
-                <p className="text-sm">{sampleAuction.currentLot.batting}</p>
+                <p className="text-sm">{auctionData.currentLot.batting}</p>
               </div>
               <div>
                 <span className="text-xs opacity-75">Ball</span>
-                <p className="text-sm">{sampleAuction.currentLot.bowling}</p>
+                <p className="text-sm">{auctionData.currentLot.bowling}</p>
               </div>
             </div>
             <p className="mt-3 text-base font-semibold bg-blue-900/50 py-1 rounded-lg">
-              Base Price: {sampleAuction.currentLot.basePrice}
+              Base Price: {auctionData.currentLot.basePrice}
             </p>
           </motion.div>
         </div>
@@ -201,6 +261,8 @@ export default function AdminBiddingDashboard() {
             animate={{ scale: 1 }}
             transition={{ type: "spring", stiffness: 300 }}
           >
+            {/* You could replace this avatar placeholder with:
+                <img src={auctionData.currentLot.avatarUrl} alt="player avatar" /> */}
             <div className="mx-auto mb-4 rounded-full bg-gray-700 w-24 h-24 sm:w-32 sm:h-32 flex items-center justify-center">
               <span className="text-4xl">👤</span>
             </div>
@@ -219,19 +281,19 @@ export default function AdminBiddingDashboard() {
             {/* Player Details Card */}
             <div className="bg-gradient-to-r from-indigo-900/50 to-blue-800/50 rounded-xl p-3 text-center">
               <h2 className="font-bold text-sm truncate">
-                {sampleAuction.currentLot.name}
+                {auctionData.currentLot.name}
               </h2>
               <p className="text-xs bg-blue-600/30 inline-block px-2 py-0.5 rounded-full">
-                {sampleAuction.currentLot.role}
+                {auctionData.currentLot.role}
               </p>
               <p className="mt-1 text-[10px] opacity-75">
-                Bat: {sampleAuction.currentLot.batting}
+                Bat: {auctionData.currentLot.batting}
               </p>
               <p className="text-[10px] opacity-75">
-                Ball: {sampleAuction.currentLot.bowling}
+                Ball: {auctionData.currentLot.bowling}
               </p>
               <p className="mt-1 text-xs font-semibold bg-blue-900/30 py-0.5 rounded">
-                Base: {sampleAuction.currentLot.basePrice}
+                Base: {auctionData.currentLot.basePrice}
               </p>
             </div>
 
@@ -240,7 +302,7 @@ export default function AdminBiddingDashboard() {
               <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 mx-auto" />
               <p className="text-[10px] opacity-75 mt-1">Bid By</p>
               <h3 className="text-xs font-semibold truncate">
-                {sampleAuction.currentBid.team}
+                {auctionData.currentBid.team}
               </h3>
             </div>
           </div>
@@ -366,7 +428,7 @@ export default function AdminBiddingDashboard() {
             <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 mx-auto" />
             <p className="text-xs sm:text-sm opacity-75 mt-2">Bid By</p>
             <h3 className="text-sm sm:text-base font-semibold mt-1">
-              {sampleAuction.currentBid.team}
+              {auctionData.currentBid.team}
             </h3>
           </motion.div>
         </div>
@@ -374,7 +436,6 @@ export default function AdminBiddingDashboard() {
 
       {/* === Mobile-only Bottom Section === */}
       <div className="md:hidden mt-4 space-y-4">
-        {/* Enhanced Selection Mode Toggle */}
         <div className="bg-gradient-to-r from-indigo-900/50 to-blue-800/50 rounded-xl p-4 shadow-lg">
           <h3 className="text-sm font-semibold mb-3 text-center">
             Player Selection
@@ -439,11 +500,10 @@ export default function AdminBiddingDashboard() {
           )}
         </div>
 
-        {/* Last Sold & Most Expensive (Mobile) */}
         <div className="flex gap-3">
           {[
-            ["Last Sold", sampleAuction.lastSold],
-            ["Most Expensive", sampleAuction.mostExpensive],
+            ["Last Sold", auctionData.lastSold],
+            ["Most Expensive", auctionData.mostExpensive],
           ].map(([title, info]) => (
             <motion.div
               key={title}
