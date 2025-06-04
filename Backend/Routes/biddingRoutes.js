@@ -49,7 +49,7 @@ router.post('/manual-sell/:auctionId/:playerId', auth, async (req, res) => {
 
     await Team.findByIdAndUpdate(teamId, {
       $push: { players: { player: playerId, price: amount } },
-      $inc: { purse: -amount }
+      $inc: { remaining: -amount }
     });
 
     auction.biddingHistory.push({
