@@ -35,6 +35,7 @@ export default function AdminBiddingDashboard() {
   //    Initialize with SAMPLE so the UI doesn’t break if the fetch is still pending.
   const [auctionData, setAuctionData] = useState(SAMPLE_AUCTION);
 
+
   // status / UI state
   const [status, setStatus] = useState("live");
   const [showEdit, setShowEdit] = useState(false);
@@ -42,6 +43,23 @@ export default function AdminBiddingDashboard() {
   const [fullScreen, setFullScreen] = useState(false);
   const [selectionMode, setSelectionMode] = useState("automatic");
   const [role, setRole] = useState("Batsman");
+
+
+    // popup
+  const [showStartPopup, setShowStartPopup] = useState(false);
+  const [popupSelection, setPopupSelection] = useState("automatic");
+
+   const handleStartBidding = () => {
+    setShowStartPopup(true);
+  };
+
+  const handleSaveStartSelection = () => {
+    setSelectionMode(popupSelection);
+    if (popupSelection === "manual") {
+      handleManualSelect();
+    }
+    setShowStartPopup(false);
+  };
 
   // 3) FETCH from BACKEND on mount
   useEffect(() => {
@@ -158,11 +176,6 @@ export default function AdminBiddingDashboard() {
         {/* === Left Sidebar (desktop only) === */}
         <div className="hidden md:flex flex-col space-y-4 md:h-full md:justify-between">
           <div>
-            <motion.button className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-blue-500 rounded-xl hover:from-indigo-700 hover:to-blue-600 text-xs sm:text-sm shadow-md">
-              Start Bidding
-            </motion.button>
-          </div>
-          <div>
             {[
               ["Last Sold", auctionData.lastSold],
               ["Most Expensive", auctionData.mostExpensive],
@@ -234,6 +247,7 @@ export default function AdminBiddingDashboard() {
             >
               Teams
             </motion.button>
+           
             <motion.button
               onClick={togglePause}
               className={`w-24 rounded-xl py-2 text-xs sm:text-sm shadow-md transition md:hidden ${
@@ -265,7 +279,17 @@ export default function AdminBiddingDashboard() {
             >
               Reset Bid
             </motion.button>
+             <motion.button 
+          onClick={handleStartBidding}
+          className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-500 rounded-xl hover:from-green-700 hover:to-emerald-600 text-xs sm:text-sm shadow-md"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          Start Bidding
+        </motion.button>
+            
           </div>
+          
 
           {/* Avatar & Current Bid */}
           <motion.div
@@ -534,6 +558,70 @@ export default function AdminBiddingDashboard() {
           ))}
         </div>
       </div>
+      {showStartPopup && (
+        <motion.div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-60 px-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <motion.div
+            className="w-full max-w-sm space-y-4 rounded-xl bg-gradient-to-br from-gray-800 to-gray-900 p-6 text-white shadow-2xl"
+            initial={{ scale: 0.9, y: 20 }}
+            animate={{ scale: 1, y: 0 }}
+            transition={{ type: "spring" }}
+          >
+            <h2 className="text-lg font-bold text-center">
+              Select Player Selection Mode
+            </h2>
+            
+            <div className="flex gap-4 justify-center my-4">
+              <motion.button
+                onClick={() => setPopupSelection("manual")}
+                className={`px-4 py-2 rounded-xl transition ${
+                  popupSelection === "manual"
+                    ? "bg-gradient-to-r from-amber-500 to-orange-400 text-white"
+                    : "bg-gray-700"
+                }`}
+                whileHover={{ scale: 1.05 }}
+              >
+                Manual
+              </motion.button>
+              
+              <motion.button
+                onClick={() => setPopupSelection("automatic")}
+                className={`px-4 py-2 rounded-xl transition ${
+                  popupSelection === "automatic"
+                    ? "bg-gradient-to-r from-emerald-500 to-cyan-400 text-white"
+                    : "bg-gray-700"
+                }`}
+                whileHover={{ scale: 1.05 }}
+              >
+                Automatic
+              </motion.button>
+            </div>
+            
+            <div className="flex gap-3">
+              <motion.button
+                onClick={handleSaveStartSelection}
+                className="flex-1 rounded-xl bg-gradient-to-r from-green-600 to-emerald-500 px-4 py-2 hover:from-green-700 hover:to-emerald-600 text-sm font-medium shadow-md"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Save
+              </motion.button>
+              
+              <motion.button
+                onClick={() => setShowStartPopup(false)}
+                className="flex-1 rounded-xl bg-gradient-to-r from-gray-600 to-gray-500 px-4 py-2 hover:from-gray-700 hover:to-gray-600 text-sm font-medium shadow-md"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Cancel
+              </motion.button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
 
       {/* --- Edit Bid Modal --- */}
       {showEdit && (
