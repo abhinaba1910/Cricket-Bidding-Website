@@ -56,6 +56,37 @@ const auctionSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Player',
   }],
+  selectionMode: {
+    type: String,
+    enum: ['manual', 'automatic'],
+    default: 'manual'
+  },
+  
+  // For automatic mode filtering
+  automaticFilter: {
+    type: String,
+    enum: ['All', 'Batsman', 'Bowler', 'Wicket-keeper', 'All-rounder'],
+    default: 'All'
+  },
+  
+  // For manual mode - pre-selected players queue
+  manualPlayerQueue: [{
+    player: { type: mongoose.Schema.Types.ObjectId, ref: 'Player' },
+    position: { type: Number } // 1, 2, 3, 4
+  }],
+  
+  // Track if bidding has been started (to prevent re-clicking start bidding)
+  biddingStarted: {
+    type: Boolean,
+    default: false
+  },
+  
+  // Current queue position for manual mode
+  currentQueuePosition: {
+    type: Number,
+    default: 0
+  },
+  
   biddingHistory: [
     {
       player: { type: mongoose.Schema.Types.ObjectId, ref: 'Player' },
