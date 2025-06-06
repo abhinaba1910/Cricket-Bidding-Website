@@ -214,36 +214,81 @@ router.patch("/start-auction/:id", AuthMiddleWare, async (req, res) => {
   }
 });
 
-// router.get('/get-auction/:id', AuthMiddleWare, async (req, res) => {
+// router.get("/get-auction/:id", AuthMiddleWare, async (req, res) => {
 //   try {
 //     const auctionId = req.params.id;
-//     const user = req.user; // set by verifyToken middleware
+//     const user = req.user;
 
-//     // Only allow admin or temp-admin
-//     if (user.role !== 'admin' && user.role !== 'temp-admin') {
-//       return res.status(403).json({ message: 'Access denied: Unauthorized role.' });
+//     if (user.role !== "admin" && user.role !== "temp-admin") {
+//       return res
+//         .status(403)
+//         .json({ message: "Access denied: Unauthorized role." });
 //     }
 
-//     // Find the auction and populate team/player info if needed
 //     const auction = await Auction.findById(auctionId)
-//       .populate('selectedTeams')
-//       .populate('selectedPlayers');
+//       .populate("selectedTeams")
+//       .populate("selectedPlayers")
+//       .populate("currentPlayerOnBid") // populate current player
+//       .populate("currentBid.team") // populate current bid team
+//       .populate("biddingHistory.player") // populate sold player
+//       .populate("biddingHistory.team"); // populate team for bid history
 
 //     if (!auction) {
-//       return res.status(404).json({ message: 'Auction not found.' });
+//       return res.status(404).json({ message: "Auction not found." });
 //     }
 
-//     // Ensure the auction was created by the logged-in user
 //     if (auction.createdBy.toString() !== user.id) {
-//       return res.status(403).json({ message: 'Access denied: Not the creator of this auction.' });
+//       return res
+//         .status(403)
+//         .json({ message: "Access denied: Not the creator of this auction." });
 //     }
 
-//     return res.status(200).json(auction);
+//     // Last sold player
+//     const lastSold =
+//       auction.biddingHistory.length > 0
+//         ? auction.biddingHistory[auction.biddingHistory.length - 1]
+//         : null;
+
+//     // Most expensive player
+//     const mostExpensive = auction.biddingHistory.reduce((max, entry) => {
+//       return entry.bidAmount > (max?.bidAmount || 0) ? entry : max;
+//     }, null);
+
+//     return res.status(200).json({
+//       auctionId: auction._id,
+//       auctionName: auction.auctionName,
+//       shortName: auction.shortName,
+//       auctionImage: auction.auctionImage,
+//       description: auction.description,
+//       startDate: auction.startDate,
+//       status: auction.status,
+//       countdownStartedAt: auction.countdownStartedAt,
+//       isPaused: auction.isPaused,
+
+//       selectedTeams: auction.selectedTeams,
+//       selectedPlayers: auction.selectedPlayers,
+
+//       currentPlayerOnBid: auction.currentPlayerOnBid || null,
+//       currentBid: auction.currentBid || null,
+
+//       lastSoldPlayer: lastSold || null,
+//       mostExpensivePlayer: mostExpensive || null,
+//       // Add these fields to the response in get-auction route:
+//       selectionMode: auction.selectionMode,
+//       automaticFilter: auction.automaticFilter,
+//       manualPlayerQueue: auction.manualPlayerQueue,
+//       biddingStarted: auction.biddingStarted,
+//       currentQueuePosition: auction.currentQueuePosition,
+//     });
 //   } catch (error) {
-//     console.error('Error fetching auction:', error);
-//     return res.status(500).json({ message: 'Server error while fetching auction.' });
+//     console.error("Error fetching auction:", error);
+//     return res
+//       .status(500)
+//       .json({ message: "Server error while fetching auction." });
 //   }
 // });
+
+
 
 router.get("/get-auction/:id", AuthMiddleWare, async (req, res) => {
   try {
@@ -251,34 +296,37 @@ router.get("/get-auction/:id", AuthMiddleWare, async (req, res) => {
     const user = req.user;
 
     if (user.role !== "admin" && user.role !== "temp-admin") {
-      return res
-        .status(403)
-        .json({ message: "Access denied: Unauthorized role." });
+      return res.status(403).json({ message: "Access denied: Unauthorized role." });
     }
 
+    // Fetch the auction with related data except selectedPlayers
     const auction = await Auction.findById(auctionId)
       .populate("selectedTeams")
       .populate("selectedPlayers")
-      .populate("currentPlayerOnBid") // populate current player
-      .populate("currentBid.team") // populate current bid team
-      .populate("biddingHistory.player") // populate sold player
-      .populate("biddingHistory.team"); // populate team for bid history
+      .populate("currentPlayerOnBid")
+      .populate("currentBid.team")
+      .populate("biddingHistory.player")
+      .populate("biddingHistory.team")
+      .populate("manualPlayerQueue.player");
 
     if (!auction) {
       return res.status(404).json({ message: "Auction not found." });
     }
 
     if (auction.createdBy.toString() !== user.id) {
-      return res
-        .status(403)
-        .json({ message: "Access denied: Not the creator of this auction." });
+      return res.status(403).json({ message: "Access denied: Not the creator of this auction." });
     }
 
+    // Manually populate and filter selectedPlayers with availability === 'Available'
+    const filteredPlayers = await Player.find({
+      _id: { $in: auction.selectedPlayers },
+      availability: "Available"
+    });
+
     // Last sold player
-    const lastSold =
-      auction.biddingHistory.length > 0
-        ? auction.biddingHistory[auction.biddingHistory.length - 1]
-        : null;
+    const lastSold = auction.biddingHistory.length > 0
+      ? auction.biddingHistory[auction.biddingHistory.length - 1]
+      : null;
 
     // Most expensive player
     const mostExpensive = auction.biddingHistory.reduce((max, entry) => {
@@ -297,14 +345,15 @@ router.get("/get-auction/:id", AuthMiddleWare, async (req, res) => {
       isPaused: auction.isPaused,
 
       selectedTeams: auction.selectedTeams,
-      selectedPlayers: auction.selectedPlayers,
+      selectedPlayers:auction.selectedPlayers,
+      savailablePlayers: filteredPlayers,
 
       currentPlayerOnBid: auction.currentPlayerOnBid || null,
       currentBid: auction.currentBid || null,
 
       lastSoldPlayer: lastSold || null,
       mostExpensivePlayer: mostExpensive || null,
-      // Add these fields to the response in get-auction route:
+
       selectionMode: auction.selectionMode,
       automaticFilter: auction.automaticFilter,
       manualPlayerQueue: auction.manualPlayerQueue,
@@ -313,11 +362,10 @@ router.get("/get-auction/:id", AuthMiddleWare, async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching auction:", error);
-    return res
-      .status(500)
-      .json({ message: "Server error while fetching auction." });
+    return res.status(500).json({ message: "Server error while fetching auction." });
   }
 });
+
 
 router.patch("/end-auction/:id", AuthMiddleWare, async (req, res) => {
   try {

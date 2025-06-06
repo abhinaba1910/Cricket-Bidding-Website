@@ -65,7 +65,7 @@ const auctionSchema = new mongoose.Schema({
   // For automatic mode filtering
   automaticFilter: {
     type: String,
-    enum: ['All', 'Batsman', 'Bowler', 'Wicket-keeper', 'All-rounder'],
+    enum: ['All', 'Batsman', 'Bowler', 'Wicket-keeper', 'All-Rounder'],
     default: 'All'
   },
   

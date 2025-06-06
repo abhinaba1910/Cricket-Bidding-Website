@@ -6,6 +6,7 @@ const upload = multer({ storage });
 
 const authMiddleware = require("../Auth/Authentication");
 const Team = require("../Models/team");
+const Player=require("../Models/player")
 
 // Create team route
 // routes/team.js
@@ -86,10 +87,12 @@ router.get("/get-teams", authMiddleware, async (req, res) => {
   }
 });
 
-
 router.get("/get-team/:id", authMiddleware, async (req, res) => {
   try {
-    const team = await Team.findById(req.params.id).lean();
+    // const team = await Team.findById(req.params.id).lean();
+    const team = await Team.findById(req.params.id)
+      .populate("players.player") // populate player info
+      .lean();
 
     if (!team) {
       return res.status(404).json({ error: "Team not found" });
@@ -106,32 +109,104 @@ router.get("/get-team/:id", authMiddleware, async (req, res) => {
   }
 });
 
-router.put('/update-team/:id', authMiddleware, upload.single('logoFile'), async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { teamName, shortName, purse } = req.body;
-    const userId = req.user.id;
+// router.put(
+//   "/update-team/:id",
+//   authMiddleware,
+//   upload.single("logoFile"),
+//   async (req, res) => {
+//     try {
+//       const { id } = req.params;
+//       const { teamName, shortName, purse } = req.body;
+//       const userId = req.user.id;
 
-    const team = await Team.findById(id);
-    if (!team) return res.status(404).json({ error: 'Team not found' });
-    if (team.createdBy.toString() !== userId)
-      return res.status(403).json({ error: 'Unauthorized to update this team' });
+//       const team = await Team.findById(id);
+//       if (!team) return res.status(404).json({ error: "Team not found" });
+//       if (team.createdBy.toString() !== userId)
+//         return res
+//           .status(403)
+//           .json({ error: "Unauthorized to update this team" });
 
-    team.teamName = teamName || team.teamName;
-    team.shortName = shortName || team.shortName;
-    team.purse = purse || team.purse;
+//       team.teamName = teamName || team.teamName;
+//       team.shortName = shortName || team.shortName;
+//       team.purse = purse || team.purse;
 
-    if (req.file && req.file.path) {
-      team.logoUrl = req.file.path;
+//       if (req.file && req.file.path) {
+//         team.logoUrl = req.file.path;
+//       }
+
+//       await team.save();
+//       res.json({ message: "Team updated successfully", team });
+//     } catch (err) {
+//       console.error(err);
+//       res.status(500).json({ error: "Failed to update team" });
+//     }
+//   }
+// );
+
+
+router.put(
+  "/update-team/:id",
+  authMiddleware,
+  upload.single("logoFile"),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const {
+        teamName,
+        shortName,
+        purse,
+        retainedPlayers, // [{playerId, price}]
+        releasedPlayers, // [playerId]
+      } = req.body;
+      const userId = req.user.id;
+
+      const team = await Team.findById(id);
+      if (!team) return res.status(404).json({ error: "Team not found" });
+      if (team.createdBy.toString() !== userId)
+        return res.status(403).json({ error: "Unauthorized to update this team" });
+
+      // Basic updates
+      team.teamName = teamName || team.teamName;
+      team.shortName = shortName || team.shortName;
+      team.purse = purse || team.purse;
+
+      // Handle logo update
+      if (req.file && req.file.path) {
+        team.logoUrl = req.file.path;
+      }
+
+      // Parse if sent as JSON strings
+      const retained = typeof retainedPlayers === 'string' ? JSON.parse(retainedPlayers) : retainedPlayers || [];
+      const released = typeof releasedPlayers === 'string' ? JSON.parse(releasedPlayers) : releasedPlayers || [];
+
+      // Process released players
+      for (const playerId of released) {
+        team.players = team.players.filter(p => p.player.toString() !== playerId);
+        await Player.findByIdAndUpdate(playerId, { availability: "Available" });
+        await Team.findByIdAndDelete(playerId)
+      }
+
+      // Process retained players
+      for (const { playerId, price } of retained) {
+        const existing = team.players.find(p => p.player.toString() === playerId);
+        if (!existing) {
+          team.players.push({ player: playerId, price });
+        } else {
+          existing.price = price;
+        }
+
+        await Player.findByIdAndUpdate(playerId, { availability: "Retained" });
+        team.purse -= price;
+      }
+
+      team.remaining = team.purse;
+      await team.save();
+      res.json({ message: "Team updated with players", team });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Failed to update team" });
     }
-
-    await team.save();
-    res.json({ message: 'Team updated successfully', team });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to update team' });
   }
-});
-
+);
 
 module.exports = router;

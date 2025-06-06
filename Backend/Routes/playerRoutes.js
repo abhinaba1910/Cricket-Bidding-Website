@@ -110,6 +110,30 @@ router.get("/get-player", authMiddleware, async (req, res) => {
   }
 });
 
+router.get("/get-player/available", authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await Person.findById(userId);
+
+    if (!user || (user.role !== "admin" && user.role !== "temp-admin")) {
+      return res.status(403).json({
+        error: "Access denied. Only admins and temp-admins can view players.",
+      });
+    }
+
+    const players = await Player.find({
+      createdBy: userId,
+      availability: "Available", // ✅ Only fetch players who are "Available"
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json(players);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch players." });
+  }
+});
+
+
 
 
 

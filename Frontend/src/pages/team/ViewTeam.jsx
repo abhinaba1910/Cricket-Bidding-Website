@@ -11,6 +11,8 @@ export default function ViewTeam() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let interval;
+  
     async function loadTeam() {
       try {
         const res = await api.get(`/get-team/${id}`);
@@ -24,8 +26,16 @@ export default function ViewTeam() {
         setLoading(false);
       }
     }
-    loadTeam();
+  
+    loadTeam(); // Initial fetch
+  
+    interval = setInterval(() => {
+      loadTeam();
+    }, 5000); // Fetch every 5 seconds
+  
+    return () => clearInterval(interval); // Cleanup on unmount
   }, [id]);
+  
 
   if (loading) {
     return (
@@ -107,6 +117,40 @@ export default function ViewTeam() {
               <p className="mt-1 text-gray-800">{team.founded}</p>
             </div>
           )}
+          {team.players && team.players.length > 0 && (
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                Bought Players
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left text-sm border border-gray-200 rounded-lg">
+                  <thead className="bg-gray-100 text-gray-700">
+                    <tr>
+                      <th className="px-4 py-2 border-b">#</th>
+                      <th className="px-4 py-2 border-b">Player Name</th>
+                      <th className="px-4 py-2 border-b">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {team.players.map((entry, index) => (
+                      <tr
+                        key={entry.player._id || index}
+                        className="hover:bg-gray-50"
+                      >
+                        <td className="px-4 py-2 border-b">{index + 1}</td>
+                        <td className="px-4 py-2 border-b">
+                          {entry.player?.name || "Unnamed Player"}
+                        </td>
+                        <td className="px-4 py-2 border-b">
+                          ₹{Number(entry.price).toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           <button
             onClick={() => navigate(`/admin/teams/${team._id}/edit`)}
@@ -119,4 +163,3 @@ export default function ViewTeam() {
     </div>
   );
 }
-

@@ -279,6 +279,7 @@ export default function BiddingPlayerList() {
     api.get(`/get-auction/${id}`)
       .then(res => {
         setPlayers(res.data.selectedPlayers || []);
+        console.log("Players",res.data.selectedPlayers);
         setLoading(false);
       })
       .catch(err => {

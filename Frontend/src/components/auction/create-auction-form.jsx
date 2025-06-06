@@ -317,7 +317,7 @@ export default function CreateAuctionForm() {
       try {
         const [teamRes, playerRes] = await Promise.all([
           api.get('/get-teams'),
-          api.get('/get-player'),
+          api.get('/get-player/available'),
         ]);
         setTeams(teamRes.data);
         setPlayers(playerRes.data);

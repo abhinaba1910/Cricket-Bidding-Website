@@ -20,18 +20,18 @@ export default function EditTeam() {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [teamPlayers, setTeamPlayers] = useState([]);
+  const [retainedPlayers, setRetainedPlayers] = useState([]);
+  const [releasedPlayers, setReleasedPlayers] = useState([]);
 
   useEffect(() => {
     async function load() {
       try {
         const res = await api.get(`/get-team/${id}`);
         const t = res.data;
-        reset({
-          teamName: t.teamName,
-          shortName: t.shortName,
-          purse: t.purse,
-        });
+        reset({ teamName: t.teamName, shortName: t.shortName, purse: t.purse });
         setPreview(t.logoUrl);
+        setTeamPlayers(t.players || []); // Assuming populated players
       } catch (err) {
         console.error(err);
         toast.error("Failed to load team");
@@ -58,6 +58,9 @@ export default function EditTeam() {
       formData.append("teamName", data.teamName);
       formData.append("shortName", data.shortName);
       formData.append("purse", data.purse);
+      formData.append("retainedPlayers", JSON.stringify(retainedPlayers));
+      formData.append("releasedPlayers", JSON.stringify(releasedPlayers));
+
       if (data.logoFile instanceof File) {
         formData.append("logoFile", data.logoFile);
       }
@@ -119,7 +122,9 @@ export default function EditTeam() {
                 Short Name / Code
               </label>
               <input
-                {...register("shortName", { required: "Short name is required" })}
+                {...register("shortName", {
+                  required: "Short name is required",
+                })}
                 className="w-full border px-3 py-2 rounded"
               />
               {errors.shortName && (
@@ -131,7 +136,9 @@ export default function EditTeam() {
 
             {/* Logo Upload */}
             <div>
-              <label className="block font-medium mb-1">Team Logo / Photo</label>
+              <label className="block font-medium mb-1">
+                Team Logo / Photo
+              </label>
               <Controller
                 name="logoFile"
                 control={control}
@@ -139,7 +146,9 @@ export default function EditTeam() {
                   <div className="space-y-2">
                     <div
                       className="w-32 h-32 border-2 border-dashed border-gray-300 rounded flex items-center justify-center cursor-pointer overflow-hidden"
-                      onClick={() => document.getElementById("logoInput").click()}
+                      onClick={() =>
+                        document.getElementById("logoInput").click()
+                      }
                     >
                       {preview ? (
                         <img
@@ -181,6 +190,95 @@ export default function EditTeam() {
                 </p>
               )}
             </div>
+            <div>
+              <h2 className="text-lg font-semibold mb-2">Players</h2>
+              {teamPlayers.map(({ player, price }) => (
+                <div
+                  key={player._id}
+                  className="border p-3 rounded mb-2 flex items-center justify-between"
+                >
+                  <div className="flex flex-col">
+                    <span className="font-medium">{player.name}</span>
+                    <span className="text-sm text-gray-500">
+                      Current: ₹{price}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    {/* Retain */}
+                    <label className="flex items-center gap-1">
+                      <input
+                        type="checkbox"
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setRetainedPlayers((prev) => [
+                              ...prev,
+                              { playerId: player._id, price },
+                            ]);
+                            setReleasedPlayers((prev) =>
+                              prev.filter((id) => id !== player._id)
+                            );
+                          } else {
+                            setRetainedPlayers((prev) =>
+                              prev.filter((p) => p.playerId !== player._id)
+                            );
+                          }
+                        }}
+                        checked={retainedPlayers.some(
+                          (p) => p.playerId === player._id
+                        )}
+                      />
+                      Retain
+                    </label>
+
+                    {/* Retain Price */}
+                    <input
+                      type="number"
+                      className="w-24 border px-2 py-1 rounded"
+                      value={
+                        retainedPlayers.find((p) => p.playerId === player._id)
+                          ?.price || ""
+                      }
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value) || 0;
+                        setRetainedPlayers((prev) =>
+                          prev.map((p) =>
+                            p.playerId === player._id ? { ...p, price: val } : p
+                          )
+                        );
+                      }}
+                      disabled={
+                        !retainedPlayers.some((p) => p.playerId === player._id)
+                      }
+                    />
+
+                    {/* Release */}
+                    {releasedPlayers.includes(player._id) ? (
+                      <span className="text-gray-500 italic">Released</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Are you sure you want to release ${player.name}?`
+                            )
+                          ) {
+                            setReleasedPlayers((prev) => [...prev, player._id]);
+                            setRetainedPlayers((prev) =>
+                              prev.filter((p) => p.playerId !== player._id)
+                            );
+                          }
+                        }}
+                        className="text-red-500 hover:underline text-sm"
+                      >
+                        Release
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
 
             {/* Save */}
             <div className="text-right">
@@ -188,7 +286,9 @@ export default function EditTeam() {
                 type="submit"
                 disabled={submitting}
                 className={`px-6 py-2 rounded text-white ${
-                  submitting ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+                  submitting
+                    ? "bg-blue-400 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-700"
                 }`}
               >
                 {submitting ? "Saving..." : "Save Changes"}
