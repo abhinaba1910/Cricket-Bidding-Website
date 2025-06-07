@@ -333,41 +333,132 @@ router.post("/update-selection-mode/:auctionId", auth, async (req, res) => {
 });
 
 
+// router.post("/set-manual-queue/:auctionId", auth, async (req, res) => {
+//   try {
+//     const { playerQueue } = req.body; // Array of {player: playerId, position: number}
+//     const auction = await Auction.findById(req.params.auctionId);
+
+//     if (!auction) {
+//       return res.status(404).json({ error: "Auction not found" });
+//     }
+
+//     // Sort the queue by position to ensure correct order
+//     const sortedQueue = playerQueue.sort((a, b) => a.position - b.position);
+
+//     let updateData = {
+//       manualPlayerQueue: sortedQueue,
+//     };
+
+//     // Handle queue position based on current state
+//     if (!auction.biddingStarted) {
+//       // Bidding not started - reset to beginning
+//       updateData.currentQueuePosition = 0;
+//     } else if (auction.selectionMode === "automatic" && sortedQueue.length > 0) {
+//       // Switching from auto to manual mid-bidding - set to -1 so next will be 0
+//       updateData.currentQueuePosition = -1;
+//     } else if (auction.selectionMode === "manual") {
+//       // Already in manual mode - handle adding players to existing queue
+//       const currentPos = auction.currentQueuePosition;
+      
+//       // If we're adding more players and current position is beyond new queue
+//       if (currentPos >= sortedQueue.length) {
+//         updateData.currentQueuePosition = Math.max(0, sortedQueue.length - 1);
+//       }
+//       // If we're still within the queue, keep current position
+//       // New players will be added after current ones
+//     }
+
+//     const updatedAuction = await Auction.findByIdAndUpdate(
+//       req.params.auctionId,
+//       updateData,
+//       { new: true }
+//     ).populate("manualPlayerQueue.player");
+
+//     // Check if we need to start the next player immediately
+//     let nextPlayerInfo = null;
+//     if (auction.biddingStarted && auction.selectionMode === "manual" && !auction.currentPlayerOnBid) {
+//       // No current player but bidding started - get first from new queue
+//       if (sortedQueue.length > 0) {
+//         const nextPlayer = await Player.findById(sortedQueue[0].player);
+//         nextPlayerInfo = {
+//           nextPlayer: nextPlayer,
+//           shouldStartNext: true
+//         };
+//       }
+//     }
+
+//     res.json({ 
+//       message: "Manual queue updated successfully", 
+//       auction: updatedAuction,
+//       ...nextPlayerInfo
+//     });
+//   } catch (err) {
+//     console.error("Set manual queue error:", err);
+//     res.status(500).json({ error: err.message });
+//   }
+// });
+
+
+
+
+// Updated backend route to properly handle adding players to existing queue
 router.post("/set-manual-queue/:auctionId", auth, async (req, res) => {
   try {
-    const { playerQueue } = req.body; // Array of {player: playerId, position: number}
+    const { playerQueue, newPlayers, existingQueue } = req.body;
     const auction = await Auction.findById(req.params.auctionId);
 
     if (!auction) {
       return res.status(404).json({ error: "Auction not found" });
     }
 
-    // Sort the queue by position to ensure correct order
-    const sortedQueue = playerQueue.sort((a, b) => a.position - b.position);
+    let finalQueue = [];
+    let updateData = {};
 
-    let updateData = {
-      manualPlayerQueue: sortedQueue,
-    };
-
-    // Handle queue position based on current state
-    if (!auction.biddingStarted) {
-      // Bidding not started - reset to beginning
-      updateData.currentQueuePosition = 0;
-    } else if (auction.selectionMode === "automatic" && sortedQueue.length > 0) {
-      // Switching from auto to manual mid-bidding - set to -1 so next will be 0
-      updateData.currentQueuePosition = -1;
-    } else if (auction.selectionMode === "manual") {
-      // Already in manual mode - handle adding players to existing queue
-      const currentPos = auction.currentQueuePosition;
+    // Check if we're adding to existing queue or creating new one
+    if (newPlayers && existingQueue) {
+      // Adding more players to existing queue
+      console.log("Adding to existing queue");
+      console.log("Existing queue length:", existingQueue.length);
+      console.log("New players:", newPlayers.length);
       
-      // If we're adding more players and current position is beyond new queue
-      if (currentPos >= sortedQueue.length) {
-        updateData.currentQueuePosition = Math.max(0, sortedQueue.length - 1);
+      // Combine existing queue with new players
+      finalQueue = [...existingQueue, ...newPlayers];
+      
+      // Sort by position to maintain order
+      finalQueue = finalQueue.sort((a, b) => a.position - b.position);
+      
+      updateData = {
+        manualPlayerQueue: finalQueue,
+        // Keep current position unchanged when adding more players
+        // Don't modify currentQueuePosition here
+      };
+      
+      console.log("Final combined queue length:", finalQueue.length);
+      
+    } else if (playerQueue) {
+      // Creating new queue or replacing entire queue
+      console.log("Creating new queue");
+      const sortedQueue = playerQueue.sort((a, b) => a.position - b.position);
+      
+      updateData = {
+        manualPlayerQueue: sortedQueue,
+      };
+
+      // Handle queue position based on current state
+      if (!auction.biddingStarted) {
+        // Bidding not started - reset to beginning
+        updateData.currentQueuePosition = 0;
+      } else if (auction.selectionMode === "automatic" && sortedQueue.length > 0) {
+        // Switching from auto to manual mid-bidding - set to -1 so next will be 0
+        updateData.currentQueuePosition = -1;
       }
-      // If we're still within the queue, keep current position
-      // New players will be added after current ones
+      
+      finalQueue = sortedQueue;
+    } else {
+      return res.status(400).json({ error: "Invalid request data" });
     }
 
+    // Update the auction
     const updatedAuction = await Auction.findByIdAndUpdate(
       req.params.auctionId,
       updateData,
@@ -377,9 +468,11 @@ router.post("/set-manual-queue/:auctionId", auth, async (req, res) => {
     // Check if we need to start the next player immediately
     let nextPlayerInfo = null;
     if (auction.biddingStarted && auction.selectionMode === "manual" && !auction.currentPlayerOnBid) {
-      // No current player but bidding started - get first from new queue
-      if (sortedQueue.length > 0) {
-        const nextPlayer = await Player.findById(sortedQueue[0].player);
+      // No current player but bidding started - get next from queue
+      const currentPos = updatedAuction.currentQueuePosition;
+      if (finalQueue.length > currentPos + 1) {
+        const nextPlayerData = finalQueue[currentPos + 1];
+        const nextPlayer = await Player.findById(nextPlayerData.player);
         nextPlayerInfo = {
           nextPlayer: nextPlayer,
           shouldStartNext: true
@@ -387,13 +480,40 @@ router.post("/set-manual-queue/:auctionId", auth, async (req, res) => {
       }
     }
 
+    console.log("Queue updated successfully. Total players:", finalQueue.length);
+    console.log("Current position:", updatedAuction.currentQueuePosition);
+
     res.json({ 
-      message: "Manual queue updated successfully", 
+      message: newPlayers ? "Players added to queue successfully" : "Manual queue updated successfully", 
       auction: updatedAuction,
+      totalQueueLength: finalQueue.length,
+      currentPosition: updatedAuction.currentQueuePosition,
       ...nextPlayerInfo
     });
   } catch (err) {
     console.error("Set manual queue error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Also add a separate route specifically for fetching current queue status
+router.get("/get-queue-status/:auctionId", auth, async (req, res) => {
+  try {
+    const auction = await Auction.findById(req.params.auctionId)
+      .populate("manualPlayerQueue.player");
+    
+    if (!auction) {
+      return res.status(404).json({ error: "Auction not found" });
+    }
+
+    res.json({
+      queue: auction.manualPlayerQueue,
+      currentPosition: auction.currentQueuePosition,
+      total: auction.manualPlayerQueue.length,
+      selectionMode: auction.selectionMode
+    });
+  } catch (err) {
+    console.error("Get queue status error:", err);
     res.status(500).json({ error: err.message });
   }
 });
