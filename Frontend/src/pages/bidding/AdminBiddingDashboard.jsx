@@ -63,24 +63,40 @@
 //       const response = await api.get(`/queue-status/${id}`);
 //       const data = response.data;
 
+//       console.log("Fetched queue status:", data);
+
 //       setCanChangeMode(data.canChangeMode);
-//       setCurrentQueuePosition(data.currentQueuePosition);
 //       setBiddingStarted(data.biddingStarted);
 //       setSelectionMode(data.selectionMode);
 //       setAutomaticFilter(data.automaticFilter);
-//       setManualPlayerQueue(data.manualPlayerQueue || []);
+
+//       // Update current queue position
+//       const currentPos = data.currentQueuePosition;
+//       setCurrentQueuePosition(currentPos);
+
+//       // Update manual player queue
+//       const manualQueue = data.manualPlayerQueue || [];
+//       setManualPlayerQueue(manualQueue);
 
 //       // Update queue display for manual mode
-//       if (data.selectionMode === "manual" && data.manualPlayerQueue) {
-//         setQueueDisplay({
-//           current: data.currentQueuePosition + 1,
-//           total: data.manualPlayerQueue.length,
-//         });
+//       if (data.selectionMode === "manual" && manualQueue.length > 0) {
+//         const queueDisplay = {
+//           current: Math.max(1, currentPos + 1), // Ensure at least 1
+//           total: manualQueue.length,
+//         };
+
+//         console.log("Queue display updated:", queueDisplay);
+//         setQueueDisplay(queueDisplay);
 
 //         // Show add more players option when queue is running low
-//         setShowAddMorePlayers(
-//           data.manualPlayerQueue.length - data.currentQueuePosition <= 1
-//         );
+//         const remainingPlayers = manualQueue.length - currentPos - 1;
+//         setShowAddMorePlayers(remainingPlayers <= 1);
+
+//         console.log("Remaining players in queue:", remainingPlayers);
+//       } else {
+//         // Reset queue display for automatic mode
+//         setQueueDisplay({ current: 0, total: 0 });
+//         setShowAddMorePlayers(false);
 //       }
 
 //       // Update current player if available
@@ -99,11 +115,12 @@
 //         }));
 //       }
 
-//       console.log("Queue Status:", {
-//         remainingPlayers: data.remainingPlayers,
-//         isLastPlayer: data.isLastPlayer,
-//         currentPosition: data.currentQueuePosition,
-//         totalQueue: data.totalQueueLength,
+//       console.log("Queue Status Summary:", {
+//         selectionMode: data.selectionMode,
+//         currentPosition: currentPos,
+//         totalQueue: manualQueue.length,
+//         remainingPlayers: manualQueue.length - currentPos - 1,
+//         biddingStarted: data.biddingStarted,
 //       });
 //     } catch (error) {
 //       console.error("Error fetching queue status:", error);
@@ -652,7 +669,19 @@
 //     setStatus((prev) => (prev === "live" ? "paused" : "live"));
 //   };
 //   const handleManualSelect = () => {
-//     navigate(`/admin/admin-manual-player-selection/${id}`);
+//     console.log("Navigating to manual selection with current queue:", {
+//       currentQueue: manualPlayerQueue,
+//       currentPosition: currentQueuePosition,
+//       addToExistingQueue: biddingStarted && selectionMode === "manual",
+//     });
+
+//     navigate(`/admin/admin-manual-player-selection/${id}`, {
+//       state: {
+//         addToExistingQueue: biddingStarted && selectionMode === "manual",
+//         currentQueue: manualPlayerQueue,
+//         currentPosition: currentQueuePosition,
+//       },
+//     });
 //   };
 
 //   // 5) RENDER. Everywhere you previously used SAMPLE_AUCTION, use auctionData instead.
@@ -1350,38 +1379,7 @@
 //   );
 // }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-///////////////////////////////////////
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+////////////////////////////////
 
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
@@ -1435,55 +1433,66 @@ export default function AdminBiddingDashboard() {
   const [canChangeMode, setCanChangeMode] = useState(true);
 
   const [showStartPopup, setShowStartPopup] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [popupSelection, setPopupSelection] = useState("automatic");
   const [showAddMorePlayers, setShowAddMorePlayers] = useState(false);
   const [queueDisplay, setQueueDisplay] = useState({ current: 0, total: 0 });
 
-  const handleStartBidding = () => {
+  const handleStartBidding = async () => {
     setShowStartPopup(true);
+
+    try {
+      await api.patch(`/pause-auction/${id}`, {
+        isPaused: false,
+      });
+      setIsPaused(false);
+    } catch (error) {
+      console.error("Error starting bidding:", error);
+      alert("Internal server error");
+    }
   };
 
   const fetchQueueStatus = async () => {
     try {
       const response = await api.get(`/queue-status/${id}`);
       const data = response.data;
-  
+
       console.log("Fetched queue status:", data);
-  
+
       setCanChangeMode(data.canChangeMode);
       setBiddingStarted(data.biddingStarted);
       setSelectionMode(data.selectionMode);
       setAutomaticFilter(data.automaticFilter);
-      
+
       // Update current queue position
       const currentPos = data.currentQueuePosition;
       setCurrentQueuePosition(currentPos);
-      
+
       // Update manual player queue
       const manualQueue = data.manualPlayerQueue || [];
       setManualPlayerQueue(manualQueue);
-  
+
       // Update queue display for manual mode
       if (data.selectionMode === "manual" && manualQueue.length > 0) {
         const queueDisplay = {
           current: Math.max(1, currentPos + 1), // Ensure at least 1
           total: manualQueue.length,
         };
-        
+
         console.log("Queue display updated:", queueDisplay);
         setQueueDisplay(queueDisplay);
-  
+
         // Show add more players option when queue is running low
         const remainingPlayers = manualQueue.length - currentPos - 1;
         setShowAddMorePlayers(remainingPlayers <= 1);
-        
+
         console.log("Remaining players in queue:", remainingPlayers);
       } else {
         // Reset queue display for automatic mode
         setQueueDisplay({ current: 0, total: 0 });
         setShowAddMorePlayers(false);
       }
-  
+
       // Update current player if available
       if (data.currentPlayer) {
         setAuctionData((prev) => ({
@@ -1499,7 +1508,7 @@ export default function AdminBiddingDashboard() {
           },
         }));
       }
-  
+
       console.log("Queue Status Summary:", {
         selectionMode: data.selectionMode,
         currentPosition: currentPos,
@@ -1507,7 +1516,6 @@ export default function AdminBiddingDashboard() {
         remainingPlayers: manualQueue.length - currentPos - 1,
         biddingStarted: data.biddingStarted,
       });
-      
     } catch (error) {
       console.error("Error fetching queue status:", error);
     }
@@ -1583,7 +1591,6 @@ export default function AdminBiddingDashboard() {
       return null;
     }
   };
-  
 
   const handleSaveStartSelection = async () => {
     try {
@@ -1651,6 +1658,10 @@ export default function AdminBiddingDashboard() {
         await fetchQueueStatus();
         return;
       }
+      await api.patch(`/pause-auction/${id}`, {
+        isPaused: false,
+      });
+      setIsPaused(false);
     } catch (error) {
       toast.error("Error in handleSaveStartSelection:", error);
       toast.error(
@@ -1709,6 +1720,7 @@ export default function AdminBiddingDashboard() {
       setAutomaticFilter(data.automaticFilter || "All");
       setManualPlayerQueue(data.manualPlayerQueue || []);
       setCurrentQueuePosition(data.currentQueuePosition || 0);
+      setIsPaused(data.isPaused);
 
       if (data.automaticFilter && data.automaticFilter !== "All") {
         setRole(data.automaticFilter);
@@ -1756,8 +1768,13 @@ export default function AdminBiddingDashboard() {
       console.warn("No auth token found. Cannot fetch auction.");
       return;
     }
+      const interval = setInterval(() => {
+        fetchAuctionData();
+      }, 800);
 
-    fetchAuctionData();
+
+    // Cleanup on unmount or when dependencies change
+    return () => clearInterval(interval);
   }, [id, incoming]);
 
   // 3. ADD NEW FUNCTION: Update selection mode in backend
@@ -2052,22 +2069,52 @@ export default function AdminBiddingDashboard() {
     setBidAmount(auctionData.currentBid.amount);
     setShowEdit(false);
   };
-  const togglePause = () => {
-    setStatus((prev) => (prev === "live" ? "paused" : "live"));
+
+  const togglePause = async () => {
+    try {
+      await api.patch(`/pause-auction/${id}`, {
+        isPaused: true,
+      });
+      setIsPaused(true);
+      setBiddingStarted(false); // Optional: depends on how you're using it
+    } catch (err) {
+      console.error("Failed to pause/resume:", err);
+    }
   };
+
+  useEffect(() => {
+    const checkIsPaused = async () => {
+      try {
+        const res = await api.get(`/get-auction-pause-status/${id}`);
+        const paused = res.data.isPaused;
+        setIsPaused(res.data.isPaused);
+
+        // setIsPaused(paused);
+        if (paused) setBiddingStarted(false); // disable Start Bidding
+      } catch (err) {
+        console.error("Failed to fetch pause status");
+      }
+    };
+
+    const interval = setInterval(checkIsPaused, 800);
+    checkIsPaused();
+
+    return () => clearInterval(interval);
+  }, [id]);
+
   const handleManualSelect = () => {
     console.log("Navigating to manual selection with current queue:", {
       currentQueue: manualPlayerQueue,
       currentPosition: currentQueuePosition,
-      addToExistingQueue: biddingStarted && selectionMode === "manual"
+      addToExistingQueue: biddingStarted && selectionMode === "manual",
     });
-    
+
     navigate(`/admin/admin-manual-player-selection/${id}`, {
       state: {
         addToExistingQueue: biddingStarted && selectionMode === "manual",
         currentQueue: manualPlayerQueue,
         currentPosition: currentQueuePosition,
-      }
+      },
     });
   };
 
@@ -2208,7 +2255,7 @@ export default function AdminBiddingDashboard() {
             >
               Reset Bid
             </motion.button>
-            <motion.button
+            {/* <motion.button
               onClick={handleStartBidding}
               disabled={biddingStarted}
               className={`px-4 py-2 rounded-xl text-xs sm:text-sm shadow-md ${
@@ -2220,6 +2267,22 @@ export default function AdminBiddingDashboard() {
               whileTap={!biddingStarted ? { scale: 0.95 } : {}}
             >
               {biddingStarted ? "Bidding Started" : "Start Bidding"}
+            </motion.button> */}
+
+            <motion.button
+              onClick={handleStartBidding}
+              disabled={biddingStarted && !isPaused}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm shadow-md ${
+                biddingStarted && !isPaused
+                  ? "bg-gray-500 cursor-not-allowed opacity-50"
+                  : "bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600"
+              }`}
+              whileHover={!(biddingStarted && !isPaused) ? { scale: 1.05 } : {}}
+              whileTap={!(biddingStarted && !isPaused) ? { scale: 0.95 } : {}}
+            >
+              {biddingStarted && !isPaused
+                ? "Bidding Started"
+                : "Start Bidding"}
             </motion.button>
           </div>
 
@@ -2304,46 +2367,49 @@ export default function AdminBiddingDashboard() {
               </h3>
 
               {/* Main Toggle Switch - Only show when bidding hasn't started */}
-              {!biddingStarted && (
-                <div className="relative h-10 w-full bg-indigo-800/30 rounded-full overflow-hidden">
-                  <motion.div
-                    className={`absolute top-0 h-full w-1/2 rounded-full z-0 ${
-                      selectionMode === "automatic"
-                        ? "bg-gradient-to-r from-emerald-500 to-cyan-400"
-                        : "bg-gradient-to-r from-amber-500 to-orange-400"
-                    }`}
-                    animate={{
-                      left: selectionMode === "automatic" ? "0" : "50%",
-                    }}
-                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                  />
 
-                  <button
-                    onClick={() => handleModeToggle("automatic")}
-                    className={`relative h-full w-1/2 z-10 text-sm font-medium ${
-                      selectionMode === "automatic"
-                        ? "text-white"
-                        : "text-gray-300"
-                    }`}
-                  >
-                    Auto
-                  </button>
+              <div className="relative h-10 w-full bg-indigo-800/30 rounded-full overflow-hidden">
+                <motion.div
+                  className={`absolute top-0 h-full w-1/2 rounded-full z-0 ${
+                    selectionMode === "automatic"
+                      ? "bg-gradient-to-r from-emerald-500 to-cyan-400"
+                      : "bg-gradient-to-r from-amber-500 to-orange-400"
+                  }`}
+                  animate={{
+                    left: selectionMode === "automatic" ? "0" : "50%",
+                  }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                />
 
-                  <button
-                    onClick={() => handleModeToggle("manual")}
-                    className={`relative h-full w-1/2 z-10 text-sm font-medium ${
-                      selectionMode === "manual"
-                        ? "text-white"
-                        : "text-gray-300"
-                    }`}
-                  >
-                    Manual
-                  </button>
-                </div>
-              )}
+                <button
+                  onClick={() => handleModeToggle("automatic")}
+                  disabled={biddingStarted}
+                  className={`relative h-full w-1/2 z-10 text-sm font-medium ${
+                    selectionMode === "automatic"
+                      ? "text-white"
+                      : "text-gray-300"
+                  }`}
+                  whileHover={!biddingStarted ? { scale: 1.05 } : {}}
+                  whileTap={!biddingStarted ? { scale: 0.95 } : {}}
+                >
+                  Auto
+                </button>
+
+                <button
+                  onClick={() => handleModeToggle("manual")}
+                  disabled={biddingStarted}
+                  className={`relative h-full w-1/2 z-10 text-sm font-medium ${
+                    selectionMode === "manual" ? "text-white" : "text-gray-300"
+                  }`}
+                  whileHover={!biddingStarted ? { scale: 1.05 } : {}}
+                  whileTap={!biddingStarted ? { scale: 0.95 } : {}}
+                >
+                  Manual
+                </button>
+              </div>
 
               {/* Mode change options when bidding has started */}
-              {biddingStarted && (
+              {/* {biddingStarted && (
                 <div className="p-3 bg-indigo-900/30 rounded-lg">
                   <p className="text-xs text-center mb-2 text-yellow-300">
                     Change Selection Mode:
@@ -2371,7 +2437,7 @@ export default function AdminBiddingDashboard() {
                     </button>
                   </div>
                 </div>
-              )}
+              )} */}
 
               {/* Role Selector for Automatic Mode */}
               {selectionMode === "automatic" && (
@@ -2433,7 +2499,7 @@ export default function AdminBiddingDashboard() {
             >
               Move to Unsell
             </motion.button>
-            <motion.button
+            {/* <motion.button
               onClick={togglePause}
               className={`w-full px-4 py-2 rounded text-xs sm:text-sm shadow-md transition ${
                 status === "live"
@@ -2443,7 +2509,21 @@ export default function AdminBiddingDashboard() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              {status === "live" ? "Pause Auction" : "Resume Auction"}
+              Pause Auction
+            </motion.button> */}
+
+            <motion.button
+              onClick={togglePause}
+              disabled={isPaused || !biddingStarted}
+              className={`w-full px-4 py-2 rounded text-xs sm:text-sm shadow-md transition ${
+                isPaused
+                  ? "bg-gray-600 text-white cursor-not-allowed"
+                  : "bg-amber-500 hover:bg-amber-600 text-white"
+              }`}
+              whileHover={!isPaused ? { scale: 1.02 } : {}}
+              whileTap={!isPaused ? { scale: 0.98 } : {}}
+            >
+              {isPaused ? "Paused Auction" : "Pause Auction"}
             </motion.button>
           </div>
 
@@ -2686,7 +2766,7 @@ export default function AdminBiddingDashboard() {
                 <p className="text-xs text-amber-300 mb-2">
                   No players selected for manual mode
                 </p>
-                <button
+                {/* <button
                   onClick={() => {
                     setShowStartPopup(false);
                     handleManualSelect();
@@ -2694,7 +2774,7 @@ export default function AdminBiddingDashboard() {
                   className="px-4 py-2 bg-amber-600 hover:bg-amber-700 rounded-lg text-xs"
                 >
                   Select Players First
-                </button>
+                </button> */}
               </div>
             )}
 
