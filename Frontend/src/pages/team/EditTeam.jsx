@@ -23,6 +23,8 @@ export default function EditTeam() {
   const [teamPlayers, setTeamPlayers] = useState([]);
   const [retainedPlayers, setRetainedPlayers] = useState([]);
   const [releasedPlayers, setReleasedPlayers] = useState([]);
+  const [showReleaseModal, setShowReleaseModal] = useState(false);
+  const [selectedReleasePlayer, setSelectedReleasePlayer] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -259,16 +261,11 @@ export default function EditTeam() {
                       <button
                         type="button"
                         onClick={() => {
-                          if (
-                            window.confirm(
-                              `Are you sure you want to release ${player.name}?`
-                            )
-                          ) {
-                            setReleasedPlayers((prev) => [...prev, player._id]);
-                            setRetainedPlayers((prev) =>
-                              prev.filter((p) => p.playerId !== player._id)
-                            );
-                          }
+                          setSelectedReleasePlayer({
+                            id: player._id,
+                            name: player.name,
+                          });
+                          setShowReleaseModal(true);
                         }}
                         className="text-red-500 hover:underline text-sm"
                       >
@@ -297,6 +294,40 @@ export default function EditTeam() {
           </form>
         </div>
       </div>
+      {showReleaseModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-sm">
+            <h2 className="text-lg font-bold mb-4">Confirm Release</h2>
+            <p className="mb-4">
+              Are you sure you want to release{" "}
+              <strong>{selectedReleasePlayer?.name}</strong>?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowReleaseModal(false)}
+                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setReleasedPlayers((prev) => [
+                    ...prev,
+                    selectedReleasePlayer.id,
+                  ]);
+                  setRetainedPlayers((prev) =>
+                    prev.filter((p) => p.playerId !== selectedReleasePlayer.id)
+                  );
+                  setShowReleaseModal(false);
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Release
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -166,7 +166,7 @@
 //       </div>
 //     );
 //   }
- 
+
 //   return (
 //     <FormProvider {...methods}>
 //       <form
@@ -247,35 +247,28 @@
 //   );
 // }
 
-
-
-
-
-
-
-
-
-
 ////////////////////////////////////////////////////////
 
-
-
-import React, { useState, useEffect } from 'react';
-import { useForm, FormProvider } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import StepIndicator from './step-indicator';
-import AuctionStep1Details from './auction-step-1-details';
-import AuctionStep2Teams from './auction-step-2-teams';
-import AuctionStep3Players from './auction-step-3-players';
+import React, { useState, useEffect } from "react";
+import { useForm, FormProvider } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import StepIndicator from "./step-indicator";
+import AuctionStep1Details from "./auction-step-1-details";
+import AuctionStep2Teams from "./auction-step-2-teams";
+import AuctionStep3Players from "./auction-step-3-players";
 import {
   auctionStep1Schema,
   auctionStep2Schema,
   auctionStep3Schema,
-} from '../../lib/schemas';
-import api from '../../userManagement/Api';
+} from "../../lib/schemas";
+import api from "../../userManagement/Api";
 
-const stepSchemas = [auctionStep1Schema, auctionStep2Schema, auctionStep3Schema];
-const stepTitles = ['Auction Details', 'Team Selection', 'Player Selection'];
+const stepSchemas = [
+  auctionStep1Schema,
+  auctionStep2Schema,
+  auctionStep3Schema,
+];
+const stepTitles = ["Auction Details", "Team Selection", "Player Selection"];
 
 export default function CreateAuctionForm() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -286,14 +279,14 @@ export default function CreateAuctionForm() {
 
   // 📌 Use *full schema* validation at the end (on final submission)
   const methods = useForm({
-    mode: 'onTouched',
+    mode: "onTouched",
     defaultValues: {
-      auctionName: '',
-      shortName: '',
+      auctionName: "",
+      shortName: "",
       auctionImage: undefined,
-      startDate: '',
-      startTime: '',
-      description: '',
+      startDate: "",
+      startTime: "",
+      description: "",
       selectedTeams: [],
       selectedPlayers: [],
     },
@@ -307,23 +300,23 @@ export default function CreateAuctionForm() {
     getValues,
     setValue,
     clearErrors,
-    formState: { errors }
+    formState: { errors },
   } = methods;
 
-  const selectedTeamIds = watch('selectedTeams');
+  const selectedTeamIds = watch("selectedTeams");
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [teamRes, playerRes] = await Promise.all([
-          api.get('/get-teams'),
-          api.get('/get-player/available'),
+          api.get("/get-teams"),
+          api.get("/get-player/available"),
         ]);
         setTeams(teamRes.data);
         setPlayers(playerRes.data);
       } catch (err) {
-        console.error('Fetching teams/players failed:', err);
-        setToast({ type: 'error', message: 'Failed to load teams or players' });
+        console.error("Fetching teams/players failed:", err);
+        setToast({ type: "error", message: "Failed to load teams or players" });
       }
     };
     fetchData();
@@ -338,7 +331,7 @@ export default function CreateAuctionForm() {
         handleSubmit(onSubmit)(); // 💡 final submission
       }
     } else {
-      setToast({ type: 'error', message: 'Fix errors before continuing' });
+      setToast({ type: "error", message: "Fix errors before continuing" });
       setTimeout(() => setToast(null), 3000);
     }
   };
@@ -350,97 +343,105 @@ export default function CreateAuctionForm() {
   const onSubmit = async (data) => {
     try {
       const formData = new FormData();
-      formData.append('auctionName', data.auctionName);
-      formData.append('shortName', data.shortName);
-  
+      formData.append("auctionName", data.auctionName);
+      formData.append("shortName", data.shortName);
+
       // Properly construct date + time
       const date = new Date(data.startDate);
-      const [hours, minutes] = data.startTime.split(':').map(Number);
+      const [hours, minutes] = data.startTime.split(":").map(Number);
       date.setHours(hours);
       date.setMinutes(minutes);
       date.setSeconds(0);
       date.setMilliseconds(0);
-      formData.append('startDate', date.toISOString());
-  
-      formData.append('description', data.description);
-      formData.append('selectedTeams', JSON.stringify(data.selectedTeams));
-      formData.append('selectedPlayers', JSON.stringify(data.selectedPlayers));
-  
+      // formData.append('startDate', date.toISOString());
+      // Send raw date (string) and time (string)
+      formData.append('startDateRaw', data.startDate); // e.g., '2025-06-10'
+      formData.append('startTimeRaw', data.startTime);
+
+      formData.append("description", data.description);
+      formData.append("selectedTeams", JSON.stringify(data.selectedTeams));
+      formData.append("selectedPlayers", JSON.stringify(data.selectedPlayers));
+
       if (data.auctionImage && data.auctionImage.length > 0) {
-        formData.append('auctionImage', data.auctionImage[0]);
+        formData.append("auctionImage", data.auctionImage[0]);
       }
-  
-      await api.post('/create-auction', formData, {
+
+      await api.post("/create-auction", formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          "Content-Type": "multipart/form-data",
         },
       });
-  
-      setToast({ type: 'success', message: 'Auction Created!' });
+
+      setToast({ type: "success", message: "Auction Created!" });
       setCurrentStep(4);
       setTimeout(() => setToast(null), 3000);
     } catch (err) {
-      console.error('Create auction error:', err);
+      console.error("Create auction error:", err);
       setToast({
-        type: 'error',
-        message: err.response?.data?.error || 'Failed to create auction',
+        type: "error",
+        message: err.response?.data?.error || "Failed to create auction",
       });
       setTimeout(() => setToast(null), 3000);
     }
   };
-  
 
   useEffect(() => {
     clearErrors();
   }, [currentStep]);
 
   const Toast = ({ type, message }) => (
-    <div style={{
-      position: 'fixed',
-      top: 20,
-      right: 20,
-      padding: '10px 20px',
-      backgroundColor: type === 'error' ? '#f44336' : '#4caf50',
-      color: 'white',
-      borderRadius: 4,
-      zIndex: 1000,
-      fontWeight: 'bold',
-    }}>
+    <div
+      style={{
+        position: "fixed",
+        top: 20,
+        right: 20,
+        padding: "10px 20px",
+        backgroundColor: type === "error" ? "#f44336" : "#4caf50",
+        color: "white",
+        borderRadius: 4,
+        zIndex: 1000,
+        fontWeight: "bold",
+      }}
+    >
       {message}
     </div>
   );
 
   if (currentStep === 4) {
-    const name = getValues('auctionName');
+    const name = getValues("auctionName");
     return (
-      <div style={{
-        maxWidth: 400,
-        margin: 'auto',
-        padding: 24,
-        boxShadow: '0 0 10px rgba(0,0,0,0.1)',
-        textAlign: 'center',
-        borderRadius: 8,
-      }}>
-        <div style={{
-          marginBottom: 16,
-          padding: 12,
-          backgroundColor: '#d4edda',
-          borderRadius: '50%',
-          width: 72,
-          height: 72,
-          marginLeft: 'auto',
-          marginRight: 'auto',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          fontSize: 40,
-          color: '#155724',
-        }}>
+      <div
+        style={{
+          maxWidth: 400,
+          margin: "auto",
+          padding: 24,
+          boxShadow: "0 0 10px rgba(0,0,0,0.1)",
+          textAlign: "center",
+          borderRadius: 8,
+        }}
+      >
+        <div
+          style={{
+            marginBottom: 16,
+            padding: 12,
+            backgroundColor: "#d4edda",
+            borderRadius: "50%",
+            width: 72,
+            height: 72,
+            marginLeft: "auto",
+            marginRight: "auto",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            fontSize: 40,
+            color: "#155724",
+          }}
+        >
           🎉
         </div>
         <h2 style={{ marginBottom: 8 }}>Auction Created Successfully!</h2>
         <p style={{ marginBottom: 24 }}>Your auction “{name}” is ready.</p>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 16 }}>
+        <div style={{ display: "flex", justifyContent: "center", gap: 16 }}>
           <button
             onClick={() => {
               reset();
@@ -448,12 +449,12 @@ export default function CreateAuctionForm() {
               setCurrentStep(1);
             }}
             style={{
-              padding: '10px 20px',
-              border: '1px solid #007bff',
-              backgroundColor: 'white',
-              color: '#007bff',
+              padding: "10px 20px",
+              border: "1px solid #007bff",
+              backgroundColor: "white",
+              color: "#007bff",
               borderRadius: 4,
-              cursor: 'pointer',
+              cursor: "pointer",
             }}
           >
             Create Another
@@ -461,13 +462,13 @@ export default function CreateAuctionForm() {
           <a
             href="/auctions"
             style={{
-              padding: '10px 20px',
-              backgroundColor: '#007bff',
-              color: 'white',
+              padding: "10px 20px",
+              backgroundColor: "#007bff",
+              color: "white",
               borderRadius: 4,
-              textDecoration: 'none',
-              display: 'inline-block',
-              cursor: 'pointer',
+              textDecoration: "none",
+              display: "inline-block",
+              cursor: "pointer",
             }}
           >
             View Auctions
@@ -483,15 +484,19 @@ export default function CreateAuctionForm() {
         onSubmit={handleSubmit(onSubmit)}
         style={{
           maxWidth: 900,
-          margin: '20px auto',
+          margin: "20px auto",
           padding: 24,
-          boxShadow: '0 0 20px rgba(0,0,0,0.1)',
+          boxShadow: "0 0 20px rgba(0,0,0,0.1)",
           borderRadius: 8,
-          backgroundColor: '#fff',
+          backgroundColor: "#fff",
           fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
         }}
       >
-        <StepIndicator currentStep={currentStep} totalSteps={3} stepTitles={stepTitles} />
+        <StepIndicator
+          currentStep={currentStep}
+          totalSteps={3}
+          stepTitles={stepTitles}
+        />
 
         <div style={{ marginTop: 24 }}>
           {currentStep === 1 && (
@@ -557,4 +562,3 @@ export default function CreateAuctionForm() {
     </FormProvider>
   );
 }
-

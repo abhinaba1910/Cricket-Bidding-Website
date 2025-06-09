@@ -19,15 +19,12 @@ router.post(
       const {
         auctionName,
         shortName,
-        startDate,
         description,
         selectedTeams,
         selectedPlayers,
+        startDateRaw,
+        startTimeRaw,
       } = req.body;
-
-      // Ensure array fields are parsed
-      // const parsedTeams = JSON.parse(selectedTeams);
-      // const parsedPlayers = JSON.parse(selectedPlayers);
 
       const parsedTeams = selectedTeams ? JSON.parse(selectedTeams) : [];
       const parsedPlayers = selectedPlayers ? JSON.parse(selectedPlayers) : [];
@@ -35,6 +32,14 @@ router.post(
       // Ensure all teams and players belong to the current user
       const userId = req.user.id;
       const role = req.user.role;
+      const [hours, minutes] = startTimeRaw.split(':');
+      const startDate = new Date(startDateRaw); // '2025-06-10' → 2025-06-10T00:00:00.000Z
+      
+      // Set time directly (assumes server is running in UTC)
+      startDate.setHours(Number(hours));
+      startDate.setMinutes(Number(minutes));
+      startDate.setSeconds(0);
+      startDate.setMilliseconds(0);
 
       if (role !== "admin" && role !== "temp-admin") {
         return res
@@ -65,7 +70,7 @@ router.post(
         auctionName,
         shortName,
         auctionImage: req.file?.path || "", // From Cloudinary
-        startDate,
+        startDate: startDate,
         description,
         selectedTeams: parsedTeams,
         selectedPlayers: parsedPlayers,
@@ -198,11 +203,9 @@ router.patch("/start-auction/:id", AuthMiddleWare, async (req, res) => {
         .status(400)
         .json({ error: "Time window expired. Auction cannot be started." });
     } else if (auction.status !== "upcoming") {
-      return res
-        .status(400)
-        .json({
-          error: `Cannot start auction. Current status is '${auction.status}'.`,
-        });
+      return res.status(400).json({
+        error: `Cannot start auction. Current status is '${auction.status}'.`,
+      });
     } else {
       return res
         .status(400)
@@ -288,15 +291,15 @@ router.patch("/start-auction/:id", AuthMiddleWare, async (req, res) => {
 //   }
 // });
 
-
-
 router.get("/get-auction/:id", AuthMiddleWare, async (req, res) => {
   try {
     const auctionId = req.params.id;
     const user = req.user;
 
     if (user.role !== "admin" && user.role !== "temp-admin") {
-      return res.status(403).json({ message: "Access denied: Unauthorized role." });
+      return res
+        .status(403)
+        .json({ message: "Access denied: Unauthorized role." });
     }
 
     // Fetch the auction with related data except selectedPlayers
@@ -314,19 +317,22 @@ router.get("/get-auction/:id", AuthMiddleWare, async (req, res) => {
     }
 
     if (auction.createdBy.toString() !== user.id) {
-      return res.status(403).json({ message: "Access denied: Not the creator of this auction." });
+      return res
+        .status(403)
+        .json({ message: "Access denied: Not the creator of this auction." });
     }
 
     // Manually populate and filter selectedPlayers with availability === 'Available'
     const filteredPlayers = await Player.find({
       _id: { $in: auction.selectedPlayers },
-      availability: "Available"
+      availability: "Available",
     });
 
     // Last sold player
-    const lastSold = auction.biddingHistory.length > 0
-      ? auction.biddingHistory[auction.biddingHistory.length - 1]
-      : null;
+    const lastSold =
+      auction.biddingHistory.length > 0
+        ? auction.biddingHistory[auction.biddingHistory.length - 1]
+        : null;
 
     // Most expensive player
     const mostExpensive = auction.biddingHistory.reduce((max, entry) => {
@@ -345,7 +351,7 @@ router.get("/get-auction/:id", AuthMiddleWare, async (req, res) => {
       isPaused: auction.isPaused,
 
       selectedTeams: auction.selectedTeams,
-      selectedPlayers:auction.selectedPlayers,
+      selectedPlayers: auction.selectedPlayers,
       savailablePlayers: filteredPlayers,
 
       currentPlayerOnBid: auction.currentPlayerOnBid || null,
@@ -362,10 +368,11 @@ router.get("/get-auction/:id", AuthMiddleWare, async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching auction:", error);
-    return res.status(500).json({ message: "Server error while fetching auction." });
+    return res
+      .status(500)
+      .json({ message: "Server error while fetching auction." });
   }
 });
-
 
 router.patch("/end-auction/:id", AuthMiddleWare, async (req, res) => {
   try {
