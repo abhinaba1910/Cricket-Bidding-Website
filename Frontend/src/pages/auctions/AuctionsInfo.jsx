@@ -259,7 +259,8 @@ export default function AuctionsInfo() {
       });
       if (res.status === 200) {
         setShowJoinModal(false);
-        navigate(`/user-bidding-portal/${selectedAuctionId}`);
+        // navigate(`/user-bidding-portal/${selectedAuctionId}`);
+        navigate('/user-char-selection');
       }
     } catch (err) {
       console.error(err);
@@ -413,6 +414,7 @@ export default function AuctionsInfo() {
               </button>
               <button
                 onClick={handleJoinSubmit}
+                
                 className="px-4 py-2 rounded bg-teal-600 text-white hover:bg-teal-700"
               >
                 Join

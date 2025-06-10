@@ -31,6 +31,7 @@ import AdminBiddingTeamView from "./pages/bidding/AdminBiddingTeamView";
 // import UserBiddngPortalDesktop from "./pages/userBidding/UserBiddngPortalDesktop";
 // import UserBiddingDashboardMobile from "./pages/userBidding/UserBiddingPortalMobile";
 import UserBiddingRoute from "./pages/userBidding/UserBiddingRoute";
+import UserBiddingCharSelection from "./pages/userBidding/UserBiddingCharSelection";
 function ProtectedLayout({ isAuthenticated }) {
   if (!isAuthenticated) return <AuthPage />;
   return (
@@ -82,7 +83,7 @@ function App() {
         {/* <Route path="/user-bidding-portal" element={<UserBiddngPortalDesktop/>} /> */}
         {/* <Route path="/user-bidding-portal" element={<UserBiddingDashboardMobile/>} /> */}
         <Route path="/user-bidding-portal/:id" element={<UserBiddingRoute />}/>
-
+        <Route path="/user-char-selection" element={<UserBiddingCharSelection/>}/>
         <Route element={<ProtectedLayout isAuthenticated={isAuthenticated} />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/create-auction" element={<CreateAuction />} />
