@@ -2054,16 +2054,21 @@ export default function AdminBiddingDashboard() {
   const onEditBid = () => setShowEdit(true);
   const onApplyBid = async () => {
     try {
-      // Here you can add API call to update bid amount if needed
-      // For now, just close the edit modal
       setShowEdit(false);
-
-      // You might want to add an API call here to update the bid amount in backend
-      // await api.post(`/update-bid/${id}`, { amount: bidAmount });
+  
+      await axios.post(`/update-bid/${auctionId}`, {
+        amount: bidAmount,
+        teamId: selectedTeamId, // your current team placing the bid
+      });
+  
+      // Optionally show toast
+      toast.success("Bid updated!");
     } catch (error) {
       console.error("Error updating bid:", error);
+      toast.error("Failed to update bid");
     }
   };
+  
   const onResetBid = () => {
     setBidAmount(auctionData.currentBid.amount);
     setShowEdit(false);

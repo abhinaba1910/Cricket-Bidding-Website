@@ -28,7 +28,10 @@ export default function UserBiddingCharSelection() {
       try {
         const res = await api.get(`/join-auction/${id}/teams`);
         setTeams(res.data.teams);
-        console.log(res.data.teams);
+        if(res.data.alreadyManager){
+          navigate(`/user-bidding-portal/${id}`);
+        }
+        console.log(res.data);
       } catch (err) {
         toast.error("Failed to fetch teams", err);
         setError("Could not load teams. Please try again.");
@@ -67,7 +70,6 @@ export default function UserBiddingCharSelection() {
       <h1 className="text-2xl font-bold mb-6">Join Auction #{id}</h1>
 
       <div className="space-y-8">
-        {/* Step 1: Select Team */}
         {/* Step 1: Select Team */}
         <div>
           <h2 className="text-xl font-semibold mb-4">1. Select Your Team</h2>

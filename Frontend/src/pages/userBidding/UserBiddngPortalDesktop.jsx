@@ -296,7 +296,7 @@ export default function UserBiddingDashboardDesktop() {
           </motion.button> */}
           <h3 className="text-xs font-medium mb-1">Bid Now</h3>
           <BidButton onClick={handleBid} />
-          <p className="mt-1 text-xs opacity-75">Next: 50L</p>
+          <p className="mt-1 text-xs opacity-75">Price: 50L</p>
         </motion.div>
 
         {/* ─── DESKTOP: Current Bid Card (SMALLER) ─────────────────────── */}

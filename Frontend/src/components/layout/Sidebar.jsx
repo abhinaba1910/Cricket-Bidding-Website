@@ -134,6 +134,7 @@ const Sidebar = ({ isOpen, onClose }) => {
   const [user, setUser] = useState(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const isAdmin = user?.role === 'admin'
+  const isTempAdmin = user?.role === 'temp-admin'
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -200,27 +201,27 @@ const Sidebar = ({ isOpen, onClose }) => {
               <TrendingUp className="mr-3 flex-shrink-0 text-gray-500 group-hover:text-primary-600 w-5 h-5" />
               All Auctions
             </button>
-            <button
+            {(isAdmin || isTempAdmin) && (<button
               className="group flex items-center px-2 py-2 text-base font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-primary-600 w-full text-left"
               onClick={() => handleNavigation('/admins-my-auction-info')}
             >
               <RiAuctionLine className="mr-3 flex-shrink-0 text-gray-500 group-hover:text-primary-600 w-5 h-5" />
               My Auctions
-            </button>
-            <button
+            </button>)}
+            {(isAdmin || isTempAdmin) && (<button
               className="group flex items-center px-2 py-2 text-base font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-primary-600 w-full text-left"
               onClick={() => handleNavigation('/admin-teams-info')}
             >
               <Briefcase className="mr-3 flex-shrink-0 text-gray-500 group-hover:text-primary-600 w-5 h-5" />
               Teams
-            </button>
-            <button
+            </button>)}
+            {(isAdmin || isTempAdmin) && (<button
               className="group flex items-center px-2 py-2 text-base font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-primary-600 w-full text-left"
               onClick={() => handleNavigation('/admin-players-info')}
             >
               <UsersIcon className="mr-3 flex-shrink-0 text-gray-500 group-hover:text-primary-600 w-5 h-5" />
               Players
-            </button>
+            </button>)}
 
             {isAdmin && (
               <>

@@ -298,6 +298,42 @@ router.post("/manual-sell/:auctionId/:playerId", auth, async (req, res) => {
   }
 });
 
+
+// POST /update-bid/:auctionId
+router.post("/update-bid/:auctionId", auth, async (req, res) => {
+  const { auctionId } = req.params;
+  const { amount, teamId } = req.body;
+
+  try {
+    const auction = await Auction.findById(auctionId);
+    if (!auction) return res.status(404).json({ message: "Auction not found" });
+
+    // Update current bid
+    auction.currentBid = {
+      amount,
+      team: teamId,
+    };
+
+    // Add to bidding history (optional but recommended)
+    if (auction.currentPlayerOnBid) {
+      auction.biddingHistory.push({
+        player: auction.currentPlayerOnBid,
+        team: teamId,
+        bidAmount: amount,
+        time: new Date(),
+      });
+    }
+
+    await auction.save();
+    res.json({ message: "Bid updated successfully", currentBid: auction.currentBid });
+  } catch (error) {
+    console.error("Error updating bid:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+
 router.post("/update-selection-mode/:auctionId", auth, async (req, res) => {
   try {
     const { selectionMode, automaticFilter } = req.body;
@@ -872,132 +908,6 @@ router.post("/start-automatic-bidding/:auctionId", auth, async (req, res) => {
   }
 });
 
-/////////////////////////USER BIDDING ROUTES////////////////////////////
-
-// routes/auction.js
-router.post("/join-auction/:auctionId/confirm", auth, async (req, res) => {
-  try {
-    const { auctionId } = req.params;
-    const userId = req.user.id;
-    const { teamId, avatarUrl } = req.body;
-
-    if (!teamId || !avatarUrl) {
-      return res.status(400).json({ message: "Team and avatar are required." });
-    }
-
-    const auction = await Auction.findById(auctionId);
-    if (!auction) {
-      return res.status(404).json({ message: "Auction not found." });
-    }
-
-    // ✅ NEW CHECK: Is the user already a manager in this auction?
-    const alreadyManager = auction.selectedTeams.find(
-      (entry) => entry.manager && entry.manager.toString() === userId
-    );
-    if (alreadyManager) {
-      return res
-        .status(409)
-        .json({ message: "You have already selected a team and avatar." });
-    }
-
-    // Check if the selected team is valid and available
-    const teamEntry = auction.selectedTeams.find(
-      (t) => t.team.toString() === teamId
-    );
-    if (!teamEntry) {
-      return res.status(400).json({ message: "Invalid team selection." });
-    }
-    if (teamEntry.manager) {
-      return res
-        .status(409)
-        .json({ message: "Team already selected by another user." });
-    }
-
-    // Assign manager and avatar
-    teamEntry.manager = userId;
-    teamEntry.avatar = avatarUrl;
-
-    await auction.save();
-    res.status(200).json({ message: "Team and avatar selection successful." });
-  } catch (err) {
-    console.error("Error in join-auction/confirm:", err);
-    res.status(500).json({ message: "Internal server error." });
-  }
-});
-
-
-// routes/auction.js
-router.get("/join-auction/:auctionId/teams", auth, async (req, res) => {
-  try {
-    const { auctionId } = req.params;
-    console.log("Fetching teams for auction:", auctionId);
-
-    const auction = await Auction.findById(auctionId).populate("selectedTeams.team");
-
-    if (!auction) {
-      return res.status(404).json({ message: "Auction not found." });
-    }
-
-    
-    // Filter out teams that have no manager assigned and ensure t.team is not null
-    const availableTeams = auction.selectedTeams
-      .filter((t) => !t.manager && t.team) // skip if t.manager is set or t.team is undefined
-      .map((t) => ({
-        id: t.team._id,
-        name: t.team.teamName,
-        shortName: t.team.shortName,
-        logoUrl: t.team.logoUrl,
-      }));
-
-    res.json({ teams: availableTeams });
-    console.log(availableTeams)
-
-  } catch (err) {
-    console.error("Error fetching teams:", err);
-    res.status(500).json({ message: "Failed to fetch teams." });
-  }
-});
-
-
-router.post("/place-bid", auth, async (req, res) => {
-  try {
-    const { auctionId, playerId, teamId, bidAmount } = req.body;
-
-    const auction = await Auction.findById(auctionId);
-
-    if (auction.isPaused || auction.status !== "started") {
-      return res.status(400).json({ error: "Auction is not active" });
-    }
-
-    auction.currentBid = { team: teamId, amount: bidAmount };
-    auction.biddingHistory.push({
-      player: playerId,
-      team: teamId,
-      bidAmount,
-    });
-
-    await auction.save();
-
-    res.json({ message: "Bid placed successfully" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// 5. Pause auction
-// router.patch("/pause-auction/:auctionId", auth, async (req, res) => {
-//   try {
-//     const auction = await Auction.findByIdAndUpdate(
-//       req.params.auctionId,
-//       { isPaused: true },
-//       { new: true }
-//     );
-//     res.json({ message: "Auction paused", auction });
-//   } catch (err) {
-//     res.status(500).json({ error: err.message });
-//   }
-// });
-
 // 6. Resume auction
 router.patch("/pause-auction/:id", auth, async (req, res) => {
   try {
@@ -1085,5 +995,123 @@ router.get("/get-bidding-data/:auctionId", auth, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+/////////////////////////USER BIDDING ROUTES////////////////////////////
+
+// routes/auction.js
+router.post("/join-auction/:auctionId/confirm", auth, async (req, res) => {
+  try {
+    const { auctionId } = req.params;
+    const userId = req.user.id;
+    const { teamId, avatarUrl } = req.body;
+
+    if (!teamId || !avatarUrl) {
+      return res.status(400).json({ message: "Team and avatar are required." });
+    }
+
+    const auction = await Auction.findById(auctionId);
+    if (!auction) {
+      return res.status(404).json({ message: "Auction not found." });
+    }
+
+    // ✅ NEW CHECK: Is the user already a manager in this auction?
+    const alreadyManager = auction.selectedTeams.find(
+      (entry) => entry.manager && entry.manager.toString() === userId
+    );
+    if (alreadyManager) {
+      return res
+        .status(409)
+        .json({ message: "You have already selected a team and avatar." });
+    }
+
+    // Check if the selected team is valid and available
+    const teamEntry = auction.selectedTeams.find(
+      (t) => t.team.toString() === teamId
+    );
+    if (!teamEntry) {
+      return res.status(400).json({ message: "Invalid team selection." });
+    }
+    if (teamEntry.manager) {
+      return res
+        .status(409)
+        .json({ message: "Team already selected by another user." });
+    }
+
+    // Assign manager and avatar
+    teamEntry.manager = userId;
+    teamEntry.avatar = avatarUrl;
+
+    await auction.save();
+    res.status(200).json({ message: "Team and avatar selection successful." });
+  } catch (err) {
+    console.error("Error in join-auction/confirm:", err);
+    res.status(500).json({ message: "Internal server error." });
+  }
+});
+
+
+// routes/auction.js
+router.get("/join-auction/:auctionId/teams", auth, async (req, res) => {
+  try {
+    const { auctionId } = req.params;
+    const userId = req.user.id;
+    console.log("Fetching teams for auction:", auctionId);
+
+    const auction = await Auction.findById(auctionId).populate("selectedTeams.team");
+
+    if (!auction) {
+      return res.status(404).json({ message: "Auction not found." });
+    }
+
+    const alreadyManagerEntry = auction.selectedTeams.find(
+      (entry) => entry.manager?.toString() === userId
+    );
+    
+    // Filter out teams that have no manager assigned and ensure t.team is not null
+    const availableTeams = auction.selectedTeams
+      .filter((t) => !t.manager && t.team) // skip if t.manager is set or t.team is undefined
+      .map((t) => ({
+        id: t.team._id,
+        name: t.team.teamName,
+        shortName: t.team.shortName,
+        logoUrl: t.team.logoUrl,
+      }));
+
+    res.json({ teams: availableTeams,alreadyManager: !!alreadyManagerEntry, });
+    console.log(availableTeams)
+
+  } catch (err) {
+    console.error("Error fetching teams:", err);
+    res.status(500).json({ message: "Failed to fetch teams." });
+  }
+});
+
+
+router.post("/place-bid", auth, async (req, res) => {
+  try {
+    const { auctionId, playerId, teamId, bidAmount } = req.body;
+
+    const auction = await Auction.findById(auctionId);
+
+    if (auction.isPaused || auction.status !== "started") {
+      return res.status(400).json({ error: "Auction is not active" });
+    }
+
+    auction.currentBid = { team: teamId, amount: bidAmount };
+    auction.biddingHistory.push({
+      player: playerId,
+      team: teamId,
+      bidAmount,
+    });
+
+    await auction.save();
+
+    res.json({ message: "Bid placed successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 
 module.exports = router;
