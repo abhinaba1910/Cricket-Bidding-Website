@@ -259,7 +259,7 @@ export default function AuctionsInfo() {
       });
       if (res.status === 200) {
         setShowJoinModal(false);
-        navigate(`/live-auction/${selectedAuctionId}`);
+        navigate(`/user-bidding-portal/${selectedAuctionId}`);
       }
     } catch (err) {
       console.error(err);
@@ -369,7 +369,7 @@ export default function AuctionsInfo() {
               </div>
               <div className="mt-4 sm:mt-0 sm:ml-4 flex-shrink-0 space-x-2 flex flex-col sm:flex-row sm:space-y-0 space-y-2">
                 <a
-                  href={`/auctions/${a.id}`}
+                  href={`#`}
                   className="inline-flex items-center px-3 py-1.5 bg-gray-100 text-gray-800 rounded hover:bg-gray-200"
                 >
                   <FiEye className="mr-1" /> View

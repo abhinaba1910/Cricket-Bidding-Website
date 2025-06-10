@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useSwipeable } from 'react-swipeable';
 import BidButton from '../../components/ui/BidButton';
+import CharacterCard from '../characters/CharacterCard';
 
 // ─── Shared “CriteriaTable” for Mobile ──────────────────────────────────
 function CriteriaTable() {
@@ -475,34 +476,12 @@ export default function UserBiddingDashboardMobile() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
-          <motion.div className="flex justify-center">
-            <div className="flex flex-col items-center bg-gradient-to-br from-indigo-900/50 to-blue-800/50 rounded-xl p-4 shadow-lg w-full">
-              <motion.div 
-                className="flex items-center w-full"
-                whileHover={{ scale: 1.02 }}
-              >
-                <motion.div 
-                  className="rounded-full bg-gray-700 w-16 h-16 flex items-center justify-center mr-3"
-                  whileHover={{ rotate: 10 }}
-                >
-                  {adminImageUrl ? (
-                    <img
-                      src={adminImageUrl}
-                      alt="Admin"
-                      className="w-full h-full object-cover rounded-full"
-                    />
-                  ) : (
-                    <span className="text-2xl">👤</span>
-                  )}
-                </motion.div>
-                <div>
-                  <p className="text-sm font-medium">Auction Controller</p>
-                  <p className="text-xs opacity-75">Admin</p>
+                <div className='bg-gradient-to-br from-indigo-800/50 to-blue-700/50 rounded-xl p-4 w-full max-w-md shadow-xl'>
+
+                  <CharacterCard/>  
                 </div>
-              </motion.div>
-            </div>
           </motion.div>
-        </motion.div>
+
       </div>
     </div>
   );

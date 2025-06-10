@@ -1,7 +1,6 @@
 // src/App.js
 import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Outlet } from "react-router-dom";
-
 import SplashScreen from "./components/splashScreen";
 import AuthPage from "./pages/authentication/AuthPage";
 import Layout from "./components/layout/Layout";
@@ -16,7 +15,6 @@ import AdminMyAuctionInfo from "./pages/auctions/AdminMyAuctionInfo";
 import AddTempAdmin from "./pages/adminPages/AddTempAdmin";
 import AdminProfilePage from "./pages/profile/AdminProfilePage";
 // import ViewPlayer from "./pages/player/ViewPlayer";
-
 import "./App.css";
 import SetPassword from "./pages/set-Password/SetPassword";
 import { Toaster } from "react-hot-toast";
@@ -83,7 +81,7 @@ function App() {
         <Route path="/set-password" element={<SetPassword/>} />
         {/* <Route path="/user-bidding-portal" element={<UserBiddngPortalDesktop/>} /> */}
         {/* <Route path="/user-bidding-portal" element={<UserBiddingDashboardMobile/>} /> */}
-        <Route path="/user-bidding-portal" element={<UserBiddingRoute />}/>
+        <Route path="/user-bidding-portal/:id" element={<UserBiddingRoute />}/>
 
         <Route element={<ProtectedLayout isAuthenticated={isAuthenticated} />}>
           <Route path="/dashboard" element={<Dashboard />} />
