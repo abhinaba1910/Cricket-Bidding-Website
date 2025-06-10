@@ -1,7 +1,6 @@
 // src/App.js
 import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Outlet } from "react-router-dom";
-
 import SplashScreen from "./components/splashScreen";
 import AuthPage from "./pages/authentication/AuthPage";
 import Layout from "./components/layout/Layout";
@@ -16,7 +15,6 @@ import AdminMyAuctionInfo from "./pages/auctions/AdminMyAuctionInfo";
 import AddTempAdmin from "./pages/adminPages/AddTempAdmin";
 import AdminProfilePage from "./pages/profile/AdminProfilePage";
 // import ViewPlayer from "./pages/player/ViewPlayer";
-
 import "./App.css";
 import SetPassword from "./pages/set-Password/SetPassword";
 import { Toaster } from "react-hot-toast";
@@ -33,6 +31,7 @@ import AdminBiddingTeamView from "./pages/bidding/AdminBiddingTeamView";
 // import UserBiddngPortalDesktop from "./pages/userBidding/UserBiddngPortalDesktop";
 // import UserBiddingDashboardMobile from "./pages/userBidding/UserBiddingPortalMobile";
 import UserBiddingRoute from "./pages/userBidding/UserBiddingRoute";
+import UserBiddingCharSelection from "./pages/userBidding/UserBiddingCharSelection";
 function ProtectedLayout({ isAuthenticated }) {
   if (!isAuthenticated) return <AuthPage />;
   return (
@@ -83,8 +82,8 @@ function App() {
         <Route path="/set-password" element={<SetPassword/>} />
         {/* <Route path="/user-bidding-portal" element={<UserBiddngPortalDesktop/>} /> */}
         {/* <Route path="/user-bidding-portal" element={<UserBiddingDashboardMobile/>} /> */}
-        <Route path="/user-bidding-portal" element={<UserBiddingRoute />}/>
-
+        <Route path="/user-bidding-portal/:id" element={<UserBiddingRoute />}/>
+        <Route path="/user-char-selection" element={<UserBiddingCharSelection/>}/>
         <Route element={<ProtectedLayout isAuthenticated={isAuthenticated} />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/create-auction" element={<CreateAuction />} />

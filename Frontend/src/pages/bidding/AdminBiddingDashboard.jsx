@@ -1955,7 +1955,6 @@ export default function AdminBiddingDashboard() {
         return;
       }
     }
-
     try {
       const filterToUse = newMode === "automatic" ? role : "All";
 

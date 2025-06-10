@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import BidButton from '../../components/ui/BidButton';
+import CharacterCard from '../characters/CharacterCard';
 // ─── Shared “CriteriaTable” for Desktop ────────────────────────────
 function CriteriaTable() {
   const totalCriteria = 24;
@@ -359,19 +360,7 @@ export default function UserBiddingDashboardDesktop() {
           transition={{ delay: 0.2 }}
           whileHover={{ scale: 1.02 }}
         >
-          <div className="rounded-full bg-gradient-to-br from-indigo-700 to-blue-800 w-24 h-24 mx-auto flex items-center justify-center overflow-hidden border-2 border-cyan-400/30">
-            {adminImageUrl ? (
-              <img
-                src={adminImageUrl}
-                alt="Admin"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <span className="text-3xl">👤</span>
-            )}
-          </div>
-          <p className="mt-2 font-bold">Admin</p>
-          <p className="text-xs opacity-75 mt-1">Auction Controller</p>
+          <CharacterCard/>
         </motion.div>
       </div>
     </div>
