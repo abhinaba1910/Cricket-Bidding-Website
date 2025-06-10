@@ -69,12 +69,13 @@ router.post(
         createdBy: userId,
         auctionName,
         shortName,
-        auctionImage: req.file?.path || "", // From Cloudinary
+        auctionImage: req.file?.path || "",
         startDate: startDate,
         description,
-        selectedTeams: parsedTeams,
+        selectedTeams: parsedTeams.map(teamId => ({ team: teamId })),
         selectedPlayers: parsedPlayers,
       });
+      
 
       console.log(newAuction);
       await newAuction.save();
@@ -455,9 +456,10 @@ router.get("/get-all-auctions", AuthMiddleWare, async (req, res) => {
   }
 });
 
-router.post("/join-auction/:id", async (req, res) => {
+router.post("/join-auction/:id", AuthMiddleWare, async (req, res) => {
   const { id } = req.params;
   const { joinCode } = req.body;
+  const userId = req.user.id;
 
   try {
     const auction = await Auction.findById(id);
@@ -474,9 +476,14 @@ router.post("/join-auction/:id", async (req, res) => {
       return res.status(401).json({ message: "Invalid join code" });
     }
 
-    // Optionally, you could log who joined or track participants here
+    const alreadyManager = auction.selectedTeams.find(
+      (t) => t.manager?.toString() === userId
+    );
 
-    res.status(200).json({ message: "Successfully joined the auction" });
+    return res.status(200).json({
+      message: "Successfully joined the auction",
+      alreadyJoined: !!alreadyManager,
+    });
   } catch (error) {
     console.error("Error joining auction:", error);
     res.status(500).json({ message: "Internal server error" });

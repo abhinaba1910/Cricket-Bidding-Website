@@ -83,7 +83,7 @@ function App() {
         {/* <Route path="/user-bidding-portal" element={<UserBiddngPortalDesktop/>} /> */}
         {/* <Route path="/user-bidding-portal" element={<UserBiddingDashboardMobile/>} /> */}
         <Route path="/user-bidding-portal/:id" element={<UserBiddingRoute />}/>
-        <Route path="/user-char-selection" element={<UserBiddingCharSelection/>}/>
+        <Route path="/user-char-selection/:id" element={<UserBiddingCharSelection/>}/>
         <Route element={<ProtectedLayout isAuthenticated={isAuthenticated} />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/create-auction" element={<CreateAuction />} />

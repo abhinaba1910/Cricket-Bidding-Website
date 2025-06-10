@@ -49,12 +49,21 @@ const auctionSchema = new mongoose.Schema(
       team: { type: mongoose.Schema.Types.ObjectId, ref: "Team" },
       amount: { type: Number, default: 0 },
     },
+    // selectedTeams: [
+    //   {
+    //     type: mongoose.Schema.Types.ObjectId,
+    //     ref: "Team",
+    //   },
+    // ],
+
     selectedTeams: [
       {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Team",
-      },
-    ],
+        team: { type: mongoose.Schema.Types.ObjectId, ref: "Team" },
+        manager: { type: mongoose.Schema.Types.ObjectId, ref: "Person", default: null },
+        avatar: { type: String, default: null },
+      }
+    ],    
+    
     selectedPlayers: [
       {
         type: mongoose.Schema.Types.ObjectId,

@@ -1,15 +1,7 @@
-// src/pages/UserBiddingCharSelection.jsx
-
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-
-const placeholderTeams = [
-  { id: "team1", name: "Team Alpha" },
-  { id: "team2", name: "Team Bravo" },
-  { id: "team3", name: "Team Charlie" },
-  { id: "team4", name: "Team Delta" },
-  { id: "team5", name: "Team Echo" },
-];
+import api from "../../userManagement/Api";
+import toast from "react-hot-toast";
 
 const placeholderAvatars = [
   { id: "avatar1", src: "/avatars/avatar1.png", alt: "Avatar 1" },
@@ -20,52 +12,62 @@ const placeholderAvatars = [
 ];
 
 export default function UserBiddingCharSelection() {
-  const { auctionId } = useParams();
+  const { id } = useParams(); // auctionId
   const navigate = useNavigate();
+  console.log(id);
 
   const [teams, setTeams] = useState([]);
-  const [avatars, setAvatars] = useState([]);
+  const [avatars, setAvatars] = useState(placeholderAvatars);
 
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [selectedAvatar, setSelectedAvatar] = useState(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    // TODO: fetch real team list from backend
-    setTeams(placeholderTeams);
+    const fetchTeams = async () => {
+      try {
+        const res = await api.get(`/join-auction/${id}/teams`);
+        setTeams(res.data.teams);
+        console.log(res.data.teams);
+      } catch (err) {
+        toast.error("Failed to fetch teams", err);
+        setError("Could not load teams. Please try again.");
+      }
+    };
 
-    // TODO: fetch real avatar list from backend
+    fetchTeams();
     setAvatars(placeholderAvatars);
-  }, []);
+  }, [id]);
 
   const handleJoin = async () => {
     if (!selectedTeam || !selectedAvatar) {
       setError("Please select both a team and an avatar.");
       return;
     }
-
     try {
-      // TODO: POST to backend with auctionId, selectedTeam, selectedAvatar
-      // await api.post(`/join-auction/${auctionId}/confirm`, {
-      //   teamId: selectedTeam,
-      //   avatarId: selectedAvatar,
-      // });
-
-      // After successful join, navigate to the actual bidding portal
-      navigate(`/user-bidding-portal/${auctionId}`);
+      await api.post(`/join-auction/${id}/confirm`, {
+        teamId: selectedTeam,
+        avatarUrl: avatars.find((a) => a.id === selectedAvatar)?.src,
+      });
+      navigate(`/user-bidding-portal/${id}`);
     } catch (err) {
-      console.error(err);
-      setError("Failed to join with selected options. Please try again.");
+      const message =
+        err?.response?.data?.message || "Failed to join. Please try again.";
+      if (message === "You have already selected a team and avatar.") {
+        toast.success(message);
+        navigate(`/user-bidding-portal/${id}`);
+      } else {
+        setError(message);
+      }
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 md:p-12">
-      <h1 className="text-2xl font-bold mb-6">
-        Join Auction #{auctionId}
-      </h1>
+      <h1 className="text-2xl font-bold mb-6">Join Auction #{id}</h1>
 
       <div className="space-y-8">
+        {/* Step 1: Select Team */}
         {/* Step 1: Select Team */}
         <div>
           <h2 className="text-xl font-semibold mb-4">1. Select Your Team</h2>
@@ -77,13 +79,21 @@ export default function UserBiddingCharSelection() {
                   setSelectedTeam(team.id);
                   setError("");
                 }}
-                className={`p-4 rounded-lg border 
-                  ${selectedTeam === team.id
-                    ? "border-teal-600 bg-teal-100"
-                    : "border-gray-300 bg-white hover:bg-gray-100"
-                  }`}
+                className={`p-3 rounded-xl border flex flex-col items-center shadow-sm transition
+          ${
+            selectedTeam === team.id
+              ? "border-teal-600 bg-teal-100"
+              : "border-gray-300 bg-white hover:bg-gray-100"
+          }`}
               >
-                {team.name}
+                <img
+                  src={team.logoUrl}
+                  alt={team.name}
+                  className="w-16 h-16 object-contain mb-2"
+                />
+                <div className="text-sm font-semibold text-center">
+                  {team.shortName}
+                </div>
               </button>
             ))}
           </div>
@@ -101,9 +111,10 @@ export default function UserBiddingCharSelection() {
                   setError("");
                 }}
                 className={`p-2 rounded-lg border overflow-hidden
-                  ${selectedAvatar === av.id
-                    ? "border-teal-600 bg-teal-50"
-                    : "border-gray-300 bg-white hover:bg-gray-100"
+                  ${
+                    selectedAvatar === av.id
+                      ? "border-teal-600 bg-teal-50"
+                      : "border-gray-300 bg-white hover:bg-gray-100"
                   }`}
               >
                 <img
@@ -117,9 +128,7 @@ export default function UserBiddingCharSelection() {
         </div>
       </div>
 
-      {error && (
-        <p className="text-red-500 mt-4">{error}</p>
-      )}
+      {error && <p className="text-red-500 mt-4">{error}</p>}
 
       {/* Final Join Button */}
       <div className="mt-8">
@@ -127,9 +136,10 @@ export default function UserBiddingCharSelection() {
           onClick={handleJoin}
           disabled={!selectedTeam || !selectedAvatar}
           className={`w-full max-w-xs mx-auto px-6 py-3 rounded-lg text-white font-medium
-            ${selectedTeam && selectedAvatar
-              ? "bg-teal-600 hover:bg-teal-700"
-              : "bg-gray-400 cursor-not-allowed"
+            ${
+              selectedTeam && selectedAvatar
+                ? "bg-teal-600 hover:bg-teal-700"
+                : "bg-gray-400 cursor-not-allowed"
             }`}
         >
           Join Auction
