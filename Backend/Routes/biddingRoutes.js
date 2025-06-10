@@ -300,35 +300,28 @@ router.post("/manual-sell/:auctionId/:playerId", auth, async (req, res) => {
 
 
 // POST /update-bid/:auctionId
-router.post("/update-bid/:auctionId", auth, async (req, res) => {
-  const { auctionId } = req.params;
-  const { amount, teamId } = req.body;
-
+// routes/auction.js or similar
+router.post("/update-bid/:auctionId", async (req, res) => {
   try {
+    const { auctionId } = req.params;
+    const { amount, teamId } = req.body;
+
     const auction = await Auction.findById(auctionId);
     if (!auction) return res.status(404).json({ message: "Auction not found" });
 
-    // Update current bid
+    // Update bid amount and currentBid
+    auction.bidAmount = amount;
     auction.currentBid = {
-      amount,
       team: teamId,
+      amount,
     };
 
-    // Add to bidding history (optional but recommended)
-    if (auction.currentPlayerOnBid) {
-      auction.biddingHistory.push({
-        player: auction.currentPlayerOnBid,
-        team: teamId,
-        bidAmount: amount,
-        time: new Date(),
-      });
-    }
-
     await auction.save();
-    res.json({ message: "Bid updated successfully", currentBid: auction.currentBid });
+
+    return res.status(200).json({ message: "Bid updated successfully", auction });
   } catch (error) {
     console.error("Error updating bid:", error);
-    res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: "Server error" });
   }
 });
 

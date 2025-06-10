@@ -50,6 +50,10 @@ const auctionSchema = new mongoose.Schema(
       amount: { type: Number, default: 0 },
     },
 
+    bidAmount: {
+      type: Number,
+      default: 0,
+    },
     selectedTeams: [
       {
         team: { type: mongoose.Schema.Types.ObjectId, ref: "Team" },
