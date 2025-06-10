@@ -570,13 +570,33 @@ router.get("/queue-status/:auctionId", auth, async (req, res) => {
       return res.status(404).json({ error: "Auction not found" });
     }
 
-    // 🧹 Filter out any players that were deleted
-    const validQueue = auction.manualPlayerQueue.filter(q => q.player !== null);
+    // 🧹 Remove any deleted players
+    let validQueue = auction.manualPlayerQueue.filter(q => q.player !== null);
 
-    // 🛠️ If any were removed, update the auction queue
+    // ⚠️ Auto-clear queue if last player is sold and no new players were added
+    if (
+      validQueue.length > 0 &&
+      auction.currentPlayerOnBid &&
+      String(auction.currentPlayerOnBid._id) === String(validQueue[validQueue.length - 1].player._id)
+    ) {
+      const currentPlayer = await Player.findById(auction.currentPlayerOnBid._id);
+      if (currentPlayer && currentPlayer.availability === "Sold") {
+        await Auction.findByIdAndUpdate(auction._id, {
+          manualPlayerQueue: [],
+          currentQueuePosition: 0,
+        });
+        validQueue = [];
+        
+        console.log("Manual queue cleared automatically after last player was sold.");
+      }
+    }
+
+    // Update auction if any deleted player was removed
     if (validQueue.length !== auction.manualPlayerQueue.length) {
-      auction.manualPlayerQueue = validQueue;
-      await auction.save();
+      await Auction.findByIdAndUpdate(auction._id, {
+        manualPlayerQueue: validQueue,
+      });
+      
     }
 
     // Calculate remaining players (manual mode)
@@ -596,7 +616,7 @@ router.get("/queue-status/:auctionId", auth, async (req, res) => {
               ? "Wicket-keeper" 
               : auction.automaticFilter,
           };
-      
+
       const availablePlayers = await Player.countDocuments({
         ...filterQuery,
         _id: { $in: auction.selectedPlayers, $ne: auction.currentPlayerOnBid },
@@ -624,6 +644,7 @@ router.get("/queue-status/:auctionId", auth, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 
 // Enhanced next-player route
