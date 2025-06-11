@@ -49,11 +49,6 @@ const auctionSchema = new mongoose.Schema(
       team: { type: mongoose.Schema.Types.ObjectId, ref: "Team" },
       amount: { type: Number, default: 0 },
     },
-
-    bidAmount: {
-      type: Number,
-      default: 0,
-    },
     selectedTeams: [
       {
         team: { type: mongoose.Schema.Types.ObjectId, ref: "Team" },
@@ -94,6 +89,11 @@ const auctionSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    
+    bidAmount: {
+      player: { type: mongoose.Schema.Types.ObjectId, ref: "Player" },
+      amount: { type: Number, default: 0 },
+    },    
 
     // Current queue position for manual mode
     currentQueuePosition: {
@@ -109,7 +109,7 @@ const auctionSchema = new mongoose.Schema(
         bidAmount: Number,
         time: { type: Date, default: Date.now },
       },
-    ],
+    ],   
   },
   { timestamps: true }
 );

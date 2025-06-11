@@ -1762,20 +1762,23 @@ export default function AdminBiddingDashboard() {
     if (incoming.length > 0) {
       setSelectionMode("manual");
     }
-
+  
     const token = localStorage.getItem("token");
     if (!token) {
       console.warn("No auth token found. Cannot fetch auction.");
       return;
     }
-      const interval = setInterval(() => {
-        fetchAuctionData();
-      }, 800);
-
-
-    // Cleanup on unmount or when dependencies change
+  
+    // ❌ Skip fetching if edit popup is open
+    if (showEdit) return;
+  
+    const interval = setInterval(() => {
+      fetchAuctionData();
+    }, 800);
+  
     return () => clearInterval(interval);
-  }, [id, incoming]);
+  }, [id, incoming, showEdit]); // ⬅️ Add showEdit as a dependency
+  
 
   // 3. ADD NEW FUNCTION: Update selection mode in backend
   const updateSelectionMode = async (newMode, filter = "All") => {
@@ -1842,6 +1845,7 @@ export default function AdminBiddingDashboard() {
       }
     }
   };
+
   const handleManualSell = async () => {
     if (!auctionData.currentLot.id || auctionData.currentLot.id === "--/--") {
       alert("No player currently on bid");
@@ -1853,14 +1857,17 @@ export default function AdminBiddingDashboard() {
         `/manual-sell/${id}/${auctionData.currentLot.id}`
       );
 
-      console.log("Player sold successfully:", response.data);
-
-      // Update UI based on response
       const { nextPlayer, isLastPlayer, biddingEnded, soldTo, amount } =
         response.data;
 
+      // Show success message
+      if (biddingEnded || isLastPlayer) {
+        toast.success("Auction completed! No more players available.");
+      } else {
+        toast.success(`Player sold for ₹${amount.toLocaleString()}!`);
+      }
+
       if (nextPlayer) {
-        // Update with next player
         setAuctionData((prev) => ({
           ...prev,
           currentLot: {
@@ -1878,9 +1885,9 @@ export default function AdminBiddingDashboard() {
             teamLogo: null,
           },
         }));
+
         setBidAmount(nextPlayer.basePrice || 0);
 
-        // Update queue position for manual mode
         if (selectionMode === "manual") {
           setCurrentQueuePosition((prev) => prev + 1);
           setQueueDisplay((prev) => ({
@@ -1889,7 +1896,6 @@ export default function AdminBiddingDashboard() {
           }));
         }
       } else {
-        // No more players - bidding ended
         setAuctionData((prev) => ({
           ...prev,
           currentLot: {
@@ -1909,21 +1915,15 @@ export default function AdminBiddingDashboard() {
         }));
         setBiddingStarted(false);
         setStatus("completed");
-        setCanChangeMode(true); // Re-enable mode switching when bidding ends
+        setCanChangeMode(true);
       }
 
-      // Refresh auction data for sold player history
+      // Refresh state for latest auction snapshot
       await fetchAuctionData();
       await fetchQueueStatus();
-
-      if (biddingEnded || isLastPlayer) {
-        toast.success("Auction completed! No more players available.");
-        setCanChangeMode(true); // Re-enable mode switching
-      } else {
-        toast.success(`Player sold for ₹${amount.toLocaleString()}!`);
-      }
     } catch (error) {
-      toast.error("Error selling player:", error);
+      console.error("Sell error:", error);
+      toast.error("Error selling player.");
       toast.error(
         error.response?.data?.error ||
           "Failed to sell player. Please try again."
@@ -2052,23 +2052,26 @@ export default function AdminBiddingDashboard() {
   const onSell = () => setStatus("selling");
   const onMoveToUnsell = () => setStatus("live");
   const onEditBid = () => setShowEdit(true);
+  
   const onApplyBid = async () => {
     try {
       setShowEdit(false);
   
-      await axios.post(`/update-bid/${auctionId}`, {
+      await api.patch(`/update-bid/${id}`, {
         amount: bidAmount,
-        teamId: selectedTeamId, // your current team placing the bid
       });
   
-      // Optionally show toast
       toast.success("Bid updated!");
+  
+      // ✅ Refresh data manually after update
+      await fetchAuctionData();
     } catch (error) {
       console.error("Error updating bid:", error);
       toast.error("Failed to update bid");
     }
   };
   
+
   const onResetBid = () => {
     setBidAmount(auctionData.currentBid.amount);
     setShowEdit(false);
@@ -2297,8 +2300,7 @@ export default function AdminBiddingDashboard() {
             animate={{ scale: 1 }}
             transition={{ type: "spring", stiffness: 300 }}
           >
-            {/* You could replace this avatar placeholder with:
-              <img src={auctionData.currentLot.avatarUrl} alt="player avatar" /> */}
+            {/* <img src={auctionData.currentBid.logoUrl} alt="player avatar" /> */}
             <div className="mx-auto mb-4 rounded-full bg-gray-700 w-24 h-24 sm:w-32 sm:h-32 flex items-center justify-center">
               <span className="text-4xl">👤</span>
             </div>
@@ -2537,7 +2539,15 @@ export default function AdminBiddingDashboard() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 mx-auto" />
+            {auctionData.currentBid.teamLogo ? (
+              <img
+                src={auctionData.currentBid.teamLogo}
+                alt="Team Logo"
+                className="w-16 h-16 rounded-xl object-contain mx-auto border-2"
+              />
+            ) : (
+              <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 mx-auto" />
+            )}
             <p className="text-xs sm:text-sm opacity-75 mt-2">Bid By</p>
             <h3 className="text-sm sm:text-base font-semibold mt-1">
               {auctionData.currentBid.team}
