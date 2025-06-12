@@ -5,7 +5,7 @@ import { useGLTF, useAnimations, Html } from '@react-three/drei';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { AnimationUtils, LoopOnce } from 'three';
 
-export default function Character({ modelPath, emotePaths, labels = [] }) {
+export default function Character({ modelPath, emotePaths, labels = [],triggerEmote, }) {
   const group = useRef();
 
   // — load base character + Idle/other animations —
@@ -77,6 +77,12 @@ export default function Character({ modelPath, emotePaths, labels = [] }) {
     Object.values(actions).forEach((a) => a.stop());
     actions[name]?.reset().fadeIn(0.2).play();
   };
+
+  useEffect(() => {
+    if (triggerEmote && !isPlaying) {
+      playEmote(triggerEmote);
+    }
+  }, [triggerEmote]);
 
   return (
     <>

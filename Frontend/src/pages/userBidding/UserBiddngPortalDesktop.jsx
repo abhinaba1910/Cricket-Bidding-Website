@@ -392,6 +392,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import BidButton from "../../components/ui/BidButton";
 import CharacterCard from "../characters/CharacterCard";
 import api from "../../userManagement/Api";
+
 // ─── Shared “CriteriaTable” for Desktop ────────────────────────────
 function CriteriaTable() {
   const totalCriteria = 24;
@@ -482,6 +483,7 @@ export default function UserBiddingDashboardDesktop() {
   const [rtmCount, setRtmCount] = useState(1);
   const [isBidding, setIsBidding] = useState(false);
   const { id } = useParams();
+  const [emoteToPlay, setEmoteToPlay] = useState(null);
 
   const toggleFullScreen = () => setFullScreen((fs) => !fs);
 
@@ -521,7 +523,8 @@ export default function UserBiddingDashboardDesktop() {
     adminImageUrl: null,
   };
   const [auctionData, setAuctionData] = useState(sampleAuction);
-
+ const [avatarUrl, setAvatarUrl]     = useState(null);
+   const [error, setError]             = useState(null);
   useEffect(() => {
     const fetchAuctionData = async () => {
       try {
@@ -529,7 +532,17 @@ export default function UserBiddingDashboardDesktop() {
         const data = response.data;
         console.log("Fetched Auction Data:", data);
         setAuctionData(data);
-      } catch (error) {
+         if (data.team?.avatar) {
+  const raw = data.team.avatar;                           // e.g. "Frontend/public/models/char2.glb"
+  const idx = raw.indexOf("/models");                     // find where the real path starts
+  const publicPath = idx >= 0 ? raw.slice(idx) : raw;     // "/models/char2.glb"
+  console.log("Loading GLB from:", publicPath);
+  setAvatarUrl(publicPath);
+}
+
+        console.log("avatar from back:", data.team.avatar)
+      }
+      catch (error) {
         console.error("Error fetching auction data:", error);
       }
     };
@@ -563,8 +576,11 @@ export default function UserBiddingDashboardDesktop() {
     try {
       setIsBidding(true);
       const res = await api.post(`/place-bid/${id}`, payload); // <-- also fix the URL to include slash before ID
+      // setEmoteToPlay('HandRaise');
+      setEmoteToPlay(null);
+      setTimeout(() => setEmoteToPlay('HandRaise'), 10);
       console.log("Bid response:", res.data);
-
+      // setTimeout(() => setEmoteToPlay(null), 1000);
       // Refresh data
       const updated = await api.get(`/bidding-portal/${id}`);
       setAuctionData(updated.data);
@@ -788,11 +804,17 @@ export default function UserBiddingDashboardDesktop() {
           <CriteriaTable />
         </div>
         <motion.div
-          className="bg-gradient-to-br mb-4 from-indigo-900/50 to-blue-800/50 rounded-xl p-4 text-center shadow-lg self-end w-full border border-indigo-700/30"
+          className="bg-gradient-to-br mb-4  from-indigo-900/50 to-blue-800/50 rounded-xl text-center shadow-lg self-end  border border-indigo-700/30"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <CharacterCard />
+{avatarUrl
+  ? <CharacterCard 
+  modelPath={avatarUrl}
+ triggerEmote={emoteToPlay}
+  />
+  : <p>Loading your character…</p>
+}
         </motion.div>
       </div>
     </div>

@@ -3,12 +3,47 @@ import { useNavigate, useParams } from "react-router-dom";
 import api from "../../userManagement/Api";
 import toast from "react-hot-toast";
 
+// const placeholderAvatars = [
+//   { id: "avatar1", src: "/avatars/avatar1.png", alt: "Avatar 1" },
+//   { id: "avatar2", src: "/avatars/avatar2.png", alt: "Avatar 2" },
+//   { id: "avatar3", src: "/avatars/avatar3.png", alt: "Avatar 3" },
+//   { id: "avatar4", src: "/avatars/avatar4.png", alt: "Avatar 4" },
+//   { id: "avatar5", src: "/avatars/avatar5.png", alt: "Avatar 5" },
+// ];
 const placeholderAvatars = [
-  { id: "avatar1", src: "/avatars/avatar1.png", alt: "Avatar 1" },
-  { id: "avatar2", src: "/avatars/avatar2.png", alt: "Avatar 2" },
-  { id: "avatar3", src: "/avatars/avatar3.png", alt: "Avatar 3" },
-  { id: "avatar4", src: "/avatars/avatar4.png", alt: "Avatar 4" },
-  { id: "avatar5", src: "/avatars/avatar5.png", alt: "Avatar 5" },
+  {
+    id: "avatar1",
+    // this thumbnail could still be a PNG for the grid if you like…
+    thumbnail: "/avatars/avatar1-thumb.png",
+    // …but the .src you send (avatarUrl) should be your glb:
+    src: "/models/char1.glb",
+    alt: "Bidder1",
+  },
+  {
+    id: "avatar2",
+    thumbnail: "/avatars/avatar2-thumb.png",
+    src: "/models/char2.glb",
+    alt: "Bidder2",
+  },
+  {
+    id: "avatar3",
+    thumbnail: "/avatars/avatar2-thumb.png",
+    src: "/models/char3.glb",
+    alt: "Bidder3",
+  },
+  {
+    id: "avatar4",
+    thumbnail: "/avatars/avatar2-thumb.png",
+    src: "/models/char4.glb",
+    alt: "Bidder4",
+  },
+  {
+    id: "avatar5",
+    thumbnail: "/avatars/avatar2-thumb.png",
+    src: "/models/char5.glb",
+    alt: "Bidder5",
+  },
+  // …etc
 ];
 
 export default function UserBiddingCharSelection() {
@@ -50,7 +85,7 @@ export default function UserBiddingCharSelection() {
     try {
       await api.post(`/join-auction/${id}/confirm`, {
         teamId: selectedTeam,
-        avatarUrl: avatars.find((a) => a.id === selectedAvatar)?.src,
+        avatarUrl: avatars.find(a => a.id === selectedAvatar).src,
       });
       navigate(`/user-bidding-portal/${id}`);
     } catch (err) {
@@ -119,8 +154,9 @@ export default function UserBiddingCharSelection() {
                       : "border-gray-300 bg-white hover:bg-gray-100"
                   }`}
               >
+                
                 <img
-                  src={av.src}
+                  src={av.thumbnail}
                   alt={av.alt}
                   className="w-full h-auto object-cover"
                 />
