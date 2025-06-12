@@ -182,7 +182,8 @@ export default function AdminBiddingTeamView() {
                   ["Total Purse", `₹${Number(team.purse).toLocaleString()}`],
                   [
                     "Total Spent",
-                    `₹${Number(team.totalSpent).toLocaleString()}`,
+                    `₹${Number(team.totalSpent
+                    ).toLocaleString()}`,
                   ],
                   [
                     "Remaining Purse",

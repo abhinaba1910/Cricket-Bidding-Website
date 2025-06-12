@@ -4,9 +4,6 @@
 // import api from "../../userManagement/Api";
 // import { toast } from "react-hot-toast";
 
-// // 1) SAMPLE FALLBACK DATA
-// //    This object lives in state until/if the backend returns real data.
-// //    Any values you haven’t wired yet can remain here.
 // const SAMPLE_AUCTION = {
 //   lastSold: { name: "--/--", price: "--/--", team: "--/--" },
 //   mostExpensive: { name: "--/--", price: "--/--", team: "--/--" },
@@ -50,12 +47,23 @@
 //   const [canChangeMode, setCanChangeMode] = useState(true);
 
 //   const [showStartPopup, setShowStartPopup] = useState(false);
+//   const [isPaused, setIsPaused] = useState(false);
 //   const [popupSelection, setPopupSelection] = useState("automatic");
 //   const [showAddMorePlayers, setShowAddMorePlayers] = useState(false);
 //   const [queueDisplay, setQueueDisplay] = useState({ current: 0, total: 0 });
 
-//   const handleStartBidding = () => {
+//   const handleStartBidding = async () => {
 //     setShowStartPopup(true);
+
+//     try {
+//       await api.patch(`/pause-auction/${id}`, {
+//         isPaused: false,
+//       });
+//       setIsPaused(false);
+//     } catch (error) {
+//       console.error("Error starting bidding:", error);
+//       alert("Internal server error");
+//     }
 //   };
 
 //   const fetchQueueStatus = async () => {
@@ -264,6 +272,10 @@
 //         await fetchQueueStatus();
 //         return;
 //       }
+//       await api.patch(`/pause-auction/${id}`, {
+//         isPaused: false,
+//       });
+//       setIsPaused(false);
 //     } catch (error) {
 //       toast.error("Error in handleSaveStartSelection:", error);
 //       toast.error(
@@ -322,6 +334,7 @@
 //       setAutomaticFilter(data.automaticFilter || "All");
 //       setManualPlayerQueue(data.manualPlayerQueue || []);
 //       setCurrentQueuePosition(data.currentQueuePosition || 0);
+//       setIsPaused(data.isPaused);
 
 //       if (data.automaticFilter && data.automaticFilter !== "All") {
 //         setRole(data.automaticFilter);
@@ -370,8 +383,15 @@
 //       return;
 //     }
 
-//     fetchAuctionData();
-//   }, [id, incoming]);
+//     // ❌ Skip fetching if edit popup is open
+//     if (showEdit) return;
+
+//     const interval = setInterval(() => {
+//       fetchAuctionData();
+//     }, 800);
+
+//     return () => clearInterval(interval);
+//   }, [id, incoming, showEdit]); // ⬅️ Add showEdit as a dependency
 
 //   // 3. ADD NEW FUNCTION: Update selection mode in backend
 //   const updateSelectionMode = async (newMode, filter = "All") => {
@@ -438,6 +458,7 @@
 //       }
 //     }
 //   };
+
 //   const handleManualSell = async () => {
 //     if (!auctionData.currentLot.id || auctionData.currentLot.id === "--/--") {
 //       alert("No player currently on bid");
@@ -449,14 +470,17 @@
 //         `/manual-sell/${id}/${auctionData.currentLot.id}`
 //       );
 
-//       console.log("Player sold successfully:", response.data);
-
-//       // Update UI based on response
 //       const { nextPlayer, isLastPlayer, biddingEnded, soldTo, amount } =
 //         response.data;
 
+//       // Show success message
+//       if (biddingEnded || isLastPlayer) {
+//         toast.success("Auction completed! No more players available.");
+//       } else {
+//         toast.success(`Player sold for ₹${amount.toLocaleString()}!`);
+//       }
+
 //       if (nextPlayer) {
-//         // Update with next player
 //         setAuctionData((prev) => ({
 //           ...prev,
 //           currentLot: {
@@ -474,9 +498,9 @@
 //             teamLogo: null,
 //           },
 //         }));
+
 //         setBidAmount(nextPlayer.basePrice || 0);
 
-//         // Update queue position for manual mode
 //         if (selectionMode === "manual") {
 //           setCurrentQueuePosition((prev) => prev + 1);
 //           setQueueDisplay((prev) => ({
@@ -485,7 +509,6 @@
 //           }));
 //         }
 //       } else {
-//         // No more players - bidding ended
 //         setAuctionData((prev) => ({
 //           ...prev,
 //           currentLot: {
@@ -505,21 +528,15 @@
 //         }));
 //         setBiddingStarted(false);
 //         setStatus("completed");
-//         setCanChangeMode(true); // Re-enable mode switching when bidding ends
+//         setCanChangeMode(true);
 //       }
 
-//       // Refresh auction data for sold player history
+//       // Refresh state for latest auction snapshot
 //       await fetchAuctionData();
 //       await fetchQueueStatus();
-
-//       if (biddingEnded || isLastPlayer) {
-//         toast.success("Auction completed! No more players available.");
-//         setCanChangeMode(true); // Re-enable mode switching
-//       } else {
-//         toast.success(`Player sold for ₹${amount.toLocaleString()}!`);
-//       }
 //     } catch (error) {
-//       toast.error("Error selling player:", error);
+//       console.error("Sell error:", error);
+//       toast.error("Error selling player.");
 //       toast.error(
 //         error.response?.data?.error ||
 //           "Failed to sell player. Please try again."
@@ -551,7 +568,6 @@
 //         return;
 //       }
 //     }
-
 //     try {
 //       const filterToUse = newMode === "automatic" ? role : "All";
 
@@ -649,25 +665,62 @@
 //   const onSell = () => setStatus("selling");
 //   const onMoveToUnsell = () => setStatus("live");
 //   const onEditBid = () => setShowEdit(true);
+
 //   const onApplyBid = async () => {
 //     try {
-//       // Here you can add API call to update bid amount if needed
-//       // For now, just close the edit modal
 //       setShowEdit(false);
 
-//       // You might want to add an API call here to update the bid amount in backend
-//       // await api.post(`/update-bid/${id}`, { amount: bidAmount });
+//       await api.patch(`/update-bid/${id}`, {
+//         amount: bidAmount,
+//       });
+
+//       toast.success("Bid updated!");
+
+//       // ✅ Refresh data manually after update
+//       await fetchAuctionData();
 //     } catch (error) {
 //       console.error("Error updating bid:", error);
+//       toast.error("Failed to update bid");
 //     }
 //   };
+
 //   const onResetBid = () => {
 //     setBidAmount(auctionData.currentBid.amount);
 //     setShowEdit(false);
 //   };
-//   const togglePause = () => {
-//     setStatus((prev) => (prev === "live" ? "paused" : "live"));
+
+//   const togglePause = async () => {
+//     try {
+//       await api.patch(`/pause-auction/${id}`, {
+//         isPaused: true,
+//       });
+//       setIsPaused(true);
+//       setBiddingStarted(false); // Optional: depends on how you're using it
+//     } catch (err) {
+//       console.error("Failed to pause/resume:", err);
+//     }
 //   };
+
+//   useEffect(() => {
+//     const checkIsPaused = async () => {
+//       try {
+//         const res = await api.get(`/get-auction-pause-status/${id}`);
+//         const paused = res.data.isPaused;
+//         setIsPaused(res.data.isPaused);
+
+//         // setIsPaused(paused);
+//         if (paused) setBiddingStarted(false); // disable Start Bidding
+//       } catch (err) {
+//         console.error("Failed to fetch pause status");
+//       }
+//     };
+
+//     const interval = setInterval(checkIsPaused, 800);
+//     checkIsPaused();
+
+//     return () => clearInterval(interval);
+//   }, [id]);
+
 //   const handleManualSelect = () => {
 //     console.log("Navigating to manual selection with current queue:", {
 //       currentQueue: manualPlayerQueue,
@@ -821,7 +874,7 @@
 //             >
 //               Reset Bid
 //             </motion.button>
-//             <motion.button
+//             {/* <motion.button
 //               onClick={handleStartBidding}
 //               disabled={biddingStarted}
 //               className={`px-4 py-2 rounded-xl text-xs sm:text-sm shadow-md ${
@@ -833,6 +886,22 @@
 //               whileTap={!biddingStarted ? { scale: 0.95 } : {}}
 //             >
 //               {biddingStarted ? "Bidding Started" : "Start Bidding"}
+//             </motion.button> */}
+
+//             <motion.button
+//               onClick={handleStartBidding}
+//               disabled={biddingStarted && !isPaused}
+//               className={`px-4 py-2 rounded-xl text-xs sm:text-sm shadow-md ${
+//                 biddingStarted && !isPaused
+//                   ? "bg-gray-500 cursor-not-allowed opacity-50"
+//                   : "bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600"
+//               }`}
+//               whileHover={!(biddingStarted && !isPaused) ? { scale: 1.05 } : {}}
+//               whileTap={!(biddingStarted && !isPaused) ? { scale: 0.95 } : {}}
+//             >
+//               {biddingStarted && !isPaused
+//                 ? "Bidding Started"
+//                 : "Start Bidding"}
 //             </motion.button>
 //           </div>
 
@@ -843,8 +912,7 @@
 //             animate={{ scale: 1 }}
 //             transition={{ type: "spring", stiffness: 300 }}
 //           >
-//             {/* You could replace this avatar placeholder with:
-//               <img src={auctionData.currentLot.avatarUrl} alt="player avatar" /> */}
+//             {/* <img src={auctionData.currentBid.logoUrl} alt="player avatar" /> */}
 //             <div className="mx-auto mb-4 rounded-full bg-gray-700 w-24 h-24 sm:w-32 sm:h-32 flex items-center justify-center">
 //               <span className="text-4xl">👤</span>
 //             </div>
@@ -917,46 +985,49 @@
 //               </h3>
 
 //               {/* Main Toggle Switch - Only show when bidding hasn't started */}
-//               {!biddingStarted && (
-//                 <div className="relative h-10 w-full bg-indigo-800/30 rounded-full overflow-hidden">
-//                   <motion.div
-//                     className={`absolute top-0 h-full w-1/2 rounded-full z-0 ${
-//                       selectionMode === "automatic"
-//                         ? "bg-gradient-to-r from-emerald-500 to-cyan-400"
-//                         : "bg-gradient-to-r from-amber-500 to-orange-400"
-//                     }`}
-//                     animate={{
-//                       left: selectionMode === "automatic" ? "0" : "50%",
-//                     }}
-//                     transition={{ type: "spring", stiffness: 300, damping: 20 }}
-//                   />
 
-//                   <button
-//                     onClick={() => handleModeToggle("automatic")}
-//                     className={`relative h-full w-1/2 z-10 text-sm font-medium ${
-//                       selectionMode === "automatic"
-//                         ? "text-white"
-//                         : "text-gray-300"
-//                     }`}
-//                   >
-//                     Auto
-//                   </button>
+//               <div className="relative h-10 w-full bg-indigo-800/30 rounded-full overflow-hidden">
+//                 <motion.div
+//                   className={`absolute top-0 h-full w-1/2 rounded-full z-0 ${
+//                     selectionMode === "automatic"
+//                       ? "bg-gradient-to-r from-emerald-500 to-cyan-400"
+//                       : "bg-gradient-to-r from-amber-500 to-orange-400"
+//                   }`}
+//                   animate={{
+//                     left: selectionMode === "automatic" ? "0" : "50%",
+//                   }}
+//                   transition={{ type: "spring", stiffness: 300, damping: 20 }}
+//                 />
 
-//                   <button
-//                     onClick={() => handleModeToggle("manual")}
-//                     className={`relative h-full w-1/2 z-10 text-sm font-medium ${
-//                       selectionMode === "manual"
-//                         ? "text-white"
-//                         : "text-gray-300"
-//                     }`}
-//                   >
-//                     Manual
-//                   </button>
-//                 </div>
-//               )}
+//                 <button
+//                   onClick={() => handleModeToggle("automatic")}
+//                   disabled={biddingStarted}
+//                   className={`relative h-full w-1/2 z-10 text-sm font-medium ${
+//                     selectionMode === "automatic"
+//                       ? "text-white"
+//                       : "text-gray-300"
+//                   }`}
+//                   whileHover={!biddingStarted ? { scale: 1.05 } : {}}
+//                   whileTap={!biddingStarted ? { scale: 0.95 } : {}}
+//                 >
+//                   Auto
+//                 </button>
+
+//                 <button
+//                   onClick={() => handleModeToggle("manual")}
+//                   disabled={biddingStarted}
+//                   className={`relative h-full w-1/2 z-10 text-sm font-medium ${
+//                     selectionMode === "manual" ? "text-white" : "text-gray-300"
+//                   }`}
+//                   whileHover={!biddingStarted ? { scale: 1.05 } : {}}
+//                   whileTap={!biddingStarted ? { scale: 0.95 } : {}}
+//                 >
+//                   Manual
+//                 </button>
+//               </div>
 
 //               {/* Mode change options when bidding has started */}
-//               {biddingStarted && (
+//               {/* {biddingStarted && (
 //                 <div className="p-3 bg-indigo-900/30 rounded-lg">
 //                   <p className="text-xs text-center mb-2 text-yellow-300">
 //                     Change Selection Mode:
@@ -984,7 +1055,7 @@
 //                     </button>
 //                   </div>
 //                 </div>
-//               )}
+//               )} */}
 
 //               {/* Role Selector for Automatic Mode */}
 //               {selectionMode === "automatic" && (
@@ -1046,7 +1117,7 @@
 //             >
 //               Move to Unsell
 //             </motion.button>
-//             <motion.button
+//             {/* <motion.button
 //               onClick={togglePause}
 //               className={`w-full px-4 py-2 rounded text-xs sm:text-sm shadow-md transition ${
 //                 status === "live"
@@ -1056,7 +1127,21 @@
 //               whileHover={{ scale: 1.02 }}
 //               whileTap={{ scale: 0.98 }}
 //             >
-//               {status === "live" ? "Pause Auction" : "Resume Auction"}
+//               Pause Auction
+//             </motion.button> */}
+
+//             <motion.button
+//               onClick={togglePause}
+//               disabled={isPaused || !biddingStarted}
+//               className={`w-full px-4 py-2 rounded text-xs sm:text-sm shadow-md transition ${
+//                 isPaused
+//                   ? "bg-gray-600 text-white cursor-not-allowed"
+//                   : "bg-amber-500 hover:bg-amber-600 text-white"
+//               }`}
+//               whileHover={!isPaused ? { scale: 1.02 } : {}}
+//               whileTap={!isPaused ? { scale: 0.98 } : {}}
+//             >
+//               {isPaused ? "Paused Auction" : "Pause Auction"}
 //             </motion.button>
 //           </div>
 
@@ -1066,7 +1151,15 @@
 //             animate={{ opacity: 1, y: 0 }}
 //             transition={{ delay: 0.3 }}
 //           >
-//             <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 mx-auto" />
+//             {auctionData.currentBid.teamLogo ? (
+//               <img
+//                 src={auctionData.currentBid.teamLogo}
+//                 alt="Team Logo"
+//                 className="w-16 h-16 rounded-xl object-contain mx-auto border-2"
+//               />
+//             ) : (
+//               <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 mx-auto" />
+//             )}
 //             <p className="text-xs sm:text-sm opacity-75 mt-2">Bid By</p>
 //             <h3 className="text-sm sm:text-base font-semibold mt-1">
 //               {auctionData.currentBid.team}
@@ -1299,7 +1392,7 @@
 //                 <p className="text-xs text-amber-300 mb-2">
 //                   No players selected for manual mode
 //                 </p>
-//                 <button
+//                 {/* <button
 //                   onClick={() => {
 //                     setShowStartPopup(false);
 //                     handleManualSelect();
@@ -1307,7 +1400,7 @@
 //                   className="px-4 py-2 bg-amber-600 hover:bg-amber-700 rounded-lg text-xs"
 //                 >
 //                   Select Players First
-//                 </button>
+//                 </button> */}
 //               </div>
 //             )}
 
@@ -1379,7 +1472,22 @@
 //   );
 // }
 
-////////////////////////////////
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
 
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
@@ -1387,9 +1495,6 @@ import { useNavigate, useLocation, useParams } from "react-router-dom";
 import api from "../../userManagement/Api";
 import { toast } from "react-hot-toast";
 
-// 1) SAMPLE FALLBACK DATA
-//    This object lives in state until/if the backend returns real data.
-//    Any values you haven’t wired yet can remain here.
 const SAMPLE_AUCTION = {
   lastSold: { name: "--/--", price: "--/--", team: "--/--" },
   mostExpensive: { name: "--/--", price: "--/--", team: "--/--" },
@@ -1726,8 +1831,8 @@ export default function AdminBiddingDashboard() {
         setRole(data.automaticFilter);
       }
 
-      if (data.currentBid?.amount !== undefined) {
-        setBidAmount(data.currentBid.amount);
+      if (data.bidAmount?.amount!== undefined) {
+        setBidAmount(data.bidAmount.amount);
       } else if (data.currentPlayerOnBid?.basePrice) {
         setBidAmount(data.currentPlayerOnBid.basePrice);
       }
@@ -1762,23 +1867,22 @@ export default function AdminBiddingDashboard() {
     if (incoming.length > 0) {
       setSelectionMode("manual");
     }
-  
+
     const token = localStorage.getItem("token");
     if (!token) {
       console.warn("No auth token found. Cannot fetch auction.");
       return;
     }
-  
+
     // ❌ Skip fetching if edit popup is open
     if (showEdit) return;
-  
+
     const interval = setInterval(() => {
       fetchAuctionData();
     }, 800);
-  
+
     return () => clearInterval(interval);
   }, [id, incoming, showEdit]); // ⬅️ Add showEdit as a dependency
-  
 
   // 3. ADD NEW FUNCTION: Update selection mode in backend
   const updateSelectionMode = async (newMode, filter = "All") => {
@@ -2052,17 +2156,17 @@ export default function AdminBiddingDashboard() {
   const onSell = () => setStatus("selling");
   const onMoveToUnsell = () => setStatus("live");
   const onEditBid = () => setShowEdit(true);
-  
+
   const onApplyBid = async () => {
     try {
       setShowEdit(false);
-  
+
       await api.patch(`/update-bid/${id}`, {
         amount: bidAmount,
       });
-  
+
       toast.success("Bid updated!");
-  
+
       // ✅ Refresh data manually after update
       await fetchAuctionData();
     } catch (error) {
@@ -2070,7 +2174,6 @@ export default function AdminBiddingDashboard() {
       toast.error("Failed to update bid");
     }
   };
-  
 
   const onResetBid = () => {
     setBidAmount(auctionData.currentBid.amount);
@@ -2550,7 +2653,7 @@ export default function AdminBiddingDashboard() {
             )}
             <p className="text-xs sm:text-sm opacity-75 mt-2">Bid By</p>
             <h3 className="text-sm sm:text-base font-semibold mt-1">
-              {auctionData.currentBid.team}
+              {auctionData.currentBid.team} <p className="text-xs sm:text-sm opacity-75 mt-2">₹{auctionData.currentBid.amount}</p>
             </h3>
           </motion.div>
         </div>

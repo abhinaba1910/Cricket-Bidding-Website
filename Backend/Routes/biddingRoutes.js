@@ -6,21 +6,6 @@ const Auction = require("../Models/auction");
 const Team = require("../Models/team");
 const Player = require("../Models/player");
 
-// 1. Set the current player for bidding
-// router.post('/start-bidding/:auctionId', auth, async (req, res) => {
-//   try {
-//     const { playerId } = req.body;
-//     const auction = await Auction.findByIdAndUpdate(
-//       req.params.auctionId,
-//       { currentPlayerOnBid: playerId, currentBid: { team: null, amount: 0 } },
-//       { new: true }
-//     );
-//     res.json({ message: 'Bidding started', auction });
-//   } catch (err) {
-//     res.status(500).json({ error: err.message });
-//   }
-// });
-
 // 2. Start bidding timer (frontend will handle the timer logic)
 router.post("/start-timer/:playerId", auth, async (req, res) => {
   try {
@@ -31,43 +16,6 @@ router.post("/start-timer/:playerId", auth, async (req, res) => {
   }
 });
 
-// 3. Manual Sell
-// router.post('/manual-sell/:auctionId/:playerId', auth, async (req, res) => {
-//   try {
-//     const auction = await Auction.findById(req.params.auctionId);
-//     const playerId = req.params.playerId;
-
-//     if (!auction || !auction.currentBid.team) {
-//       return res.status(400).json({ error: 'No bid to sell' });
-//     }
-
-//     const { team: teamId, amount } = auction.currentBid;
-
-//     await Player.findByIdAndUpdate(playerId, {
-//       availability: 'Sold',
-//     });
-
-//     await Team.findByIdAndUpdate(teamId, {
-//       $push: { players: { player: playerId, price: amount } },
-//       $inc: { remaining: -amount }
-//     });
-
-//     auction.biddingHistory.push({
-//       player: playerId,
-//       team: teamId,
-//       bidAmount: amount
-//     });
-
-//     auction.currentBid = { team: null, amount: 0 };
-//     auction.currentPlayerOnBid = null;
-
-//     await auction.save();
-
-//     res.json({ message: 'Player sold successfully' });
-//   } catch (err) {
-//     res.status(500).json({ error: err.message });
-//   }
-// });
 
 router.post("/start-bidding/:auctionId", auth, async (req, res) => {
   try {
@@ -173,9 +121,10 @@ router.post("/manual-sell/:auctionId/:playerId", auth, async (req, res) => {
     if (!auction.biddingStarted) {
       return res.status(400).json({ error: "Bidding has not started yet" });
     }
+    
 
     let teamId = auction.currentBid?.team;
-    let amount = auction.bidAmount?.amount;
+    let amount = auction.currentBid?.amount;
 
     if (!teamId || !amount) {
       return res
@@ -227,17 +176,33 @@ router.post("/manual-sell/:auctionId/:playerId", auth, async (req, res) => {
       $inc: { remaining: -amount },
     });
 
-    // Add to bidding history
+
     auction.biddingHistory.push({
       player: playerId,
       team: teamId,
       bidAmount: amount,
+      time: new Date(),
     });
 
-    auction.bidAmount = {
-      player: nextPlayer._id,
-      amount: nextPlayer.basePrice,
-    };
+
+    if (nextPlayer) {
+      auction.currentPlayerOnBid = nextPlayer._id;
+      auction.currentBid = { team: null, amount: 0 };
+      auction.currentQueuePosition = newQueuePosition;
+      auction.bidAmount = {
+        player: nextPlayer._id,
+        amount: nextPlayer.basePrice,
+      };
+    } else {
+      auction.currentPlayerOnBid = null;
+      auction.currentBid = { team: null, amount: 0 };
+      auction.bidAmount = {
+        player: null,
+        amount: 0,
+      };
+      auction.biddingStarted = false;
+    }
+    
     
     // Update lastSoldPlayer and mostExpensivePlayer
     auction.lastSoldPlayer = {
@@ -260,7 +225,7 @@ router.post("/manual-sell/:auctionId/:playerId", auth, async (req, res) => {
     // Update auction with next player
     if (nextPlayer) {
       auction.currentPlayerOnBid = nextPlayer._id;
-      auction.currentBid = { team: null, amount: nextPlayer.basePrice || 0 };
+      auction.currentBid = { team: null, amount: 0 };
       auction.currentQueuePosition = newQueuePosition;
     } else {
       // No more players available - end bidding
@@ -310,12 +275,11 @@ router.patch("/update-bid/:auctionId", auth, async (req, res) => {
         .json({ error: "Auction or current player not found." });
     }
 
-    // Set the bid amount and update currentBid as well
+    // ✅ Only update bidAmount, NOT currentBid
     auction.bidAmount = {
       player: auction.currentPlayerOnBid,
       amount: amount,
     };
-    auction.currentBid.amount = amount;
 
     await auction.save();
 
@@ -324,6 +288,7 @@ router.patch("/update-bid/:auctionId", auth, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 router.post("/update-selection-mode/:auctionId", auth, async (req, res) => {
   try {
@@ -377,72 +342,7 @@ router.post("/update-selection-mode/:auctionId", auth, async (req, res) => {
   }
 });
 
-// router.post("/set-manual-queue/:auctionId", auth, async (req, res) => {
-//   try {
-//     const { playerQueue } = req.body; // Array of {player: playerId, position: number}
-//     const auction = await Auction.findById(req.params.auctionId);
 
-//     if (!auction) {
-//       return res.status(404).json({ error: "Auction not found" });
-//     }
-
-//     // Sort the queue by position to ensure correct order
-//     const sortedQueue = playerQueue.sort((a, b) => a.position - b.position);
-
-//     let updateData = {
-//       manualPlayerQueue: sortedQueue,
-//     };
-
-//     // Handle queue position based on current state
-//     if (!auction.biddingStarted) {
-//       // Bidding not started - reset to beginning
-//       updateData.currentQueuePosition = 0;
-//     } else if (auction.selectionMode === "automatic" && sortedQueue.length > 0) {
-//       // Switching from auto to manual mid-bidding - set to -1 so next will be 0
-//       updateData.currentQueuePosition = -1;
-//     } else if (auction.selectionMode === "manual") {
-//       // Already in manual mode - handle adding players to existing queue
-//       const currentPos = auction.currentQueuePosition;
-
-//       // If we're adding more players and current position is beyond new queue
-//       if (currentPos >= sortedQueue.length) {
-//         updateData.currentQueuePosition = Math.max(0, sortedQueue.length - 1);
-//       }
-//       // If we're still within the queue, keep current position
-//       // New players will be added after current ones
-//     }
-
-//     const updatedAuction = await Auction.findByIdAndUpdate(
-//       req.params.auctionId,
-//       updateData,
-//       { new: true }
-//     ).populate("manualPlayerQueue.player");
-
-//     // Check if we need to start the next player immediately
-//     let nextPlayerInfo = null;
-//     if (auction.biddingStarted && auction.selectionMode === "manual" && !auction.currentPlayerOnBid) {
-//       // No current player but bidding started - get first from new queue
-//       if (sortedQueue.length > 0) {
-//         const nextPlayer = await Player.findById(sortedQueue[0].player);
-//         nextPlayerInfo = {
-//           nextPlayer: nextPlayer,
-//           shouldStartNext: true
-//         };
-//       }
-//     }
-
-//     res.json({
-//       message: "Manual queue updated successfully",
-//       auction: updatedAuction,
-//       ...nextPlayerInfo
-//     });
-//   } catch (err) {
-//     console.error("Set manual queue error:", err);
-//     res.status(500).json({ error: err.message });
-//   }
-// });
-
-// Updated backend route to properly handle adding players to existing queue
 router.post("/set-manual-queue/:auctionId", auth, async (req, res) => {
   try {
     const { playerQueue, newPlayers, existingQueue } = req.body;
@@ -455,67 +355,73 @@ router.post("/set-manual-queue/:auctionId", auth, async (req, res) => {
     let finalQueue = [];
     let updateData = {};
 
-    // Check if we're adding to existing queue or creating new one
+    // Utility: Ensure no duplicate player entries — override older ones with latest position
+    const mergeAndDeduplicateQueue = (baseQueue, addedPlayers) => {
+      const playerMap = new Map();
+
+      // First add existing queue
+      for (const item of baseQueue) {
+        playerMap.set(String(item.player), { ...item });
+      }
+
+      // Then add new players — overwrite if already exists
+      for (const item of addedPlayers) {
+        playerMap.set(String(item.player), { ...item }); // Update to new position
+      }
+
+      // Convert map back to array
+      return Array.from(playerMap.values()).sort((a, b) => a.position - b.position);
+    };
+
+    // CASE 1: Adding more players to existing queue
     if (newPlayers && existingQueue) {
-      // Adding more players to existing queue
       console.log("Adding to existing queue");
-      console.log("Existing queue length:", existingQueue.length);
-      console.log("New players:", newPlayers.length);
 
-      // Combine existing queue with new players
-      finalQueue = [...existingQueue, ...newPlayers];
-
-      // Sort by position to maintain order
-      finalQueue = finalQueue.sort((a, b) => a.position - b.position);
+      // Merge and deduplicate by player ID
+      finalQueue = mergeAndDeduplicateQueue(existingQueue, newPlayers);
 
       updateData = {
         manualPlayerQueue: finalQueue,
-        // Keep current position unchanged when adding more players
-        // Don't modify currentQueuePosition here
       };
 
-      console.log("Final combined queue length:", finalQueue.length);
+    // CASE 2: Replacing entire queue
     } else if (playerQueue) {
-      // Creating new queue or replacing entire queue
       console.log("Creating new queue");
-      const sortedQueue = playerQueue.sort((a, b) => a.position - b.position);
+
+      // Ensure no duplicates within the new queue itself
+      finalQueue = mergeAndDeduplicateQueue([], playerQueue);
 
       updateData = {
-        manualPlayerQueue: sortedQueue,
+        manualPlayerQueue: finalQueue,
       };
 
-      // Handle queue position based on current state
       if (!auction.biddingStarted) {
-        // Bidding not started - reset to beginning
         updateData.currentQueuePosition = 0;
       } else if (
         auction.selectionMode === "automatic" &&
-        sortedQueue.length > 0
+        finalQueue.length > 0
       ) {
-        // Switching from auto to manual mid-bidding - set to -1 so next will be 0
         updateData.currentQueuePosition = -1;
       }
 
-      finalQueue = sortedQueue;
     } else {
       return res.status(400).json({ error: "Invalid request data" });
     }
 
-    // Update the auction
+    // Save the updated auction
     const updatedAuction = await Auction.findByIdAndUpdate(
       req.params.auctionId,
       updateData,
       { new: true }
     ).populate("manualPlayerQueue.player");
 
-    // Check if we need to start the next player immediately
+    // Trigger next player if needed
     let nextPlayerInfo = null;
     if (
       auction.biddingStarted &&
       auction.selectionMode === "manual" &&
       !auction.currentPlayerOnBid
     ) {
-      // No current player but bidding started - get next from queue
       const currentPos = updatedAuction.currentQueuePosition;
       if (finalQueue.length > currentPos + 1) {
         const nextPlayerData = finalQueue[currentPos + 1];
@@ -526,12 +432,6 @@ router.post("/set-manual-queue/:auctionId", auth, async (req, res) => {
         };
       }
     }
-
-    console.log(
-      "Queue updated successfully. Total players:",
-      finalQueue.length
-    );
-    console.log("Current position:", updatedAuction.currentQueuePosition);
 
     res.json({
       message: newPlayers
@@ -548,65 +448,6 @@ router.post("/set-manual-queue/:auctionId", auth, async (req, res) => {
   }
 });
 
-// Updated queue status route
-// router.get("/queue-status/:auctionId", auth, async (req, res) => {
-//   try {
-//     const auction = await Auction.findById(req.params.auctionId)
-//       .populate("manualPlayerQueue.player")
-//       .populate("currentPlayerOnBid");
-
-//     if (!auction) {
-//       return res.status(404).json({ error: "Auction not found" });
-//     }
-
-//     // Calculate remaining players
-//     let remainingPlayers = 0;
-//     let isLastPlayer = false;
-
-//     if (auction.selectionMode === "manual") {
-//       remainingPlayers = Math.max(0, auction.manualPlayerQueue.length - auction.currentQueuePosition - 1);
-//       isLastPlayer = remainingPlayers === 0 && auction.biddingStarted;
-//     } else {
-//       // For automatic mode, count available players matching filter
-//       const filterQuery = auction.automaticFilter === "All"
-//         ? { availability: "Available" }
-//         : {
-//             availability: "Available",
-//             role: auction.automaticFilter === "Wicket-keeper"
-//               ? "Wicket-keeper"
-//               : auction.automaticFilter,
-//           };
-
-//       const availablePlayers = await Player.countDocuments({
-//         ...filterQuery,
-//         _id: { $in: auction.selectedPlayers, $ne: auction.currentPlayerOnBid },
-//       });
-
-//       remainingPlayers = availablePlayers;
-//       isLastPlayer = remainingPlayers === 0 && auction.biddingStarted;
-//     }
-
-//     // Mode can always be changed now
-//     const canChangeMode = true;
-
-//     res.json({
-//       currentQueuePosition: auction.currentQueuePosition,
-//       totalQueueLength: auction.manualPlayerQueue.length,
-//       remainingPlayers: remainingPlayers,
-//       isLastPlayer: isLastPlayer,
-//       canChangeMode: canChangeMode,
-//       selectionMode: auction.selectionMode,
-//       biddingStarted: auction.biddingStarted,
-//       automaticFilter: auction.automaticFilter,
-//       hasCurrentPlayer: !!auction.currentPlayerOnBid,
-//       currentPlayer: auction.currentPlayerOnBid,
-//       manualPlayerQueue: auction.manualPlayerQueue
-//     });
-//   } catch (err) {
-//     console.error("Queue status error:", err);
-//     res.status(500).json({ error: err.message });
-//   }
-// });
 
 router.get("/queue-status/:auctionId", auth, async (req, res) => {
   try {
@@ -768,12 +609,14 @@ router.get("/next-player/:auctionId", auth, async (req, res) => {
   }
 });
 
-// New route to handle automatic filter popup and start bidding
+
 // router.post("/start-automatic-bidding/:auctionId", auth, async (req, res) => {
 //   try {
 //     const { automaticFilter } = req.body;
-//     const auction = await Auction.findById(req.params.auctionId)
-//       .populate("selectedPlayers");
+
+//     const auction = await Auction.findById(req.params.auctionId).populate(
+//       "selectedPlayers"
+//     );
 
 //     if (!auction) {
 //       return res.status(404).json({ error: "Auction not found" });
@@ -783,22 +626,29 @@ router.get("/next-player/:auctionId", auth, async (req, res) => {
 //       return res.status(400).json({ error: "Bidding has already started" });
 //     }
 
-//     // Update to automatic mode with selected filter
-//     const filterQuery = automaticFilter === "All"
-//       ? { availability: "Available" }
-//       : {
-//           availability: "Available",
-//           role: automaticFilter === "Wicket-keeper" ? "Wicket-keeper" : automaticFilter,
-//         };
+//     // ✅ Filter players by availability: "Available" OR "Unsold"
+//     const availabilityFilter = {
+//       availability: { $in: ["Available", "Unsold"] },
+//     };
+
+//     // ✅ Add role filter if not "All"
+//     let filterQuery = {
+//       ...availabilityFilter,
+//     };
+
+//     if (automaticFilter !== "All") {
+//       filterQuery.role =
+//         automaticFilter === "Wicket-keeper" ? "Wicket-keeper" : automaticFilter;
+//     }
 
 //     const firstPlayer = await Player.findOne({
 //       ...filterQuery,
-//       _id: { $in: auction.selectedPlayers },
+//       _id: { $in: auction.selectedPlayers }, // ensure player is among selected
 //     });
 
 //     if (!firstPlayer) {
 //       return res.status(400).json({
-//         error: "No players available matching the selected filter"
+//         error: "No players available matching the selected filter",
 //       });
 //     }
 
@@ -809,8 +659,11 @@ router.get("/next-player/:auctionId", auth, async (req, res) => {
 //         automaticFilter: automaticFilter,
 //         biddingStarted: true,
 //         currentPlayerOnBid: firstPlayer._id,
-//         currentBid: { team: null, amount: firstPlayer.basePrice || 0 },
-//         currentQueuePosition: 0
+//         currentBid: {
+//           team: null,
+//           amount: firstPlayer.basePrice || 0,
+//         },
+//         currentQueuePosition: 0,
 //       },
 //       { new: true }
 //     ).populate("currentPlayerOnBid");
@@ -820,7 +673,7 @@ router.get("/next-player/:auctionId", auth, async (req, res) => {
 //       auction: updatedAuction,
 //       currentPlayer: firstPlayer,
 //       selectionMode: "automatic",
-//       automaticFilter: automaticFilter
+//       automaticFilter: automaticFilter,
 //     });
 //   } catch (err) {
 //     console.error("Start automatic bidding error:", err);
@@ -832,9 +685,7 @@ router.post("/start-automatic-bidding/:auctionId", auth, async (req, res) => {
   try {
     const { automaticFilter } = req.body;
 
-    const auction = await Auction.findById(req.params.auctionId).populate(
-      "selectedPlayers"
-    );
+    const auction = await Auction.findById(req.params.auctionId).populate("selectedPlayers");
 
     if (!auction) {
       return res.status(404).json({ error: "Auction not found" });
@@ -844,32 +695,30 @@ router.post("/start-automatic-bidding/:auctionId", auth, async (req, res) => {
       return res.status(400).json({ error: "Bidding has already started" });
     }
 
-    // ✅ Filter players by availability: "Available" OR "Unsold"
-    const availabilityFilter = {
-      availability: { $in: ["Available", "Unsold"] },
-    };
+    // ✅ Filter players with correct availability
+    const availabilityFilter = { availability: { $in: ["Available", "Unsold"] } };
 
-    // ✅ Add role filter if not "All"
-    let filterQuery = {
-      ...availabilityFilter,
-    };
+    let filterQuery = { ...availabilityFilter };
 
     if (automaticFilter !== "All") {
-      filterQuery.role =
-        automaticFilter === "Wicket-keeper" ? "Wicket-keeper" : automaticFilter;
+      filterQuery.role = automaticFilter === "Wicket-keeper" ? "Wicket-keeper" : automaticFilter;
     }
 
-    const firstPlayer = await Player.findOne({
-      ...filterQuery,
-      _id: { $in: auction.selectedPlayers }, // ensure player is among selected
-    });
+    // ✅ Limit to only selected players
+    filterQuery._id = { $in: auction.selectedPlayers };
 
-    if (!firstPlayer) {
+    // ✅ Find all matching players (for count and first)
+    const availablePlayers = await Player.find(filterQuery).sort({ basePrice: 1 });
+
+    if (!availablePlayers.length) {
       return res.status(400).json({
-        error: "No players available matching the selected filter",
+        error: "No available players left. Please add more players or check your filter.",
       });
     }
 
+    const firstPlayer = availablePlayers[0];
+
+    // ✅ Start bidding with first player
     const updatedAuction = await Auction.findByIdAndUpdate(
       req.params.auctionId,
       {
@@ -882,6 +731,10 @@ router.post("/start-automatic-bidding/:auctionId", auth, async (req, res) => {
           amount: firstPlayer.basePrice || 0,
         },
         currentQueuePosition: 0,
+        bidAmount: {
+          player: firstPlayer._id,
+          amount: firstPlayer.basePrice || 0,
+        },
       },
       { new: true }
     ).populate("currentPlayerOnBid");
@@ -891,13 +744,14 @@ router.post("/start-automatic-bidding/:auctionId", auth, async (req, res) => {
       auction: updatedAuction,
       currentPlayer: firstPlayer,
       selectionMode: "automatic",
-      automaticFilter: automaticFilter,
+      automaticFilter,
     });
   } catch (err) {
     console.error("Start automatic bidding error:", err);
     res.status(500).json({ error: err.message });
   }
 });
+
 
 // 6. Resume auction
 router.patch("/pause-auction/:id", auth, async (req, res) => {
@@ -1145,6 +999,77 @@ router.get("/bidding-portal/:auctionId", auth, async (req, res) => {
   }
 });
 
+
+
+// router.post("/place-bid/:auctionId", auth, async (req, res) => {
+//   try {
+//     const { playerId, teamId, bidAmount } = req.body;
+//     const { auctionId } = req.params;
+
+//     const auction = await Auction.findById(auctionId).populate("currentBid.team");
+//     if (!auction) {
+//       return res.status(404).json({ error: "Auction not found" });
+//     }
+
+//     if (auction.isPaused || auction.status !== "live") {
+//       return res.status(400).json({ error: "Auction is not active" });
+//     }
+
+//     if (
+//       auction.currentPlayerOnBid &&
+//       auction.currentPlayerOnBid.toString() !== playerId.toString()
+//     ) {
+//       return res.status(400).json({
+//         error: "Player on bid does not match the current bidding player.",
+//       });
+//     }
+
+//     // Check for same bid amount conflict
+//     if (
+//       auction.currentBid &&
+//       Number(auction.currentBid.amount) === Number(bidAmount)
+//     ) {
+//       const currentTeamId = auction.currentBid.team?._id?.toString();
+//       if (currentTeamId === teamId.toString()) {
+//         return res.status(400).json({
+//           error: "You cannot place the same bid twice.",
+//         });
+//       } else {
+//         const currentTeamName = auction.currentBid.team?.name || "Another team";
+//         return res.status(400).json({
+//           error: `${currentTeamName} already placed this bid. Wait for the bid amount to change.`,
+//         });
+//       }
+//     }
+
+//     // Get bidding team info
+//     const team = await Team.findById(teamId);
+//     if (!team) return res.status(404).json({ error: "Team not found" });
+
+//     // Proceed with valid bid
+//     auction.currentBid = {
+//       team: teamId,
+//       amount: bidAmount,
+//     };
+
+//     auction.biddingHistory.push({
+//       player: playerId,
+//       team: teamId,
+//       bidAmount,
+//       time: new Date(),
+//     });
+
+//     await auction.save();
+
+//     res.status(200).json({ message: "Bid placed successfully" });
+//   } catch (err) {
+//     console.error("Place bid error:", err);
+//     res.status(500).json({ error: "Internal server error", details: err.message });
+//   }
+// });
+
+
+
 router.post("/place-bid/:auctionId", auth, async (req, res) => {
   try {
     const { playerId, teamId, bidAmount } = req.body;
@@ -1168,22 +1093,41 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
       });
     }
 
-    // Get team data
+    const isSameAmount = Number(auction.currentBid?.amount) === Number(bidAmount);
+    const isSameTeam = auction.currentBid?.team?.toString() === teamId.toString();
+
+    if (isSameAmount) {
+      if (isSameTeam) {
+        return res.status(400).json({
+          error: "You cannot place the same bid twice.",
+        });
+      } else {
+        // Fetch team name of the currentBid team
+        const existingTeam = await Team.findById(auction.currentBid.team);
+        const teamName = existingTeam?.shortName|| "Another team";
+
+        return res.status(400).json({
+          error: `${teamName} already placed this bid. Wait for the amount to change.`,
+        });
+      }
+    }
+
+    // Get bidding team data
     const team = await Team.findById(teamId);
     if (!team) return res.status(404).json({ error: "Team not found" });
 
-    // Update currentBid with only string and logoUrl
+    // ✅ Place the bid
     auction.currentBid = {
       team: teamId,
       amount: bidAmount,
     };
 
-    auction.biddingHistory.push({
-      player: playerId,
-      team: teamId,
-      bidAmount,
-      time: new Date(),
-    });
+    // auction.biddingHistory.push({
+    //   player: playerId,
+    //   team: teamId,
+    //   bidAmount,
+    //   time: new Date(),
+    // });
 
     await auction.save();
 
@@ -1195,6 +1139,7 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
       .json({ error: "Internal server error", details: err.message });
   }
 });
+
 
 
 module.exports = router;

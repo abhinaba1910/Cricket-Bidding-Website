@@ -392,6 +392,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import BidButton from "../../components/ui/BidButton";
 import CharacterCard from "../characters/CharacterCard";
 import api from "../../userManagement/Api";
+import toast from "react-hot-toast";
 
 // ─── Shared “CriteriaTable” for Desktop ────────────────────────────
 function CriteriaTable() {
@@ -523,8 +524,8 @@ export default function UserBiddingDashboardDesktop() {
     adminImageUrl: null,
   };
   const [auctionData, setAuctionData] = useState(sampleAuction);
- const [avatarUrl, setAvatarUrl]     = useState(null);
-   const [error, setError]             = useState(null);
+  const [avatarUrl, setAvatarUrl] = useState(null);
+  const [error, setError] = useState(null);
   useEffect(() => {
     const fetchAuctionData = async () => {
       try {
@@ -532,18 +533,17 @@ export default function UserBiddingDashboardDesktop() {
         const data = response.data;
         console.log("Fetched Auction Data:", data);
         setAuctionData(data);
-         if (data.team?.avatar) {
-  const raw = data.team.avatar;                           // e.g. "Frontend/public/models/char2.glb"
-  const idx = raw.indexOf("/models");                     // find where the real path starts
-  const publicPath = idx >= 0 ? raw.slice(idx) : raw;     // "/models/char2.glb"
-  console.log("Loading GLB from:", publicPath);
-  setAvatarUrl(publicPath);
-}
+        if (data.team?.avatar) {
+          const raw = data.team.avatar; // e.g. "Frontend/public/models/char2.glb"
+          const idx = raw.indexOf("/models"); // find where the real path starts
+          const publicPath = idx >= 0 ? raw.slice(idx) : raw; // "/models/char2.glb"
+          console.log("Loading GLB from:", publicPath);
+          setAvatarUrl(publicPath);
+        }
 
-        console.log("avatar from back:", data.team.avatar)
-      }
-      catch (error) {
-        console.error("Error fetching auction data:", error);
+        console.error("avatar from back:", data.team.avatar);
+      } catch (error) {
+        toast.error("Error fetching auction data:", error);
       }
     };
 
@@ -559,9 +559,15 @@ export default function UserBiddingDashboardDesktop() {
   const handleBid = async () => {
     const playerId = auctionData?.currentPlayer?._id;
     const teamId = auctionData?.team?.teamId;
+    const visibleBid = auctionData?.bidAmount;
 
     if (!playerId || !teamId) {
       alert("Missing team or player information.");
+      return;
+    }
+
+    if (!visibleBid || visibleBid <= 0) {
+      alert("Invalid bid amount.");
       return;
     }
 
@@ -569,24 +575,22 @@ export default function UserBiddingDashboardDesktop() {
       auctionId: id,
       playerId,
       teamId,
-      bidAmount:
-        (auctionData.currentBid?.amount ?? auctionData.bidAmount ?? 0) + 100000, // ₹1L increment
+      bidAmount: visibleBid, // ✅ send what is visible, NOT incremented
     };
 
     try {
       setIsBidding(true);
-      const res = await api.post(`/place-bid/${id}`, payload); // <-- also fix the URL to include slash before ID
-      // setEmoteToPlay('HandRaise');
+      const res = await api.post(`/place-bid/${id}`, payload);
       setEmoteToPlay(null);
-      setTimeout(() => setEmoteToPlay('HandRaise'), 10);
-      console.log("Bid response:", res.data);
-      // setTimeout(() => setEmoteToPlay(null), 1000);
+      setTimeout(() => setEmoteToPlay("HandRaise"), 10);
+
+      toast.success("Bid Placed Successfully")
       // Refresh data
       const updated = await api.get(`/bidding-portal/${id}`);
       setAuctionData(updated.data);
     } catch (error) {
       console.error("Failed to place bid:", error);
-      alert(error.response?.data?.error || "Failed to place bid");
+      toast.error(error.response?.data?.error || "Failed to place bid");
     } finally {
       setIsBidding(false);
     }
@@ -761,10 +765,7 @@ export default function UserBiddingDashboardDesktop() {
             </span>
           </div>
           <motion.div className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 py-3 font-bold text-xl text-black shadow-lg mb-3">
-            ₹
-            {
-              auctionData.bidAmount?.toLocaleString() ??
-              "--/--"}
+            ₹{auctionData.bidAmount?.toLocaleString() ?? "--/--"}
           </motion.div>
           <div className="flex items-center justify-center mb-3">
             <div className="bg-gray-700 rounded-full w-8 h-8 flex items-center justify-center mr-2 border border-gray-500">
@@ -808,13 +809,11 @@ export default function UserBiddingDashboardDesktop() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-{avatarUrl
-  ? <CharacterCard 
-  modelPath={avatarUrl}
- triggerEmote={emoteToPlay}
-  />
-  : <p>Loading your character…</p>
-}
+          {avatarUrl ? (
+            <CharacterCard modelPath={avatarUrl} triggerEmote={emoteToPlay} />
+          ) : (
+            <p>Loading your character…</p>
+          )}
         </motion.div>
       </div>
     </div>
