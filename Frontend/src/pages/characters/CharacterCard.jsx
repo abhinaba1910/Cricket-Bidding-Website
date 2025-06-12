@@ -54,19 +54,42 @@
 // }
 // src/CharacterCard.jsx
 // src/CharacterCard.jsx
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import ErrorBoundary from './ErrorBoundary';
 import Character from './Character';
+import BgImg from '../../assets/ipl-auction-2.jpg'
 
 
-export default function CharacterCard() {
+export default function CharacterCard({
+modelPath,
+triggerEmote,
+  emotePaths = [
+    '/models/emotes/BidWon.glb',
+    '/models/emotes/HandRaise.glb',
+    '/models/emotes/LostBid.glb',
+    '/models/emotes/RTM.glb',
+    '/models/emotes/StandToSit.glb',
+  ],
+  labels = ['Bid Won','Hand Raise','Lost Bid','Ready to Move','Stand to Sit'],
+  
+})
+
+{
+    if (!modelPath) {
+    return (
+      <div className="w-80 h-96 flex items-center justify-center bg-gray-100 rounded-xl">
+        <p className="text-gray-500">Loading character…</p>
+      </div>
+    );
+  }
   return (
     <div
       className="w-80 h-96 rounded-xl overflow-hidden flex flex-col bg-cover bg-center"
-      style={{
-        backgroundImage: "url('../../assets/ipl-auction-2.jpg')",
-      }}
+      // style={{
+      //   backgroundImage: "url('/src/assets/ipl-auction-2.jpg')",
+      // }}
+      style={{ backgroundImage: `url(${BgImg})` }}
     >
       {/* Optional transparent header (you can remove this entirely if you don't need a header) */}
       <div className="px-4 py-3">
@@ -80,6 +103,7 @@ export default function CharacterCard() {
             camera={{ position: [0, 0.8, 2.5], fov: 70 }}
             style={{ width: '100%', height: '100%' }}
           >
+            <Suspense fallback={null}>
             <ambientLight intensity={0.7} />
             <directionalLight position={[3, 3, 3]} intensity={0.9} castShadow />
             <directionalLight position={[-3, 2, -1]} intensity={0.4} color="#fbcfe8" />
@@ -94,7 +118,7 @@ export default function CharacterCard() {
             </mesh>
 
             {/* Character + emotes */}
-            <Character
+            {/* <Character
               modelPath="/models/char1.glb"
               emotePaths={[
                 '/models/emotes/BidWon.glb',
@@ -110,7 +134,14 @@ export default function CharacterCard() {
                 'Ready to Move',
                 'Stand to Sit',
               ]}
+            /> */}
+            <Character
+              modelPath={modelPath}
+              emotePaths={emotePaths}
+              labels={labels}
+              triggerEmote={triggerEmote}
             />
+            </Suspense>
           </Canvas>
         </ErrorBoundary>
       </div>

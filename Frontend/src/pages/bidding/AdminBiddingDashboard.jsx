@@ -1382,6 +1382,7 @@
 ////////////////////////////////
 
 import React, { useState, useEffect } from "react";
+import { useRef } from 'react';
 import { motion } from "framer-motion";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import api from "../../userManagement/Api";
@@ -1437,6 +1438,19 @@ export default function AdminBiddingDashboard() {
   const [popupSelection, setPopupSelection] = useState("automatic");
   const [showAddMorePlayers, setShowAddMorePlayers] = useState(false);
   const [queueDisplay, setQueueDisplay] = useState({ current: 0, total: 0 });
+
+  // inside AdminBiddingDashboard component
+const [showIncreasePopup, setShowIncreasePopup] = useState(false);
+const [incrementOptions, setIncrementOptions] = useState([50000, 5000000]); 
+// example defaults: 50k and 50 lakh. You can make this configurable via props or backend.
+const [selectedIncrement, setSelectedIncrement] = useState(incrementOptions[0]);
+const [increaseTimer, setIncreaseTimer] = useState(60); // seconds remaining in 1-minute popup
+const [roundInfo, setRoundInfo] = useState(null);
+// roundInfo = { newAmount, roundStart: Date, roundEnd: Date }
+const [roundCountdown, setRoundCountdown] = useState(null); // seconds remaining in bidding window
+const increaseIntervalRef = useRef(null);
+const roundIntervalRef = useRef(null);
+
 
   const handleStartBidding = async () => {
     setShowStartPopup(true);
