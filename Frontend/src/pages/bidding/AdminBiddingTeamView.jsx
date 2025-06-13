@@ -6,13 +6,13 @@ import api from "../../userManagement/Api";
 import toast from "react-hot-toast";
 
 export default function AdminBiddingTeamView() {
-  const { id, teamId } = useParams(); // Now expecting both auction ID and team ID
+  const { id, teamId } = useParams();
   const navigate = useNavigate();
+
   const [team, setTeam] = useState(null);
   const [auctionDetails, setAuctionDetails] = useState(null);
   const [loading, setLoading] = useState(true);
-  console.log("TEam ID", teamId);
-  console.log("Auction ID", id);
+
   // modal state
   const [modalPlayers, setModalPlayers] = useState([]);
   const [modalTitle, setModalTitle] = useState("");
@@ -21,43 +21,39 @@ export default function AdminBiddingTeamView() {
   useEffect(() => {
     async function loadData() {
       try {
-        // Fetch auction details to get the specific team data
-        const auctionRes = await api.get(`/get-auction/${id}`);
-        const auction = auctionRes.data;
+        // Fetch auction detail (includes selectedTeams with purse/remaining/totalSpent and boughtPlayers)
+        const { data: auction } = await api.get(`/get-auction/${id}`);
 
-        // Find the specific team from selectedTeams
-        const selectedTeam = auction.selectedTeams.find(
-          (t) => t._id === teamId
-        );
-        console.log("SELECTED TEAM", selectedTeam);
+        const selectedTeam = auction.selectedTeams.find(t => t._id === teamId);
         if (!selectedTeam) {
           throw new Error("Team not found in this auction");
         }
 
-        // Get players bought by this team from biddingHistory
-        const teamPlayers = (auction.biddingHistory || [])
-          .filter((bid) => bid.team && bid.team._id === teamId)
-          .map((bid) => ({
-            name: bid.player.name,
-            role: bid.player.role,
-            price: bid.bidAmount,
-            playerDetails: bid.player,
-          }));
-        // Calculate remaining purse
-        const totalSpent = teamPlayers.reduce(
-          (sum, player) => sum + player.price,
-          0
-        );
-        const remainingPurse = selectedTeam.purse - totalSpent;
+        // Map server-supplied boughtPlayers into the UI format
+        const teamPlayers = selectedTeam.boughtPlayers.map(p => ({
+          name: p.playerName,
+          role: p.role,
+          price: p.price,
+          playerDetails: {
+            _id:         p.playerId,
+            name:        p.playerName,
+            image:       p.playerImage,
+            role:        p.role,
+            nationality: p.nationality
+          }
+        }));
+
+        // Destructure purse info from server
+        const { purse, remaining, totalSpent } = selectedTeam;
 
         setAuctionDetails(auction);
         setTeam({
           ...selectedTeam,
-          players: teamPlayers,
-          remainingPurse: remainingPurse,
-          totalSpent: totalSpent,
+          players:        teamPlayers,
+          remainingPurse: remaining,
+          totalSpent:     totalSpent,
           manager: {
-            name: selectedTeam.managerName || "Team Manager",
+            name:     selectedTeam.managerName || "Team Manager",
             photoUrl: selectedTeam.managerPhoto || "/manager-placeholder.jpg",
           },
         });
@@ -65,13 +61,14 @@ export default function AdminBiddingTeamView() {
         console.error("Failed to load team data:", err);
         toast.error(
           err.response?.data?.message ||
-            err.message ||
-            "Could not load team data"
+          err.message ||
+          "Could not load team data"
         );
       } finally {
         setLoading(false);
       }
     }
+
     loadData();
   }, [id, teamId]);
 
@@ -99,12 +96,12 @@ export default function AdminBiddingTeamView() {
     );
   }
 
-  // derived stats
-  const totalTaken = team.players.length;
-  const batsmen = team.players.filter((p) => p.role === "Batsman");
-  const bowlers = team.players.filter((p) => p.role === "Bowler");
-  const allrounders = team.players.filter((p) => p.role === "All-Rounder");
-  const wicketKeepers = team.players.filter((p) => p.role === "Wicket-Keeper");
+  // Derived stats
+  const totalTaken    = team.players.length;
+  const batsmen       = team.players.filter(p => p.role === "Batsman");
+  const bowlers       = team.players.filter(p => p.role === "Bowler");
+  const allrounders   = team.players.filter(p => p.role === "All-Rounder");
+  const wicketKeepers = team.players.filter(p => p.role === "Wicket-Keeper");
 
   const openModal = (title, list) => {
     setModalTitle(title);
@@ -179,15 +176,8 @@ export default function AdminBiddingTeamView() {
                 {[
                   ["Short Name", team.shortName],
                   ["Total Purse", `₹${Number(team.purse).toLocaleString()}`],
-                  [
-                    "Total Spent",
-                    `₹${Number(team.totalSpent
-                    ).toLocaleString()}`,
-                  ],
-                  [
-                    "Remaining Purse",
-                    `₹${Number(team.remainingPurse).toLocaleString()}`,
-                  ],
+                  ["Total Spent", `₹${Number(team.totalSpent).toLocaleString()}`],
+                  ["Remaining Purse", `₹${Number(team.remainingPurse).toLocaleString()}`],
                   ["Players Bought", totalTaken],
                 ].map(([label, val]) => (
                   <div key={label}>
@@ -217,18 +207,8 @@ export default function AdminBiddingTeamView() {
                 {[
                   ["Batsmen", batsmen, "bg-blue-100", "text-blue-800"],
                   ["Bowlers", bowlers, "bg-green-100", "text-green-800"],
-                  [
-                    "All-Rounders",
-                    allrounders,
-                    "bg-yellow-100",
-                    "text-yellow-800",
-                  ],
-                  [
-                    "Wicket-Keepers",
-                    wicketKeepers,
-                    "bg-purple-100",
-                    "text-purple-800",
-                  ],
+                  ["All-Rounders", allrounders, "bg-yellow-100", "text-yellow-800"],
+                  ["Wicket-Keepers", wicketKeepers, "bg-purple-100", "text-purple-800"],
                 ].map(([lbl, list, bg, textColor]) => (
                   <motion.div
                     key={lbl}
