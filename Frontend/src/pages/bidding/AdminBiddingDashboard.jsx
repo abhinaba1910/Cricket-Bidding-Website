@@ -2228,6 +2228,19 @@ export default function AdminBiddingDashboard() {
     });
   };
 
+const handleEndAuction = async () => {
+    try {
+      const res = await api.patch(`/end-auction/${auctionId}`)
+      toast.success(res.data.message || 'Auction ended')
+      // inform parent to refresh or navigate away
+      onAuctionEnded && onAuctionEnded()
+    } catch (err) {
+      console.error('End-auction error:', err)
+      toast.error(err.response?.data?.error || 'Failed to end auction')
+    }
+  }
+
+
   // 5) RENDER. Everywhere you previously used SAMPLE_AUCTION, use auctionData instead.
   const containerClasses = [
     "p-4 text-white bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900",
@@ -2256,7 +2269,6 @@ export default function AdminBiddingDashboard() {
           {fullScreen ? "Exit Full Screen" : "Full Screen"}
         </button>
       </div>
-
       {/* Responsive grid: 1-col mobile, 4-col md+ */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:h-[calc(85vh-4rem)]">
         {/* === Left Sidebar (desktop only) === */}
@@ -2346,6 +2358,7 @@ export default function AdminBiddingDashboard() {
             >
               {status === "live" ? "Pause Auction" : "Resume Auction"}
             </motion.button>
+            
           </div>
 
           <div className="flex flex-wrap gap-2 justify-center">
@@ -2634,6 +2647,15 @@ export default function AdminBiddingDashboard() {
             >
               {isPaused ? "Paused Auction" : "Pause Auction"}
             </motion.button>
+                         <motion.button
+        className="w-32 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-xl text-white shadow-lg"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        // onClick={handleEndAuction}
+      >
+        End Auction
+      </motion.button>
+
           </div>
 
           <motion.div
@@ -2656,6 +2678,7 @@ export default function AdminBiddingDashboard() {
               {auctionData.currentBid.team} <p className="text-xs sm:text-sm opacity-75 mt-2">₹{auctionData.currentBid.amount}</p>
             </h3>
           </motion.div>
+          
         </div>
       </div>
 
@@ -2957,6 +2980,7 @@ export default function AdminBiddingDashboard() {
               </motion.button>
             </div>
           </motion.div>
+          
         </motion.div>
       )}
     </div>
