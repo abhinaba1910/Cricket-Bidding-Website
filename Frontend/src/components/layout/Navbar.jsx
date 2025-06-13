@@ -154,8 +154,6 @@
 //     </header>
 //   );
 // };
-
-// export default Navbar;
 import React, { useState, useEffect } from 'react'
 import { Menu, X, User as UserIcon, LogOut, ChevronDown } from 'lucide-react'
 import Avatar from '../ui/Avatar'
@@ -180,10 +178,10 @@ function Navbar({ onOpenSidebar }) {
     }
   }, [])
 
-  const toggleMenu = () => {
-    setIsMenuOpen(prev => !prev)
-  }
+  const isAdmin = user?.role === 'admin'
+  const isTemp  = user?.role === 'temp-admin'
 
+  const toggleMenu = () => setIsMenuOpen(v => !v)
   const handleLogout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
@@ -193,11 +191,21 @@ function Navbar({ onOpenSidebar }) {
     navigate('/')
   }
 
+  // decide mobile container alignment:
+  // - admin/temp → justify-between
+  // - regular user → justify-center
+  const containerClasses = `
+    flex h-16
+    ${isAdmin || isTemp ? 'justify-between' : 'justify-center'}
+    md:justify-between
+  `
+
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex">
+        <div className={containerClasses.trim()}>
+          {/* Left side: only show on mobile for admins */}
+          {(isAdmin || isTemp) && (
             <div className="flex items-center md:hidden">
               <button
                 type="button"
@@ -208,13 +216,17 @@ function Navbar({ onOpenSidebar }) {
                 <Menu className="h-6 w-6" aria-hidden="true" />
               </button>
             </div>
-            <div className="flex-shrink-0 flex items-center">
-              <span className="text-xl font-bold text-primary-600">BidMaster</span>
-            </div>
+          )}
+
+          {/* Logo always visible, centered for regular users on mobile */}
+          <div className="flex-shrink-0 flex items-center">
+            <span className="text-3xl font-bold text-primary-600">BidMaster</span>
           </div>
 
-          {isAuthenticated ? (
+          {/* Right side: desktop menu + mobile avatar for admins */}
+          {isAuthenticated && (isAdmin || isTemp) && (
             <div className="flex items-center">
+              {/* Desktop user menu */}
               <div className="hidden md:ml-4 md:flex md:items-center">
                 <div className="relative ml-3">
                   <button
@@ -227,7 +239,6 @@ function Navbar({ onOpenSidebar }) {
                     <span className="mr-1">{user.username}</span>
                     <ChevronDown className="h-4 w-4 text-gray-500" />
                   </button>
-
                   {isMenuOpen && (
                     <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
                       <div className="py-1">
@@ -252,6 +263,7 @@ function Navbar({ onOpenSidebar }) {
                 </div>
               </div>
 
+              {/* Mobile avatar dropdown for admins */}
               <div className="md:hidden flex items-center">
                 <button
                   type="button"
@@ -260,18 +272,19 @@ function Navbar({ onOpenSidebar }) {
                 >
                   <Avatar src={user.avatar} alt={user.username} size="sm" />
                 </button>
-
                 {isMenuOpen && (
                   <div className="absolute top-0 inset-x-0 p-2 transition transform origin-top-right md:hidden z-40">
                     <div className="rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 overflow-hidden">
                       <div className="pt-4 pb-3 border-t border-gray-200">
                         <div className="flex items-center px-4">
-                          <div className="flex-shrink-0">
-                            <Avatar src={user.avatar} alt={user.username} size="md" />
-                          </div>
+                          <Avatar src={user.avatar} alt={user.username} size="md" />
                           <div className="ml-3">
-                            <div className="text-base font-medium text-gray-800">{user.username}</div>
-                            <div className="text-sm font-medium text-gray-500">{user.email}</div>
+                            <div className="text-base font-medium text-gray-800">
+                              {user.username}
+                            </div>
+                            <div className="text-sm font-medium text-gray-500">
+                              {user.email}
+                            </div>
                           </div>
                           <button
                             type="button"
@@ -303,12 +316,14 @@ function Navbar({ onOpenSidebar }) {
                 )}
               </div>
             </div>
-          ) : (
-            <div className="flex items-center">
+          )}
+
+          {/* Unauthenticated / regular user on mobile: show login button if not signed in */}
+          {!isAuthenticated && (
+            <div className="flex items-center md:flex-none">
               <Button
                 variant="primary"
                 size="sm"
-                className="ml-4"
                 onClick={() => navigate('/')}
               >
                 Log in
