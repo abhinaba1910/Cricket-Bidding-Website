@@ -2182,15 +2182,26 @@ export default function AdminBiddingDashboard() {
 
   const togglePause = async () => {
     try {
-      await api.patch(`/pause-auction/${id}`, {
+      const response = await api.patch(`/pause-auction/${id}`, {
         isPaused: true,
       });
+  
+      console.log(response.data.message); // You can show this as a toast or alert
       setIsPaused(true);
-      setBiddingStarted(false); // Optional: depends on how you're using it
+      setBiddingStarted(false); // Optional
+      toast.success("Auction Paused");
     } catch (err) {
-      console.error("Failed to pause/resume:", err);
+      toast.error("Failed to pause/resume:", err);
+  
+      // Extract and show backend message
+      if (err.response && err.response.data && err.response.data.message) {
+        toast.error(`Error: ${err.response.data.message}`);
+      } else {
+        toast.error("An unexpected error occurred while pausing the auction.");
+      }
     }
   };
+  
 
   useEffect(() => {
     const checkIsPaused = async () => {

@@ -120,12 +120,12 @@ export default function AuctionsInfo() {
               className="w-full pl-10 pr-3 py-2 border rounded-lg"
             />
           </div>
-          <a
+          {/* <a
             href="/create-auction"
             className="inline-flex items-center px-4 py-2 bg-teal-600 text-white rounded shadow hover:bg-teal-700 whitespace-nowrap max-md:hidden"
           >
             <FiPlus className="mr-2" /> Create Auction
-          </a>
+          </a> */}
           <a
             href="/create-auction"
             className="md:hidden inline-flex items-center px-4 py-2 bg-teal-600 text-white rounded shadow hover:bg-teal-700 whitespace-nowrap"

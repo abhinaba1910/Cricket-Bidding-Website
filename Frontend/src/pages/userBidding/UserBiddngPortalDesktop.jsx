@@ -487,7 +487,6 @@ export default function UserBiddingDashboardDesktop() {
   const [emoteToPlay, setEmoteToPlay] = useState(null);
   const [lastSoldTeam, setLastSoldTeam] = useState(null);
 
-
   const toggleFullScreen = () => setFullScreen((fs) => !fs);
 
   // ─── Sample Auction Data ────────────────────────────────────────
@@ -545,20 +544,20 @@ export default function UserBiddingDashboardDesktop() {
 
         console.error("avatar from back:", data.team.avatar);
         const history = data.biddingHistory || [];
-      const lastEntry = history[history.length - 1] || null;
-      if (lastEntry) {
-        const soldTeamId = lastEntry.team._id || lastEntry.team;
-        if (soldTeamId !== lastSoldTeam) {
-          setLastSoldTeam(soldTeamId);
+        const lastEntry = history[history.length - 1] || null;
+        if (lastEntry) {
+          const soldTeamId = lastEntry.team._id || lastEntry.team;
+          if (soldTeamId !== lastSoldTeam) {
+            setLastSoldTeam(soldTeamId);
 
-          if (soldTeamId === data.team.teamId) {
-            setEmoteToPlay("BidWon");
-          } else {
-            setEmoteToPlay("LostBid");
+            if (soldTeamId === data.team.teamId) {
+              setEmoteToPlay("BidWon");
+            } else {
+              setEmoteToPlay("LostBid");
+            }
+            setTimeout(() => setEmoteToPlay(null), 5000);
           }
-          setTimeout(() => setEmoteToPlay(null), 5000);
         }
-      }
       } catch (error) {
         toast.error("Error fetching auction data:", error);
       }
@@ -569,7 +568,7 @@ export default function UserBiddingDashboardDesktop() {
 
     // Cleanup to stop interval on unmount
     return () => clearInterval(interval);
-  }, [id,lastSoldTeam]);
+  }, [id, lastSoldTeam]);
 
   const { tableNumbers, currentLot, adminImageUrl } = auctionData;
 
@@ -601,7 +600,7 @@ export default function UserBiddingDashboardDesktop() {
       setEmoteToPlay(null);
       setTimeout(() => setEmoteToPlay("HandRaise"), 10);
 
-      toast.success("Bid Placed Successfully")
+      toast.success("Bid Placed Successfully");
       // Refresh data
       const updated = await api.get(`/bidding-portal/${id}`);
       setAuctionData(updated.data);
@@ -686,9 +685,9 @@ export default function UserBiddingDashboardDesktop() {
             animate={{ scale: [1, 1.05, 1] }}
             transition={{ duration: 4, repeat: Infinity }}
           >
-            {auctionData.currentPlayer?.avatarUrl ? (
+            {auctionData.currentPlayer?.playerPic ? (
               <img
-                src={auctionData.currentPlayer.avatarUrl}
+                src={auctionData.currentPlayer.playerPic}
                 alt={auctionData.currentPlayer.name}
                 className="w-full h-full object-cover rounded-full"
               />

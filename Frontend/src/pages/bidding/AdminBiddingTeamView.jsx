@@ -23,6 +23,7 @@ export default function AdminBiddingTeamView() {
       try {
         // Fetch auction detail (includes selectedTeams with purse/remaining/totalSpent and boughtPlayers)
         const { data: auction } = await api.get(`/get-auction/${id}`);
+        console.log(auction)
 
         const selectedTeam = auction.selectedTeams.find(t => t._id === teamId);
         if (!selectedTeam) {

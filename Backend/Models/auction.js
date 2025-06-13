@@ -45,6 +45,10 @@ const auctionSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    pauseAfterCurrentPlayer: {
+      type: Boolean,
+      default: false,
+    },    
     currentBid: {
       team: { type: mongoose.Schema.Types.ObjectId, ref: "Team" },
       amount: { type: Number, default: 0 },
