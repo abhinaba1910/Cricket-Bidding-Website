@@ -11,7 +11,6 @@ export default function AdminBiddingTeamView() {
   const [team, setTeam] = useState(null);
   const [auctionDetails, setAuctionDetails] = useState(null);
   const [loading, setLoading] = useState(true);
-
   console.log("TEam ID", teamId);
   console.log("Auction ID", id);
   // modal state

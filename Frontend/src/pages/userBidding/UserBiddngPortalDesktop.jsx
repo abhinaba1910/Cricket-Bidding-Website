@@ -485,6 +485,8 @@ export default function UserBiddingDashboardDesktop() {
   const [isBidding, setIsBidding] = useState(false);
   const { id } = useParams();
   const [emoteToPlay, setEmoteToPlay] = useState(null);
+  const [lastSoldTeam, setLastSoldTeam] = useState(null);
+
 
   const toggleFullScreen = () => setFullScreen((fs) => !fs);
 
@@ -542,6 +544,21 @@ export default function UserBiddingDashboardDesktop() {
         }
 
         console.error("avatar from back:", data.team.avatar);
+        const history = data.biddingHistory || [];
+      const lastEntry = history[history.length - 1] || null;
+      if (lastEntry) {
+        const soldTeamId = lastEntry.team._id || lastEntry.team;
+        if (soldTeamId !== lastSoldTeam) {
+          setLastSoldTeam(soldTeamId);
+
+          if (soldTeamId === data.team.teamId) {
+            setEmoteToPlay("BidWon");
+          } else {
+            setEmoteToPlay("LostBid");
+          }
+          setTimeout(() => setEmoteToPlay(null), 5000);
+        }
+      }
       } catch (error) {
         toast.error("Error fetching auction data:", error);
       }
@@ -552,7 +569,7 @@ export default function UserBiddingDashboardDesktop() {
 
     // Cleanup to stop interval on unmount
     return () => clearInterval(interval);
-  }, [id]);
+  }, [id,lastSoldTeam]);
 
   const { tableNumbers, currentLot, adminImageUrl } = auctionData;
 
