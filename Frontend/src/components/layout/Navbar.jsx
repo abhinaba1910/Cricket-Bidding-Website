@@ -224,7 +224,7 @@ function Navbar({ onOpenSidebar }) {
           </div>
 
           {/* Right side: desktop menu + mobile avatar for admins */}
-          {isAuthenticated && (isAdmin || isTemp) && (
+          {isAuthenticated && (
             <div className="flex items-center">
               {/* Desktop user menu */}
               <div className="hidden md:ml-4 md:flex md:items-center">

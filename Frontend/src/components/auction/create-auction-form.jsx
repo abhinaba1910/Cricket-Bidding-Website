@@ -460,7 +460,7 @@ export default function CreateAuctionForm() {
             Create Another
           </button>
           <a
-            href="/auctions"
+            href="/admins-my-auction-info"
             style={{
               padding: "10px 20px",
               backgroundColor: "#007bff",

@@ -28,11 +28,16 @@ export default function AuctionsInfo() {
     try {
       const res = await api.get("/get-auction");
       const data = res.data.auctions;
+      console.log(data);
 
       // Normalize auction data: parse start time, no countdown logic here (backend handles it)
+      // const normalized = data.map((a) => ({
+      //   ...a,
+      //   startTime: new Date(`${a.date}T${a.time}:00`), // add seconds for correct Date
+      // }));
       const normalized = data.map((a) => ({
         ...a,
-        startTime: new Date(`${a.date}T${a.time}:00`), // add seconds for correct Date
+        startTime: new Date(`${a.date} ${a.time}`), // ✅ local time
       }));
 
       setAuctions(normalized);
@@ -45,7 +50,7 @@ export default function AuctionsInfo() {
     fetchAuctions();
 
     // Poll backend every 10 seconds for fresh data and status/timer updates
-    const interval = setInterval(fetchAuctions, 10000);
+    const interval = setInterval(fetchAuctions, 200);
     return () => clearInterval(interval);
   }, []);
 
@@ -161,6 +166,10 @@ export default function AuctionsInfo() {
               now >= startTime &&
               now <= deadline &&
               a.countdownRemaining > 0;
+            console.log("startTime:", startTime);
+            console.log("now:", now);
+            console.log("deadline:", deadline);
+            console.log("remaining:", a.countdownRemaining);
 
             return (
               <div
@@ -213,7 +222,9 @@ export default function AuctionsInfo() {
                   {/* Return to Auction button if auction is live or already joined */}
                   {(a.status === "live" || joinedAuctions[a.id]) && (
                     <button
-                      onClick={() => navigate(`/admin/admin-bidding-dashboard/${a.id}`)}
+                      onClick={() =>
+                        navigate(`/admin/admin-bidding-dashboard/${a.id}`)
+                      }
                       className="mt-2 bg-green-700 text-white px-4 py-2 rounded"
                     >
                       Return to Auction

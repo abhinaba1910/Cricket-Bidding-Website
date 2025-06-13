@@ -558,6 +558,25 @@ export default function UserBiddingDashboardDesktop() {
             setTimeout(() => setEmoteToPlay(null), 5000);
           }
         }
+        const formatPlayerData = (entry) => {
+          if (!entry || !entry.player || !entry.team) return {
+            name: "--/--",
+            price: "--/--",
+            team: "--/--"
+          };
+        
+          return {
+            name: entry.player.name || "--/--",
+            price: entry.bidAmount || "--/--",
+            team: entry.team.shortName || "--/--"
+          };
+        };
+        
+        setAuctionData((prev) => ({
+          ...prev,
+          lastSold: formatPlayerData(data.lastSoldPlayer),
+          mostExpensive: formatPlayerData(data.mostExpensivePlayer),
+        }));
       } catch (error) {
         toast.error("Error fetching auction data:", error);
       }

@@ -1961,13 +1961,18 @@ export default function AdminBiddingDashboard() {
         `/manual-sell/${id}/${auctionData.currentLot.id}`
       );
 
-      const { nextPlayer, isLastPlayer, biddingEnded, soldTo, amount } =
+      const { nextPlayer, isLastPlayer, biddingEnded, soldTo, amount,isPaused } =
         response.data;
 
       // Show success message
-      if (biddingEnded || isLastPlayer) {
+      console.log("AUCTIONNNNNNNNNNNNN",response.data)
+      if(isPaused){
+        toast.success("Auction Paused")
+      }
+      if (biddingEnded || isLastPlayer || !isPaused) {
         toast.success("Auction completed! No more players available.");
-      } else {
+      } 
+      else{
         toast.success(`Player sold for ₹${amount.toLocaleString()}!`);
       }
 
