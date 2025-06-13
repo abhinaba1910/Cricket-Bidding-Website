@@ -210,8 +210,15 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../userManagement/Api';
 import toast from 'react-hot-toast';
-
+import { LogOut } from 'lucide-react';
+import MobileStickyNav from '../../components/layout/MobileStickyNav';
+import { useNavigate } from 'react-router-dom'
 export default function AdminProfilePage() {
+  const navigate = useNavigate();
+
+    const [user, setUser] = useState(null)
+    const [isAuthenticated, setIsAuthenticated] = useState(false)
+
   const [editing, setEditing] = useState(false);
   const [userId, setUserId] = useState('');
   const [form, setForm] = useState({
@@ -222,7 +229,13 @@ export default function AdminProfilePage() {
     avatarUrl: '/default-avatar.png',
     _avatarFile: null,
   });
-
+  const handleLogout = () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    setIsAuthenticated(false)
+    setUser(null)
+    navigate('/')
+  }
   // Fetch profile on mount
   useEffect(() => {
     const fetchProfile = async () => {
@@ -314,6 +327,15 @@ export default function AdminProfilePage() {
           >
             Edit Profile
           </button>
+<div className="md:hidden bottom-16  p-4 left-0 w-full px-16">
+  <button
+    onClick={handleLogout}
+    className="w-full flex items-center justify-center space-x-2 bg-red-500 hover:bg-red-600 text-white font-semibold py-3 rounded-2xl shadow-lg transition-shadow focus:outline-none focus:ring-2 focus:ring-red-400"
+  >
+    <LogOut className="h-5 w-5" />
+    <span>Sign Out</span>
+  </button>
+</div>
         </div>
 
         {/* Edit Form */}
@@ -388,6 +410,7 @@ export default function AdminProfilePage() {
           </form>
         )}
       </div>
+      <MobileStickyNav />
     </div>
   );
 }
