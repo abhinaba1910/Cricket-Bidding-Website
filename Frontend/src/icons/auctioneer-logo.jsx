@@ -1,5 +1,4 @@
 import React from 'react';
-
 /**
  * AuctioneerLogo component (plain React JSX)
  * Renders a simplified gavel icon.

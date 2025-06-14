@@ -7,70 +7,6 @@ import api from "../../userManagement/Api";
 import toast from "react-hot-toast";
 
 // ─── Shared “CriteriaTable” for Desktop ────────────────────────────
-function CriteriaTable() {
-  const totalCriteria = 24;
-  const foreignCount = 0;
-  const foreignMax = 15;
-  const indianCount = 0;
-  const indianMax = 9;
-  const batCount = 0;
-  const ballCount = 0;
-  const jerseyCount = 0;
-  const gloveCount = 0;
-
-  return (
-    <motion.div
-      className="bg-gradient-to-br from-blue-700/90 to-indigo-800/90 rounded-xl overflow-hidden shadow-lg w-full"
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ type: "spring", stiffness: 300, delay: 0.1 }}
-    >
-      <div className="flex justify-between items-center bg-indigo-900/70 px-3 py-2">
-        <span className="text-xs font-medium uppercase text-gray-200">
-          Criteria
-        </span>
-        <span className="text-xs font-semibold text-gray-100">
-          {`${foreignCount + indianCount}/${totalCriteria}`}
-        </span>
-      </div>
-
-      <div className="grid grid-cols-2 divide-x divide-blue-800/50">
-        <div className="flex flex-col items-start px-3 py-2 space-y-2">
-          <div className="flex items-center space-x-2">
-            <span className="text-lg">✈️</span>
-            <span className="text-sm font-medium text-white">{`${foreignCount}/${foreignMax}`}</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="text-lg">🇮🇳</span>
-            <span className="text-sm font-medium text-white">{`${indianCount}/${indianMax}`}</span>
-          </div>
-        </div>
-
-        <div className="flex flex-col items-end px-3 py-2 space-y-2">
-          <div className="flex items-center space-x-2">
-            <span className="text-lg">🏏</span>
-            <span className="text-sm font-medium text-white">{batCount}</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="text-lg">🏐</span>
-            <span className="text-sm font-medium text-white">{ballCount}</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="text-lg">🎽</span>
-            <span className="text-sm font-medium text-white">
-              {jerseyCount}
-            </span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="text-lg">🥊</span>
-            <span className="text-sm font-medium text-white">{gloveCount}</span>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
 // Bid paddle animation variants
 const paddleVariants = {
   rest: {
@@ -137,6 +73,23 @@ export default function UserBiddingDashboardDesktop() {
     },
     adminImageUrl: null,
   };
+
+const [showModal, setShowModal] = useState(false);
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const openPlayerModal = () => {
+    if (auctionData.currentPlayer) {
+      setSelectedPlayer(auctionData.currentPlayer);
+      setShowModal(true);
+    }
+  };
+
+  // Helper to close
+  const closePlayerModal = () => {
+    setShowModal(false);
+    setSelectedPlayer(null);
+  };
+
+
   const [auctionData, setAuctionData] = useState(sampleAuction);
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [error, setError] = useState(null);
@@ -335,6 +288,7 @@ export default function UserBiddingDashboardDesktop() {
 
         {/* ─ Current Player Details ─ */}
         <motion.div
+        onClick={openPlayerModal}
           className="bg-gradient-to-br from-indigo-800/50 to-blue-700/50 rounded-xl p-6 w-full max-w-md text-center shadow-xl border border-indigo-600/30"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -483,9 +437,7 @@ export default function UserBiddingDashboardDesktop() {
 
       {/* ─── RIGHT COLUMN ─────────────────────────────────────────── */}
       <div className="col-span-1 flex flex-col justify-between h-full">
-        <div className="mb-4">
-          <CriteriaTable />
-        </div>
+ 
         <motion.div
           className="bg-gradient-to-br mb-4  from-indigo-900/50 to-blue-800/50 rounded-xl text-center shadow-lg self-end  border border-indigo-700/30"
           initial={{ opacity: 0, y: 20 }}
@@ -497,7 +449,64 @@ export default function UserBiddingDashboardDesktop() {
             <p>Loading your character…</p>
           )}
         </motion.div>
+        
       </div>
+      {showModal && selectedPlayer && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60"
+          onClick={closePlayerModal}
+        >
+          <div
+            className="bg-white rounded-lg p-6 w-[90%] max-w-lg shadow-lg relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="absolute top-2 right-3 text-gray-600 hover:text-red-500 text-2xl"
+              onClick={closePlayerModal}
+            >
+              &times;
+            </button>
+            <div className="text-center">
+              <img
+                src={selectedPlayer.playerPic}
+                alt={selectedPlayer.name}
+                className="mx-auto w-32 h-32 object-cover rounded-full mb-4"
+              />
+              <h2 className="text-2xl font-bold">{selectedPlayer.name}</h2>
+              <p className="text-sm italic">{selectedPlayer.role}</p>
+            </div>
+            <div className="mt-4 text-left space-y-2">
+              <p>
+                <strong>Batting Style:</strong> {selectedPlayer.battingStyle}
+              </p>
+              <p>
+                <strong>Bowling Style:</strong> {selectedPlayer.bowlingStyle}
+              </p>
+              <p>
+                <strong>Base Price:</strong> ₹
+                {selectedPlayer.basePrice?.toLocaleString()}
+              </p>
+              <p>
+                <strong>Nationality:</strong> {selectedPlayer.nationality}
+              </p>
+              <p>
+                <strong>Age:</strong> {selectedPlayer.age}
+              </p>
+              <p>
+                <strong>Matches Played:</strong> {selectedPlayer.matchesPlayed}
+              </p>
+              <p>
+                <strong>Runs Scored:</strong> {selectedPlayer.runs}
+              </p>
+              <p>
+                <strong>Wickets Taken:</strong> {selectedPlayer.wickets}
+              </p>
+              {/* …add any other fields you have… */}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+    
   );
 }
