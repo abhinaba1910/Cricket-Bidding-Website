@@ -182,7 +182,7 @@ router.put(
       // Process released players
       for (const playerId of released) {
         team.players = team.players.filter(p => p.player.toString() !== playerId);
-        await Player.findByIdAndUpdate(playerId, { availability: "Available" });
+        await Player.findByIdAndUpdate(playerId, { availability: "Available" ,isRTM: false});
         await Team.findByIdAndDelete(playerId)
       }
 

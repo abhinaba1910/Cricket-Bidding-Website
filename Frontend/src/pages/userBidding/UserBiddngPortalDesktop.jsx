@@ -231,6 +231,9 @@ const [showModal, setShowModal] = useState(false);
     fullScreen ? "fixed inset-0 z-[9999] overflow-auto" : "relative mx-auto",
     "h-screen overflow-auto",
   ].join(" ");
+  const purseBalance =
+    auctionData.team?.purse || auctionData.purseBalance || "--/--";
+  const nextBidAmount = auctionData.bidAmount || "--/--";
 
   return (
     <div
@@ -379,7 +382,7 @@ const [showModal, setShowModal] = useState(false);
           <h3 className="text-xs font-medium mb-1">Bid Now</h3>
           <BidButton onClick={handleBid} />
           <p className="mt-1 text-xs opacity-75">
-            Price: ₹{auctionData.bidAmount?.toLocaleString() ?? "--/--"}
+            Price: ₹{nextBidAmount}
           </p>
         </motion.div>
 
