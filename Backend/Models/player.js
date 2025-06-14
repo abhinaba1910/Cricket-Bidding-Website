@@ -26,6 +26,7 @@ const playerSchema = new mongoose.Schema(
       ref: "Person",
       required: true,
     },
+    isRTM: {type: Boolean, default: false},
   },
   {
     timestamps: true,

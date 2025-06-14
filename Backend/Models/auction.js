@@ -58,6 +58,7 @@ const auctionSchema = new mongoose.Schema(
         team: { type: mongoose.Schema.Types.ObjectId, ref: "Team" },
         manager: { type: mongoose.Schema.Types.ObjectId, ref: "Person", default: null },
         avatar: { type: String, default: null },
+        rtmCount: { type: Number, default: 0 } 
       }
     ],    
     

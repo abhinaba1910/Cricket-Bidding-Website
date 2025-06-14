@@ -100,9 +100,11 @@ export default function AdminBiddingTeamView() {
   // Derived stats
   const totalTaken    = team.players.length;
   const batsmen       = team.players.filter(p => p.role === "Batsman");
-  const bowlers       = team.players.filter(p => p.role === "Bowler");
-  const allrounders   = team.players.filter(p => p.role === "All-Rounder");
-  const wicketKeepers = team.players.filter(p => p.role === "Wicket-Keeper");
+  const FastAllRounder  = team.players.filter(p => p.role === "Fast All Rounder");
+  const SpinAllRounders   = team.players.filter(p => p.role === "Spin All Rounder");
+  const wicketKeepers = team.players.filter(p => p.role === "Wicket keeper batsman");
+  const spinBowler  = team.players.filter(p => p.role === "Spin bowler");
+  const fastBowler = team.players.filter(p => p.role === "Fast bowler");
 
   const openModal = (title, list) => {
     setModalTitle(title);
@@ -207,9 +209,11 @@ export default function AdminBiddingTeamView() {
               <div className="grid grid-cols-2 gap-4 mt-4">
                 {[
                   ["Batsmen", batsmen, "bg-blue-100", "text-blue-800"],
-                  ["Bowlers", bowlers, "bg-green-100", "text-green-800"],
-                  ["All-Rounders", allrounders, "bg-yellow-100", "text-yellow-800"],
-                  ["Wicket-Keepers", wicketKeepers, "bg-purple-100", "text-purple-800"],
+                  ["Fast All Rounder", FastAllRounder, "bg-green-100", "text-green-800"],
+                  ["Spin All Rounder", SpinAllRounders, "bg-yellow-100", "text-yellow-800"],
+                  ["Wicket keeper batsman", wicketKeepers, "bg-purple-100", "text-purple-800"],
+                  ["Spin bowler", spinBowler, "bg-purple-100", "text-purple-800"],
+                  ["Fast bowler", fastBowler, "bg-purple-100", "text-yellow-800"],
                 ].map(([lbl, list, bg, textColor]) => (
                   <motion.div
                     key={lbl}

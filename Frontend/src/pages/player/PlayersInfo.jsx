@@ -4,7 +4,14 @@ import MobileStickyNav from "../../components/layout/MobileStickyNav";
 import api from "../../userManagement/Api";
 
 // Filters that match actual backend structure
-const allRoles = ["Batsman", "Bowler", "All-Rounder", "Wicket-Keeper"];
+const allRoles = [
+  "Batsman",
+  "Fast all-rounder",
+  "Spin all-rounder",
+  "Wicket keeper batsman",
+  "Spin bowler",
+  "Fast bowler",
+];
 
 const allBattingStyles = ["Right Handed Batsman", "Left Handed Batsman"];
 
@@ -169,7 +176,9 @@ export default function PlayersInfo() {
                   />
                 </td>
                 {/* <td className="px-4 py-2 font-medium">{p.playerId || p._id}</td> */}
-                <td className="px-4 py-2">{p.name} {p.playerId}</td>
+                <td className="px-4 py-2">
+                  {p.name} {p.playerId}
+                </td>
                 <td className="px-4 py-2">{p.grade || "—"}</td>
                 <td className="px-4 py-2">{p.role}</td>
                 <td className="px-4 py-2">{p.country}</td>

@@ -361,6 +361,7 @@ export default function CreateAuctionForm() {
       formData.append("description", data.description);
       formData.append("selectedTeams", JSON.stringify(data.selectedTeams));
       formData.append("selectedPlayers", JSON.stringify(data.selectedPlayers));
+      formData.append("rtmCount", data.rtmCount);
 
       if (data.auctionImage && data.auctionImage.length > 0) {
         formData.append("auctionImage", data.auctionImage[0]);

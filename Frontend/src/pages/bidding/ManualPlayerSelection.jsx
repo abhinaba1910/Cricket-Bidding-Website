@@ -3,20 +3,27 @@ import { FiSearch, FiArrowLeft } from "react-icons/fi";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import api from "../../userManagement/Api";
 
-const allRoles = ["Batsman", "Bowler", "All-Rounder", "Wicket-Keeper"];
-const allBattingStyles = ["Right Handed Batsman", "Left Handed Batsman"];
-const allBowlingStyles = [
-  "Right Arm Fast",
-  "Left Arm Fast",
-  "Right Arm Medium",
-  "Left Arm Medium",
-  "Right Arm Off Break",
-  "Left Arm Orthodox",
-  "Right Arm Leg Break",
-  "Chinaman",
-  "Left Arm Fast Medium",
-  "Right Arm Fast Medium",
+const allRoles = [
+  "Batsman",
+  "Fast all-rounder",
+  "Spin all-rounder",
+  "Wicket keeper batsman",
+  "Spin bowler",
+  "Fast bowler",
 ];
+// const allBattingStyles = ["Right Handed Batsman", "Left Handed Batsman"];
+// const allBowlingStyles = [
+//   "Right Arm Fast",
+//   "Left Arm Fast",
+//   "Right Arm Medium",
+//   "Left Arm Medium",
+//   "Right Arm Off Break",
+//   "Left Arm Orthodox",
+//   "Right Arm Leg Break",
+//   "Chinaman",
+//   "Left Arm Fast Medium",
+//   "Right Arm Fast Medium",
+// ];
 const allRanks = ["A+", "A", "B", "C"];
 
 export default function ManualPlayerSelection() {
@@ -37,7 +44,6 @@ export default function ManualPlayerSelection() {
   const [players, setPlayers] = useState([]);
   const [selectedPlayers, setSelectedPlayers] = useState([]);
   const [queuedIds, setQueuedIds] = useState(new Set());
-
 
   // useEffect(() => {
   //   if (!id) return;
@@ -62,20 +68,19 @@ export default function ManualPlayerSelection() {
       .then((res) => {
         const { savailablePlayers, manualPlayerQueue } = res.data;
         setPlayers(savailablePlayers || []);
-  
+
         // Extract already queued player IDs
         const queuedPlayerIds = new Set(
           (manualPlayerQueue || []).map((entry) => entry.player._id)
         );
         setQueuedIds(queuedPlayerIds);
-  
+
         if (!addToExistingQueue) {
           setSelectedPlayers(savailablePlayers || []);
         }
       })
       .catch((err) => console.error("Failed to fetch auction data", err));
   }, [id, addToExistingQueue]);
-  
 
   // const togglePlayerSelection = (player) => {
   //   setSelectedPlayers((prev) => {
@@ -93,10 +98,9 @@ export default function ManualPlayerSelection() {
   //   });
   // };
 
-
   const togglePlayerSelection = (player) => {
     if (queuedIds.has(player._id)) return; // Ignore already queued
-  
+
     setSelectedPlayers((prev) => {
       const isSelected = prev.some((p) => p._id === player._id);
       if (isSelected) {
@@ -110,7 +114,6 @@ export default function ManualPlayerSelection() {
       }
     });
   };
-  
 
   const filtered = useMemo(() => {
     const term = search.toLowerCase();
@@ -196,109 +199,19 @@ export default function ManualPlayerSelection() {
     }
   };
 
-  // const renderPlayerRow = (p, isMobile = false) => {
-  //   const isSelected = selectedPlayers.some((x) => x._id === p._id);
-  //   const selectionIndex = isSelected
-  //     ? selectedPlayers.findIndex((x) => x._id === p._id) + 1
-  //     : null;
-
-  //   // Show selection number based on mode
-  //   let displayNumber = null;
-  //   if (isSelected) {
-  //     if (addToExistingQueue) {
-  //       // For adding to existing queue, show position after current queue
-  //       displayNumber = currentQueue.length + selectionIndex;
-  //     } else {
-  //       // For new queue, show simple 1,2,3,4
-  //       displayNumber = selectionIndex;
-  //     }
-  //   }
-
-    const NumberDisplay = ({ number }) =>
-      number ? (
-        <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-500 text-white font-semibold">
-          {number}
-        </span>
-      ) : (
-        <div className="w-8 h-8 rounded-full border-2 border-gray-300" />
-      );
-
-  //   if (isMobile) {
-  //     return (
-  //       <div
-  //         key={p._id}
-  //         onClick={() => togglePlayerSelection(p)}
-  //         className={`flex items-center p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition ${
-  //           isSelected ? "bg-blue-50" : ""
-  //         }`}
-  //       >
-  //         <div className="mr-4">
-  //           <NumberDisplay number={displayNumber} />
-  //         </div>
-  //         <img
-  //           src={p.playerPic || "https://placehold.co/60x60"}
-  //           alt={p.name}
-  //           className="w-12 h-12 rounded-full mr-4 flex-shrink-0"
-  //         />
-  //         <div className="flex-1">
-  //           <div className="flex justify-between">
-  //             <h3 className="font-medium text-gray-900">{p.name}</h3>
-  //             <span
-  //               className={`px-2 py-1 rounded-full text-xs ${
-  //                 p.grade === "A+"
-  //                   ? "bg-red-100 text-red-800"
-  //                   : p.grade === "A"
-  //                   ? "bg-orange-100 text-orange-800"
-  //                   : p.grade === "B"
-  //                   ? "bg-yellow-100 text-yellow-800"
-  //                   : "bg-gray-100 text-gray-800"
-  //               }`}
-  //             >
-  //               {p.grade || "—"}
-  //             </span>
-  //           </div>
-  //           <p className="text-sm text-gray-600">
-  //             {p.role} • {p.country}
-  //           </p>
-  //           <p className="text-sm font-medium mt-1">
-  //             ₹{p.basePrice?.toLocaleString() || 0}
-  //           </p>
-  //         </div>
-  //       </div>
-  //     );
-  //   }
-
-  //   return (
-  //     <tr
-  //       key={p._id}
-  //       onClick={() => togglePlayerSelection(p)}
-  //       className={`cursor-pointer hover:bg-gray-50 transition ${
-  //         isSelected ? "bg-blue-50" : ""
-  //       }`}
-  //     >
-  //       <td className="px-4 py-2 text-center">
-  //         <NumberDisplay number={displayNumber} />
-  //       </td>
-  //       <td className="px-4 py-2">
-  //         <img
-  //           src={p.playerPic || "https://placehold.co/60x60"}
-  //           alt={p.name}
-  //           className="w-10 h-10 rounded-full"
-  //         />
-  //       </td>
-  //       <td className="px-4 py-2">{p.name}</td>
-  //       <td className="px-4 py-2">{p.grade || "—"}</td>
-  //       <td className="px-4 py-2">{p.role}</td>
-  //       <td className="px-4 py-2">{p.country}</td>
-  //       <td className="px-4 py-2">₹{p.basePrice?.toLocaleString() || 0}</td>
-  //     </tr>
-  //   );
-  // };
+  const NumberDisplay = ({ number }) =>
+    number ? (
+      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-500 text-white font-semibold">
+        {number}
+      </span>
+    ) : (
+      <div className="w-8 h-8 rounded-full border-2 border-gray-300" />
+    );
 
   const renderPlayerRow = (p, isMobile) => {
     const isSelected = selectedPlayers.some((player) => player._id === p._id);
     const isQueued = queuedIds.has(p._id);
-  
+
     if (isMobile) {
       return (
         <div
@@ -343,7 +256,7 @@ export default function ManualPlayerSelection() {
         </div>
       );
     }
-  
+
     return (
       <tr
         key={p._id}
@@ -370,7 +283,6 @@ export default function ManualPlayerSelection() {
       </tr>
     );
   };
-  
 
   // Update the header to show different title based on mode
   const getHeaderTitle = () => {
@@ -434,7 +346,7 @@ export default function ManualPlayerSelection() {
               </select>
 
               {/* Batting */}
-              <select
+              {/* <select
                 value={battingFilter}
                 onChange={(e) => setBattingFilter(e.target.value)}
                 className="min-w-[220px] border rounded-lg px-3 py-2 focus:outline-none"
@@ -447,7 +359,7 @@ export default function ManualPlayerSelection() {
                 ))}
               </select>
 
-              {/* Bowling */}
+            
               <select
                 value={bowlingFilter}
                 onChange={(e) => setBowlingFilter(e.target.value)}
@@ -459,7 +371,7 @@ export default function ManualPlayerSelection() {
                     {r}
                   </option>
                 ))}
-              </select>
+              </select> */}
 
               {/* Rank */}
               <select

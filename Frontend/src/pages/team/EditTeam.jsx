@@ -31,6 +31,7 @@ export default function EditTeam() {
       try {
         const res = await api.get(`/get-team/${id}`);
         const t = res.data;
+        console.log(t)
         reset({ teamName: t.teamName, shortName: t.shortName, purse: t.purse });
         setPreview(t.logoUrl);
         setTeamPlayers(t.players || []); // Assuming populated players
@@ -208,7 +209,7 @@ export default function EditTeam() {
 
                   <div className="flex items-center gap-4">
                     {/* Retain */}
-                    <label className="flex items-center gap-1">
+                    {player.availability!=="Retained" &&<label className="flex items-center gap-1">
                       <input
                         type="checkbox"
                         onChange={(e) => {
@@ -231,7 +232,7 @@ export default function EditTeam() {
                         )}
                       />
                       Retain
-                    </label>
+                    </label>}
 
                     {/* Retain Price */}
                     <input

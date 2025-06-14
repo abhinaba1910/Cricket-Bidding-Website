@@ -972,7 +972,8 @@ router.get("/bidding-portal/:auctionId", auth, async (req, res) => {
       .populate("selectedTeams.manager")
       .populate("biddingHistory.player")
       .populate("biddingHistory.team")
-      .populate("isPaused");
+      .populate("isPaused")
+      .populate("selectedTeams.rtmCount");
 
     if (!auction) {
       return res.status(404).json({ message: "Auction not found" });
@@ -1010,6 +1011,7 @@ router.get("/bidding-portal/:auctionId", auth, async (req, res) => {
       manager: matchedTeamEntry.manager,
       avatar: matchedTeamEntry.avatar,
       logoUrl: fullTeamDetails.logoUrl,
+      rtmCount:matchedTeamEntry.rtmCount,
       purse: fullTeamDetails.purse,
       remaining: fullTeamDetails.remaining,
       playersBought: fullTeamDetails.players.map((p) => ({
@@ -1041,73 +1043,6 @@ router.get("/bidding-portal/:auctionId", auth, async (req, res) => {
     res.status(500).json({ message: "Server error", error });
   }
 });
-
-// router.post("/place-bid/:auctionId", auth, async (req, res) => {
-//   try {
-//     const { playerId, teamId, bidAmount } = req.body;
-//     const { auctionId } = req.params;
-
-//     const auction = await Auction.findById(auctionId).populate("currentBid.team");
-//     if (!auction) {
-//       return res.status(404).json({ error: "Auction not found" });
-//     }
-
-//     if (auction.isPaused || auction.status !== "live") {
-//       return res.status(400).json({ error: "Auction is not active" });
-//     }
-
-//     if (
-//       auction.currentPlayerOnBid &&
-//       auction.currentPlayerOnBid.toString() !== playerId.toString()
-//     ) {
-//       return res.status(400).json({
-//         error: "Player on bid does not match the current bidding player.",
-//       });
-//     }
-
-//     // Check for same bid amount conflict
-//     if (
-//       auction.currentBid &&
-//       Number(auction.currentBid.amount) === Number(bidAmount)
-//     ) {
-//       const currentTeamId = auction.currentBid.team?._id?.toString();
-//       if (currentTeamId === teamId.toString()) {
-//         return res.status(400).json({
-//           error: "You cannot place the same bid twice.",
-//         });
-//       } else {
-//         const currentTeamName = auction.currentBid.team?.name || "Another team";
-//         return res.status(400).json({
-//           error: `${currentTeamName} already placed this bid. Wait for the bid amount to change.`,
-//         });
-//       }
-//     }
-
-//     // Get bidding team info
-//     const team = await Team.findById(teamId);
-//     if (!team) return res.status(404).json({ error: "Team not found" });
-
-//     // Proceed with valid bid
-//     auction.currentBid = {
-//       team: teamId,
-//       amount: bidAmount,
-//     };
-
-//     auction.biddingHistory.push({
-//       player: playerId,
-//       team: teamId,
-//       bidAmount,
-//       time: new Date(),
-//     });
-
-//     await auction.save();
-
-//     res.status(200).json({ message: "Bid placed successfully" });
-//   } catch (err) {
-//     console.error("Place bid error:", err);
-//     res.status(500).json({ error: "Internal server error", details: err.message });
-//   }
-// });
 
 router.post("/place-bid/:auctionId", auth, async (req, res) => {
   try {
@@ -1180,5 +1115,86 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
       .json({ error: "Internal server error", details: err.message });
   }
 });
+
+// routes/auction.js
+router.post("/use-rtm/:auctionId", auth, async (req, res) => {
+  try {
+    const { auctionId } = req.params;
+    const {  teamId } = req.body;
+    const userId = req.user.id;
+
+    const auction = await Auction.findById(auctionId)
+      .populate("biddingHistory.player")
+      .populate("biddingHistory.team")
+      .populate("selectedTeams.team")
+      .populate("selectedTeams.manager");
+
+    if (!auction) return res.status(404).json({ message: "Auction not found" });
+
+    // Find the selected team & manager
+    const selectedTeam = auction.selectedTeams.find(
+      (entry) => entry.team._id.toString() === teamId && entry.manager?._id.toString() === userId
+    );
+
+    if (!selectedTeam)
+      return res.status(403).json({ message: "Unauthorized or team not found" });
+
+    if (selectedTeam.rtmCount <= 0)
+      return res.status(400).json({ message: "No RTMs left" });
+
+    // Find the last sold player from bidding history
+    const lastBid = auction.biddingHistory.length > 0
+    ? auction.biddingHistory[auction.biddingHistory.length - 1]
+    : null;
+
+    if (!lastBid)
+      return res.status(404).json({ message: "Player not found in history" });
+
+    const { bidAmount, team: previousTeam ,player: previousPlayer} = lastBid;
+
+    // Prevent RTM if original team is same
+    if (previousTeam._id.toString() === teamId)
+      return res.status(400).json({ message: "Player already in your team" });
+
+    if (previousPlayer.isRTM)
+      return res.status(400).json({ message: "Player is Already RTM once" });
+    // Attach player to new team and deduct purse
+    await Team.findByIdAndUpdate(teamId, {
+      $push: { players: { player: previousPlayer, price: bidAmount } },
+      $inc: { remaining: -bidAmount },
+    });
+    await Player.findByIdAndUpdate(previousPlayer._id, {
+      isRTM: true,
+    });
+
+    // Remove player from old team
+    await Team.findByIdAndUpdate(previousTeam._id, {
+      $pull: { players: { player: previousPlayer } },
+      $inc: { remaining: bidAmount },
+    });
+
+    // Update bidding history to reflect new team
+    auction.biddingHistory = auction.biddingHistory.map((entry) => {
+      if (entry.player._id.toString() === previousPlayer._id.toString()) {
+        return {
+          ...entry._doc,
+          team: teamId, // replace team ID
+        };
+      }
+      return entry;
+    });
+
+    // Decrease RTM count
+    selectedTeam.rtmCount -= 1;
+
+    await auction.save();
+
+    res.status(200).json({ message: "RTM successful", newTeam: teamId });
+  } catch (error) {
+    console.error("RTM error:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 
 module.exports = router;

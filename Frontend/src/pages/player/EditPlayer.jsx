@@ -220,9 +220,11 @@ export default function EditPlayer() {
                   >
                     <option value="">Select role...</option>
                     <option value="Batsman">Batsman</option>
-                    <option value="Bowler">Bowler</option>
-                    <option value="All-Rounder">All-Rounder</option>
-                    <option value="Wicket-Keeper">Wicket-Keeper</option>
+                    <option value="Fast all-rounder">Fast-All-Rounder</option>
+                    <option value="Spin all-rounder">Spin-All-Rounder</option>
+                    <option value="Wicket keeper batsman">Wicket-Keeper-Batsman</option>
+                    <option value="Spin bowler">Spin Bowler</option>
+                    <option value="Fast bowler">Fast Bowler</option>
                   </select>
                   {errors.role && (
                     <p className="text-red-600 text-sm mt-1">
@@ -266,6 +268,7 @@ export default function EditPlayer() {
                     className="w-full border px-3 py-2 rounded"
                   >
                     <option value="">Select bowling style...</option>
+                    <option value="Not Applicable">Not Applicable</option>
                     <option value="Right Arm Fast">Right Arm Fast</option>
                     <option value="Left Arm Fast">Left Arm Fast</option>
                     <option value="Right Arm Medium">Right Arm Medium</option>

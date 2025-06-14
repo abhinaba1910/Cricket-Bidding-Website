@@ -5,7 +5,6 @@ import { useNavigate } from "react-router-dom";
 import api from "../../userManagement/Api";
 import toast from "react-hot-toast";
 
-
 export default function AddPlayer() {
   const {
     register,
@@ -32,22 +31,20 @@ export default function AddPlayer() {
           formData.append(key, data[key]);
         }
       }
-  
+
       const res = await api.post("/add-player", formData);
       toast.success("Player added successfully!");
       reset();
       setPreview(null);
       navigate("/dashboard");
     } catch (err) {
-      const backendError =
-        err.response?.data?.error || "Failed to add player.";
+      const backendError = err.response?.data?.error || "Failed to add player.";
       console.error("Failed to add player:", backendError);
       toast.error(backendError);
     } finally {
       setSubmitting(false);
     }
   };
-  
 
   const handleFileChange = (e, onChange) => {
     const file = e.target.files?.[0];
@@ -179,69 +176,84 @@ export default function AddPlayer() {
 
             {/* Role Section */}
             <section>
-  <h2 className="text-xl font-semibold mb-4">Player Type & Role</h2>
-  <div className="grid sm:grid-cols-2 gap-4">
-    <div>
-      <label className="block font-medium mb-1">Primary Role</label>
-      <select
-        {...register("role", { required: "Role is required" })}
-        className="w-full border px-3 py-2 rounded"
-      >
-        <option value="">Select role...</option>
-        {["Batsman", "Bowler", "All-Rounder", "Wicket-Keeper"].map((role) => (
-          <option key={role} value={role}>
-            {role}
-          </option>
-        ))}
-      </select>
-      {errors.role && (
-        <p className="text-red-600 text-sm mt-1">{errors.role.message}</p>
-      )}
-    </div>
+              <h2 className="text-xl font-semibold mb-4">Player Type & Role</h2>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-medium mb-1">Primary Role</label>
+                  <select
+                    {...register("role", { required: "Role is required" })}
+                    className="w-full border px-3 py-2 rounded"
+                  >
+                    <option value="">Select role...</option>
+                    {[
+                      "Batsman",
+                      "Fast all-rounde",
+                      "ASpin all-rounder",
+                      "Wicket keeper batsman",
+                      "Spin bowler",
+                      "Fast bowler",
+                    ].map((role) => (
+                      <option key={role} value={role}>
+                        {role}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.role && (
+                    <p className="text-red-600 text-sm mt-1">
+                      {errors.role.message}
+                    </p>
+                  )}
+                </div>
 
-    <div>
-      <label className="block font-medium mb-1">Batting Style</label>
-      <select
-        {...register("battingStyle")}
-        className="w-full border px-3 py-2 rounded"
-      >
-        <option value="">Select batting style...</option>
-        {["Right Handed Batsman", "Left Handed Batsman"].map((style) => (
-          <option key={style} value={style}>
-            {style}
-          </option>
-        ))}
-      </select>
-    </div>
+                <div>
+                  <label className="block font-medium mb-1">
+                    Batting Style
+                  </label>
+                  <select
+                    {...register("battingStyle")}
+                    className="w-full border px-3 py-2 rounded"
+                  >
+                    <option value="">Select batting style...</option>
+                    {["Right Handed Batsman", "Left Handed Batsman"].map(
+                      (style) => (
+                        <option key={style} value={style}>
+                          {style}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </div>
 
-    <div>
-      <label className="block font-medium mb-1">Bowling Style</label>
-      <select
-        {...register("bowlingStyle")}
-        className="w-full border px-3 py-2 rounded"
-      >
-        <option value="">Select bowling style...</option>
-        {[
-          "Right Arm Fast",
-          "Left Arm Fast",
-          "Right Arm Medium",
-          "Left Arm Medium",
-          "Right Arm Off Break",
-          "Left Arm Orthodox",
-          "Right Arm Leg Break",
-          "Chinaman",
-          "Left Arm Fast Medium",
-          "Right Arm Fast Medium",
-        ].map((style) => (
-          <option key={style} value={style}>
-            {style}
-          </option>
-        ))}
-      </select>
-    </div>
-  </div>
-</section>
-
+                <div>
+                  <label className="block font-medium mb-1">
+                    Bowling Style
+                  </label>
+                  <select
+                    {...register("bowlingStyle")}
+                    className="w-full border px-3 py-2 rounded"
+                  >
+                    <option value="">Select bowling style...</option>
+                    {[
+                      "Not Applicable",
+                      "Right Arm Fast",
+                      "Left Arm Fast",
+                      "Right Arm Medium",
+                      "Left Arm Medium",
+                      "Right Arm Off Break",
+                      "Left Arm Orthodox",
+                      "Right Arm Leg Break",
+                      "Chinaman",
+                      "Left Arm Fast Medium",
+                      "Right Arm Fast Medium",
+                    ].map((style) => (
+                      <option key={style} value={style}>
+                        {style}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </section>
 
             {/* Auction/Bidding Details */}
             <section>
