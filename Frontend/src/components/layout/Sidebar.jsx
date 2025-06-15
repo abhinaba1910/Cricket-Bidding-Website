@@ -231,13 +231,13 @@ const Sidebar = ({ isOpen, onClose }) => {
                       Admin Controls
                     </h3>
                   </div>
-                  <button
+                  {/* <button
                     className="group flex items-center px-2 py-2 text-base font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-primary-600 w-full text-left"
                     onClick={() => handleNavigation('#users')}
                   >
                     <UsersIcon className="mr-3 flex-shrink-0 text-gray-500 group-hover:text-primary-600 w-5 h-5" />
                     Manage Users
-                  </button>
+                  </button> */}
                   <button
                     className="group flex items-center px-2 py-2 text-base font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-primary-600 w-full text-left"
                     onClick={() => handleNavigation('/create-team')}
@@ -252,13 +252,13 @@ const Sidebar = ({ isOpen, onClose }) => {
                     <UsersIcon className="mr-3 flex-shrink-0 text-gray-500 group-hover:text-primary-600 w-5 h-5" />
                     Add Players
                   </button>
-                  <button
+                  {/* <button
                     className="group flex items-center px-2 py-2 text-base font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-primary-600 w-full text-left"
                     onClick={() => handleNavigation('#settings')}
                   >
                     <Settings className="mr-3 flex-shrink-0 text-gray-500 group-hover:text-primary-600 w-5 h-5" />
                     Settings
-                  </button>
+                  </button> */}
                 </div>
               </>
             )}

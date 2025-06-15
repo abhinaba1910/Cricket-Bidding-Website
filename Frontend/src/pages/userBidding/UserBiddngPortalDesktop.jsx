@@ -29,15 +29,12 @@ const paddleVariants = {
 export default function UserBiddingDashboardDesktop() {
   const navigate = useNavigate();
   const [fullScreen, setFullScreen] = useState(false);
-  
   const [isBidding, setIsBidding] = useState(false);
   const { id } = useParams();
   const [emoteToPlay, setEmoteToPlay] = useState(null);
   const [lastSoldTeam, setLastSoldTeam] = useState(null);
   const [rtmCount, setRtmCount] = useState(0);
-
   const toggleFullScreen = () => setFullScreen((fs) => !fs);
-
   // ─── Sample Auction Data ────────────────────────────────────────
   const sampleAuction = {
     lastSold: { name: "--/--", price: "--/--", team: "--/--" },
@@ -343,15 +340,15 @@ const [showModal, setShowModal] = useState(false);
       <div className="col-span-2 flex flex-col items-center space-y-4">
         {/* Navigation Buttons */}
         <div className="flex flex-wrap gap-2 justify-center w-full">
-          <motion.button
+          {/* <motion.button
             onClick={() => navigate("/user/teams-list")}
             className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-blue-500 rounded-xl text-xs sm:text-sm shadow-md"
             whileHover={{ scale: 1.05 }}
           >
-            Teams List
-          </motion.button>
+            Teams List 
+          </motion.button> */}
           <motion.button
-            onClick={() => navigate("/user/players-list")}
+          onClick={() => navigate(`/user-bidding-portal/${id}/players`)}
             className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-blue-500 rounded-xl text-xs sm:text-sm shadow-md"
             whileHover={{ scale: 1.05 }}
           >
