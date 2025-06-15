@@ -5,6 +5,8 @@ import BidButton from "../../components/ui/BidButton";
 import CharacterCard from "../characters/CharacterCard";
 import api from "../../userManagement/Api";
 import toast from "react-hot-toast";
+import { FaUserTie, FaUsers } from "react-icons/fa";
+import { GiMoneyStack, GiCardRandom } from "react-icons/gi";
 
 // ─── Shared “CriteriaTable” for Desktop ────────────────────────────
 // Bid paddle animation variants
@@ -23,6 +25,81 @@ const paddleVariants = {
       ease: "easeInOut",
     },
   },
+};
+
+const DesktopTeamCard = ({ team }) => {
+  if (!team) return null;
+
+  return (
+    <motion.div
+      className="bg-gradient-to-br from-indigo-800/50 to-blue-700/50 rounded-xl p-6 w-full max-w-xl text-center shadow-xl border border-indigo-600/30"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: "spring", delay: 0.2 }}
+    >
+      {/* Team Logo */}
+      <motion.div
+        className="mx-auto mb-4 rounded-xl bg-gradient-to-br from-indigo-700 to-blue-800 w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center overflow-hidden border-2 border-cyan-400/30"
+        animate={{ scale: [1, 1.05, 1] }}
+        transition={{ duration: 4, repeat: Infinity }}
+      >
+        {team.logoUrl ? (
+          <img
+            src={team.logoUrl}
+            alt="Team Logo"
+            className="w-full h-full object-cover rounded-xl"
+          />
+        ) : (
+          <span className="text-4xl">🛡️</span>
+        )}
+      </motion.div>
+
+      {/* Team Name */}
+      <h2 className="text-2xl font-bold text-white tracking-wide">
+        {team.teamName || "Unnamed Team"}
+      </h2>
+
+      {/* Manager Info */}
+      <p className="text-sm bg-blue-600/30 inline-block px-2 py-1 rounded-full mt-1">
+        Manager:{" "}
+        <span className="font-semibold text-white">
+          {team.manager?.username}
+        </span>
+      </p>
+
+      {/* Purse & Stats */}
+      <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm text-white">
+        <div>
+          <p className="text-xs opacity-75 flex items-center justify-center gap-1">
+            <GiMoneyStack /> Total Purse
+          </p>
+          <p className="font-semibold">
+            ₹{team.purse?.toLocaleString() || "--"}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs opacity-75 flex items-center justify-center gap-1">
+            <GiMoneyStack /> Remaining
+          </p>
+          <p className="font-semibold">
+            ₹{team.remaining?.toLocaleString() || "--"}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs opacity-75 flex items-center justify-center gap-1">
+            <FaUsers /> Players
+          </p>
+          <p className="font-semibold">{team.playersBought?.length || 0}</p>
+        </div>
+        <div>
+          <p className="text-xs opacity-75 flex items-center justify-center gap-1">
+            <GiCardRandom /> RTMs
+          </p>
+          <p className="font-semibold">{team.rtmCount || 0}</p>
+        </div>
+      </div>
+    </motion.div>
+  );
 };
 
 // ─── Main Desktop Component ─────────────────────────────────────────
@@ -71,12 +148,35 @@ export default function UserBiddingDashboardDesktop() {
     adminImageUrl: null,
   };
 
-const [showModal, setShowModal] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
+  // const openPlayerModal = () => {
+  //   if (auctionData.currentPlayer) {
+  //     setSelectedPlayer(auctionData.currentPlayer);
+  //     console.log(auctionData.currentPlayer)
+  //     setShowModal(true);
+  //   }
+  // };
+
   const openPlayerModal = () => {
-    if (auctionData.currentPlayer) {
-      setSelectedPlayer(auctionData.currentPlayer);
-      console.log(auctionData.currentPlayer)
+    const p = auctionData.currentPlayer;
+    if (p) {
+      const formattedPlayer = {
+        name: p.name,
+        role: p.role,
+        battingStyle: p.battingStyle,
+        bowlingStyle: p.bowlingStyle,
+        basePrice: p.basePrice,
+        playerPic: p.playerPic,
+        nationality: p.country,
+        age: p.dob
+          ? new Date().getFullYear() - new Date(p.dob).getFullYear()
+          : "--",
+        matchesPlayed: p.matchesPlayed,
+        runs: p.runs,
+        wickets: p.wickets,
+      };
+      setSelectedPlayer(formattedPlayer);
       setShowModal(true);
     }
   };
@@ -86,7 +186,6 @@ const [showModal, setShowModal] = useState(false);
     setShowModal(false);
     setSelectedPlayer(null);
   };
-
 
   const [auctionData, setAuctionData] = useState(sampleAuction);
   const [avatarUrl, setAvatarUrl] = useState(null);
@@ -106,7 +205,7 @@ const [showModal, setShowModal] = useState(false);
           setAvatarUrl(publicPath);
         }
 
-        setRtmCount(data.team.rtmCount)
+        setRtmCount(data.team.rtmCount);
         console.error("avatar from back:", data.team.avatar);
         const history = data.biddingHistory || [];
         const lastEntry = history[history.length - 1] || null;
@@ -202,19 +301,18 @@ const [showModal, setShowModal] = useState(false);
       alert("No RTMs left");
       return;
     }
-  
+
     const myTeamId = auctionData?.team?.teamId;
     try {
-      const response = await api.post(`/use-rtm/${id}`, { 
-        teamId: myTeamId,              // The current user's selected team ID
+      const response = await api.post(`/use-rtm/${id}`, {
+        teamId: myTeamId, // The current user's selected team ID
       });
-  
-      toast.success("RTM successful!" );
+
+      toast.success("RTM successful!");
       setRtmCount((prev) => prev - 1);
-      
+
       // Optionally refetch auction state or update local UI
       // await fetchAuctionData();
-  
     } catch (err) {
       console.error("RTM error:", err);
       toast.error(err.response?.data?.message || "Failed to use RTM");
@@ -222,7 +320,7 @@ const [showModal, setShowModal] = useState(false);
       setTimeout(() => setToast(null), 3000);
     }
   };
-  
+
   // ─── Container Classes (Full-screen toggle) ───────────────────
   const containerClasses = [
     "text-white bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900",
@@ -288,7 +386,7 @@ const [showModal, setShowModal] = useState(false);
 
         {/* ─ Current Player Details ─ */}
         <motion.div
-        onClick={openPlayerModal}
+          onClick={openPlayerModal}
           className="bg-gradient-to-br from-indigo-800/50 to-blue-700/50 rounded-xl p-6 w-full max-w-md text-center shadow-xl border border-indigo-600/30"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -348,7 +446,7 @@ const [showModal, setShowModal] = useState(false);
             Teams List 
           </motion.button> */}
           <motion.button
-          onClick={() => navigate(`/user-bidding-portal/${id}/players`)}
+            onClick={() => navigate(`/user-bidding-portal/${id}/players`)}
             className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-blue-500 rounded-xl text-xs sm:text-sm shadow-md"
             whileHover={{ scale: 1.05 }}
           >
@@ -378,9 +476,7 @@ const [showModal, setShowModal] = useState(false);
         >
           <h3 className="text-xs font-medium mb-1">Bid Now</h3>
           <BidButton onClick={handleBid} />
-          <p className="mt-1 text-xs opacity-75">
-            Price: ₹{nextBidAmount}
-          </p>
+          <p className="mt-1 text-xs opacity-75">Price: ₹{nextBidAmount}</p>
         </motion.div>
 
         {/* Current Highest Bid */}
@@ -399,7 +495,7 @@ const [showModal, setShowModal] = useState(false);
           </motion.div>
           <div className="flex items-center justify-center mb-3">
             <div className="bg-gray-700 rounded-full w-8 h-8 flex items-center justify-center mr-2 border border-gray-500">
-              {auctionData.currentBid?.team?.logoUrl?(
+              {auctionData.currentBid?.team?.logoUrl ? (
                 <img
                   src={auctionData.currentBid.team.logoUrl}
                   alt={auctionData.currentBid.team}
@@ -428,7 +524,14 @@ const [showModal, setShowModal] = useState(false);
 
       {/* ─── RIGHT COLUMN ─────────────────────────────────────────── */}
       <div className="col-span-1 flex flex-col justify-between h-full">
- 
+        <motion.div
+          className="bg-gradient-to-br mb-4 from-indigo-900/50 to-blue-800/50 rounded-xl text-center shadow-lg self-stretch border border-indigo-700/30 h-[330px] overflow-auto"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <DesktopTeamCard team={auctionData.team} />
+        </motion.div>
+
         <motion.div
           className="bg-gradient-to-br mb-4  from-indigo-900/50 to-blue-800/50 rounded-xl text-center shadow-lg self-end  border border-indigo-700/30"
           initial={{ opacity: 0, y: 20 }}
@@ -440,64 +543,110 @@ const [showModal, setShowModal] = useState(false);
             <p>Loading your character…</p>
           )}
         </motion.div>
-        
       </div>
       {showModal && selectedPlayer && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-md"
           onClick={closePlayerModal}
         >
           <div
-            className="bg-white rounded-lg p-6 w-[90%] max-w-lg shadow-lg relative"
+            className="relative w-[90%] max-w-xl rounded-3xl bg-gradient-to-tr from-[#1e1e2f] via-[#2a2a3b] to-[#1e1e2f] p-6 shadow-[0_0_30px_rgba(0,0,0,0.8)] border border-gray-700 text-white"
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Close button */}
             <button
-              className="absolute top-2 right-3 text-gray-600 hover:text-red-500 text-2xl"
+              className="absolute top-4 right-5 text-gray-400 hover:text-red-500 text-3xl font-bold transition-all duration-200"
               onClick={closePlayerModal}
             >
               &times;
             </button>
+
+            {/* Player Image */}
             <div className="text-center">
               <img
                 src={selectedPlayer.playerPic}
                 alt={selectedPlayer.name}
-                className="mx-auto w-32 h-32 object-cover rounded-full mb-4"
+                className="mx-auto w-32 h-32 object-cover rounded-full border-4 border-emerald-400 shadow-lg mb-4"
               />
-              <h2 className="text-2xl font-bold">{selectedPlayer.name}</h2>
-              <p className="text-sm italic">{selectedPlayer.role}</p>
+              <h2 className="text-3xl font-bold tracking-wide text-emerald-300">
+                {selectedPlayer.name}
+              </h2>
+              <p className="text-sm italic text-gray-400 uppercase tracking-wider mt-1">
+                {selectedPlayer.role}
+              </p>
             </div>
-            <div className="mt-4 text-left space-y-2">
-              <p>
-                <strong>Batting Style:</strong> {selectedPlayer.battingStyle}
-              </p>
-              <p>
-                <strong>Bowling Style:</strong> {selectedPlayer.bowlingStyle}
-              </p>
-              <p>
-                <strong>Base Price:</strong> ₹
-                {selectedPlayer.basePrice?.toLocaleString()}
-              </p>
-              <p>
-                <strong>Nationality:</strong> {selectedPlayer.nationality}
-              </p>
-              <p>
-                <strong>Age:</strong> {selectedPlayer.age}
-              </p>
-              <p>
-                <strong>Matches Played:</strong> {selectedPlayer.matchesPlayed}
-              </p>
-              <p>
-                <strong>Runs Scored:</strong> {selectedPlayer.runs}
-              </p>
-              <p>
-                <strong>Wickets Taken:</strong> {selectedPlayer.wickets}
-              </p>
-              {/* …add any other fields you have… */}
+
+            {/* Decorative Divider */}
+            <div className="mt-5 border-t border-gray-600 opacity-40" />
+
+            {/* Player Info */}
+            <div className="mt-6 grid grid-cols-2 gap-x-6 gap-y-4 text-sm font-light">
+              <div>
+                <span className="block text-gray-400 text-xs mb-1">
+                  Batting Style
+                </span>
+                <span className="text-white font-medium">
+                  {selectedPlayer.battingStyle}
+                </span>
+              </div>
+              <div>
+                <span className="block text-gray-400 text-xs mb-1">
+                  Bowling Style
+                </span>
+                <span className="text-white font-medium">
+                  {selectedPlayer.bowlingStyle}
+                </span>
+              </div>
+              <div>
+                <span className="block text-gray-400 text-xs mb-1">
+                  Base Price
+                </span>
+                <span className="text-emerald-400 font-semibold">
+                  ₹{selectedPlayer.basePrice?.toLocaleString()}
+                </span>
+              </div>
+              <div>
+                <span className="block text-gray-400 text-xs mb-1">
+                  Nationality
+                </span>
+                <span className="text-white font-medium">
+                  {selectedPlayer.nationality}
+                </span>
+              </div>
+              <div>
+                <span className="block text-gray-400 text-xs mb-1">Age</span>
+                <span className="text-white font-medium">
+                  {selectedPlayer.age}
+                </span>
+              </div>
+              <div>
+                <span className="block text-gray-400 text-xs mb-1">
+                  Matches Played
+                </span>
+                <span className="text-white font-medium">
+                  {selectedPlayer.matchesPlayed}
+                </span>
+              </div>
+              <div>
+                <span className="block text-gray-400 text-xs mb-1">
+                  Runs Scored
+                </span>
+                <span className="text-white font-medium">
+                  {selectedPlayer.runs}
+                </span>
+              </div>
+              <div>
+                <span className="block text-gray-400 text-xs mb-1">
+                  Wickets Taken
+                </span>
+                <span className="text-white font-medium">
+                  {selectedPlayer.wickets}
+                </span>
+              </div>
             </div>
           </div>
         </div>
       )}
     </div>
-    
   );
 }

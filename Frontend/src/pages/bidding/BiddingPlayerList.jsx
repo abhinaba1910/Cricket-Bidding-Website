@@ -290,8 +290,15 @@ export default function BiddingPlayerList() {
   }, [id]);
 
   // split sold vs unsold
-  const unsold = useMemo(() => players.filter(p => !p.sold), [players]);
-  const sold   = useMemo(() => players.filter(p => p.sold),  [players]);
+  const unsold = useMemo(
+      () => players.filter((p) => p.availability === "Available"),
+      [players]
+    );
+  
+    const sold = useMemo(
+      () => players.filter((p) => p.availability === "Sold"),
+      [players]
+    );
 
   // which tab
   const [tab, setTab] = useState("unsold"); // 'unsold' or 'sold'
@@ -353,7 +360,7 @@ export default function BiddingPlayerList() {
           </button>
 
           <div className="flex space-x-4">
-            {["unsold","sold"].map(key => (
+          {["unsold", "sold"].map((key) => (
               <button
                 key={key}
                 onClick={() => setTab(key)}
@@ -364,7 +371,9 @@ export default function BiddingPlayerList() {
                     : "bg-gray-200 text-gray-700 hover:bg-gray-300")
                 }
               >
-                {key === "unsold" ? `Unsold (${unsold.length})` : `Sold (${sold.length})`}
+                {key === "unsold"
+                  ? `Available (${unsold.length})`
+                  : `Sold (${sold.length})`}
               </button>
             ))}
           </div>

@@ -51,8 +51,8 @@ router.post("/start-bidding/:auctionId", auth, async (req, res) => {
           : {
               availability: "Available",
               role:
-                updateData.automaticFilter === "Wicket-keeper"
-                  ? "Wicket-keeper"
+                updateData.automaticFilter === "Wicket keeper batsman"
+                  ? "Wicket keeper batsman"
                   : updateData.automaticFilter,
             };
 
@@ -144,8 +144,8 @@ router.post("/manual-sell/:auctionId/:playerId", auth, async (req, res) => {
           : {
               availability: "Available",
               role:
-                auction.automaticFilter === "Wicket-keeper"
-                  ? "Wicket-keeper"
+                auction.automaticFilter === "Wicket keeper batsman"
+                  ? "Wicket keeper batsman"
                   : auction.automaticFilter,
             };
 
@@ -497,14 +497,37 @@ router.get("/queue-status/:auctionId", auth, async (req, res) => {
     let validQueue = auction.manualPlayerQueue.filter((q) => q.player !== null);
 
     if (validQueue.length > 0) {
-      const lastPlayerId = validQueue[validQueue.length - 1].player._id;
+      // const lastPlayerId = validQueue[validQueue.length - 1].player._id;
 
+      // const lastPlayer = await Player.findById(lastPlayerId);
+      // const lastSold = auction.biddingHistory.find(
+      //   (entry) => String(entry.player) === String(lastPlayerId)
+      // );
+
+      // if (lastPlayer?.availability === "Sold" && lastSold) {
+      //   await Auction.findByIdAndUpdate(auction._id, {
+      //     manualPlayerQueue: [],
+      //     currentQueuePosition: 0,
+      //   });
+      //   validQueue = [];
+
+      //   console.log(
+      //     "✅ Manual queue cleared automatically after last player was sold (based on bidding history check)."
+      //   );
+      // }
+
+      const lastPlayerId = validQueue[validQueue.length - 1].player._id;
       const lastPlayer = await Player.findById(lastPlayerId);
+
       const lastSold = auction.biddingHistory.find(
         (entry) => String(entry.player) === String(lastPlayerId)
       );
 
-      if (lastPlayer?.availability === "Sold" && lastSold) {
+      // ✅ Clear queue if player was sold or explicitly marked unsold
+      if (
+        (lastPlayer?.availability === "Sold" && lastSold) ||
+        lastPlayer?.availability === "Unsold"
+      ) {
         await Auction.findByIdAndUpdate(auction._id, {
           manualPlayerQueue: [],
           currentQueuePosition: 0,
@@ -512,7 +535,7 @@ router.get("/queue-status/:auctionId", auth, async (req, res) => {
         validQueue = [];
 
         console.log(
-          "✅ Manual queue cleared automatically after last player was sold (based on bidding history check)."
+          "✅ Manual queue cleared: last player was either sold or marked unsold."
         );
       }
     }
@@ -542,8 +565,8 @@ router.get("/queue-status/:auctionId", auth, async (req, res) => {
           : {
               availability: "Available",
               role:
-                auction.automaticFilter === "Wicket-keeper"
-                  ? "Wicket-keeper"
+                auction.automaticFilter === "Wicket keeper batsman"
+                  ? "Wicket keeper batsman"
                   : auction.automaticFilter,
             };
 
@@ -624,8 +647,8 @@ router.get("/next-player/:auctionId", auth, async (req, res) => {
           : {
               availability: "Available",
               role:
-                auction.automaticFilter === "Wicket-keeper"
-                  ? "Wicket-keeper"
+                auction.automaticFilter === "Wicket keeper batsman"
+                  ? "Wicket keeper batsman"
                   : auction.automaticFilter,
             };
 
@@ -681,7 +704,7 @@ router.post("/start-automatic-bidding/:auctionId", auth, async (req, res) => {
 
     if (automaticFilter !== "All") {
       filterQuery.role =
-        automaticFilter === "Wicket-keeper" ? "Wicket-keeper" : automaticFilter;
+        automaticFilter === "Wicket keeper batsman" ? "Wicket keeper batsman" : automaticFilter;
     }
 
     // ✅ Limit to only selected players
@@ -923,7 +946,6 @@ router.get("/get-auction-pause-status/:id", auth, async (req, res) => {
 //   }
 // });
 
-
 router.patch("/unsold/:auctionId", auth, async (req, res) => {
   try {
     const { auctionId } = req.params;
@@ -964,9 +986,8 @@ router.patch("/unsold/:auctionId", auth, async (req, res) => {
         nextPlayer = await Player.findById(sortedQueue[nextPosition].player);
         newQueuePosition = nextPosition;
       }
-      
-      // ❌ Do NOT push unsold player to end of queue
 
+      // ❌ Do NOT push unsold player to end of queue
     } else {
       // Automatic mode
       const filterQuery =
@@ -975,8 +996,8 @@ router.patch("/unsold/:auctionId", auth, async (req, res) => {
           : {
               availability: "Available",
               role:
-                auction.automaticFilter === "Wicket-keeper"
-                  ? "Wicket-keeper"
+                auction.automaticFilter === "Wicket keeper batsman"
+                  ? "Wicket keeper batsman"
                   : auction.automaticFilter,
             };
 
@@ -1025,8 +1046,6 @@ router.patch("/unsold/:auctionId", auth, async (req, res) => {
     return res.status(500).json({ message: "Server error." });
   }
 });
-
-
 
 router.patch("/end-auction/:auctionId", auth, async (req, res) => {
   try {
@@ -1221,7 +1240,7 @@ router.get("/bidding-portal/:auctionId", auth, async (req, res) => {
 
     const userTeam = {
       teamId: matchedTeamEntry.team._id,
-      teamName: matchedTeamEntry.team.name,
+      teamName: matchedTeamEntry.team.shortName,
       manager: matchedTeamEntry.manager,
       avatar: matchedTeamEntry.avatar,
       logoUrl: fullTeamDetails.logoUrl,
@@ -1314,6 +1333,11 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
     const team = await Team.findById(teamId);
     if (!team) return res.status(404).json({ error: "Team not found" });
 
+    if (team.remaining < bidAmount) {
+      return res.status(400).json({
+        error: "Insufficient balance to place this bid.",
+      });
+    }
     // ✅ Place the bid
     auction.currentBid = {
       team: teamId,
@@ -1330,6 +1354,9 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
       .json({ error: "Internal server error", details: err.message });
   }
 });
+
+
+const activeRTMWindow = new Map(); 
 
 // routes/auction.js
 router.post("/use-rtm/:auctionId", auth, async (req, res) => {

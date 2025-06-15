@@ -46,7 +46,8 @@ export default function UserBiddingPlayerList() {
     if (!id) return;
 
     // Fetch auction data to get selectedPlayers
-    api.get(`/bidding-portal/${id}`)
+    api
+      .get(`/bidding-portal/${id}`)
       .then((res) => {
         setPlayers(res.data.selectedPlayers || []);
         console.log("Players", res.data.selectedPlayers);
@@ -60,11 +61,18 @@ export default function UserBiddingPlayerList() {
   }, [id]);
 
   // split sold vs unsold
-  const unsold = useMemo(() => players.filter((p) => !p.sold), [players]);
-  const sold = useMemo(() => players.filter((p) => p.sold), [players]);
+  const unsold = useMemo(
+    () => players.filter((p) => p.availability === "Available"),
+    [players]
+  );
+
+  const sold = useMemo(
+    () => players.filter((p) => p.availability === "Sold"),
+    [players]
+  );
 
   // which tab
-  const [tab, setTab] = useState("unsold"); // 'unsold' or 'sold'
+  const [tab, setTab] = useState("unsold");
   const list = tab === "unsold" ? unsold : sold;
 
   // apply search & filters
@@ -134,7 +142,7 @@ export default function UserBiddingPlayerList() {
                 }
               >
                 {key === "unsold"
-                  ? `Unsold (${unsold.length})`
+                  ? `Available (${unsold.length})`
                   : `Sold (${sold.length})`}
               </button>
             ))}
