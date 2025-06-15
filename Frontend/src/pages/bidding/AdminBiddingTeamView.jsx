@@ -4,6 +4,7 @@ import { FiChevronLeft, FiX } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "../../userManagement/Api";
 import toast from "react-hot-toast";
+import MobileStickyNav from "../../components/layout/MobileStickyNav";
 
 export default function AdminBiddingTeamView() {
   const { id, teamId } = useParams();
@@ -315,6 +316,7 @@ export default function AdminBiddingTeamView() {
           </motion.div>
         )}
       </AnimatePresence>
+      
     </div>
   );
 }

@@ -39,6 +39,7 @@ import UserBiddingRoute from "./pages/userBidding/UserBiddingRoute";
 import UserBiddingCharSelection from "./pages/userBidding/UserBiddingCharSelection";
 import UserBiddingPlayerList from "./pages/userBidding/UserBiddingPlayerList";
 import UserBiddingPlayerView from "./pages/userBidding/UserBiddingPlayerView";
+import EditAuction from "./pages/auctions/EditAuction";
 function ProtectedLayout({ isAuthenticated }) {
   if (!isAuthenticated) return <AuthPage />;
   return (
@@ -118,6 +119,7 @@ function App() {
           <Route path="/create-team" element={<CreateTeam />} />
           <Route path="/add-players" element={<AddPlayer />} />
           <Route path="/admin-auction-info" element={<AuctionsInfo />} />
+          <Route path="/admin-edit-auction" element={<EditAuction />} />
           <Route
             path="/admins-my-auction-info"
             element={<AdminMyAuctionInfo />}

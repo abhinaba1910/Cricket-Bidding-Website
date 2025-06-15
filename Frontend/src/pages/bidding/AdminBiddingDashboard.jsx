@@ -2384,7 +2384,7 @@ export default function AdminBiddingDashboard() {
 
   // 5) RENDER. Everywhere you previously used SAMPLE_AUCTION, use auctionData instead.
   const containerClasses = [
-    "p-4 text-white bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900",
+    "p-4 text-white bg-gradient-to-br from-gray-900 pb-20 via-blue-900 to-indigo-900",
     fullScreen
       ? "fixed inset-0 z-[9999] overflow-auto"
       : "relative mx-auto max-w-7xl",

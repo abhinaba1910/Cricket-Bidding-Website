@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { FiSearch, FiPlus } from "react-icons/fi";
+import { FiSearch, FiPlus, FiEdit } from "react-icons/fi";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../userManagement/Api";
+import MobileStickyNav from "../../components/layout/MobileStickyNav";
 
 const TABS = [
   { key: "upcoming", label: "Upcoming" },
@@ -230,6 +231,12 @@ export default function AuctionsInfo() {
                       Return to Auction
                     </button>
                   )}
+                  <Link
+                    to={`/admin-edit-auction `}
+                    className="inline-flex m-2  items-center bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-[9px] rounded text-sm"
+                  >
+                    <FiEdit className="mr-1" size={14} /> Edit
+                  </Link>
 
                   {/* Started label for live auctions */}
                   {a.status === "live" && (
@@ -246,10 +253,13 @@ export default function AuctionsInfo() {
               </div>
             );
           })}
+          
         </div>
       ) : (
         <p className="text-center text-gray-500">No auctions found.</p>
       )}
+      <MobileStickyNav/>
     </div>
+
   );
 }
