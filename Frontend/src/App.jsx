@@ -32,6 +32,8 @@ import AdminBiddingTeamView from "./pages/bidding/AdminBiddingTeamView";
 // import UserBiddingDashboardMobile from "./pages/userBidding/UserBiddingPortalMobile";
 import UserBiddingRoute from "./pages/userBidding/UserBiddingRoute";
 import UserBiddingCharSelection from "./pages/userBidding/UserBiddingCharSelection";
+import UserBiddingPlayerList from "./pages/userBidding/UserBiddingPlayerList";
+import UserBiddingPlayerView from "./pages/userBidding/UserBiddingPlayerView";
 function ProtectedLayout({ isAuthenticated }) {
   if (!isAuthenticated) return <AuthPage />;
   return (
@@ -84,6 +86,20 @@ function App() {
         {/* <Route path="/user-bidding-portal" element={<UserBiddingDashboardMobile/>} /> */}
         <Route path="/user-bidding-portal/:id" element={<UserBiddingRoute />}/>
         <Route path="/user-char-selection/:id" element={<UserBiddingCharSelection/>}/>
+        <Route
+          path="/user-bidding-portal/:id/players"
+          element={<UserBiddingPlayerList />}
+        />
+        <Route
+          path="/user-bidding-portal/:id/players/:playerId"
+          element={<UserBiddingPlayerView />}
+        />
+
+
+
+
+        <Route path="/user-bidding-portal/user-bidding-player-list/:id" element={<UserBiddingPlayerList />} />
+        <Route path="/user-bidding-portal/user-bidding-player-view/:id" element={<UserBiddingPlayerView />} />
         <Route element={<ProtectedLayout isAuthenticated={isAuthenticated} />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/create-auction" element={<CreateAuction />} />
