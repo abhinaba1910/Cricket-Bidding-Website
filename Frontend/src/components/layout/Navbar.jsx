@@ -191,9 +191,6 @@ function Navbar({ onOpenSidebar }) {
     navigate('/')
   }
 
-  // decide mobile container alignment:
-  // - admin/temp → justify-between
-  // - regular user → justify-center
   const containerClasses = `
     flex h-16
     ${isAdmin || isTemp ? 'justify-between' : 'justify-center'}
@@ -204,7 +201,6 @@ function Navbar({ onOpenSidebar }) {
     <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className={containerClasses.trim()}>
-          {/* Left side: only show on mobile for admins */}
           {(isAdmin || isTemp) && (
             <div className="flex items-center md:hidden">
               <button
@@ -218,15 +214,12 @@ function Navbar({ onOpenSidebar }) {
             </div>
           )}
 
-          {/* Logo always visible, centered for regular users on mobile */}
           <div className="flex-shrink-0 flex items-center">
             <span className="text-3xl font-bold text-primary-600">BidMaster</span>
           </div>
 
-          {/* Right side: desktop menu + mobile avatar for admins */}
           {isAuthenticated && (
             <div className="flex items-center">
-              {/* Desktop user menu */}
               <div className="hidden md:ml-4 md:flex md:items-center">
                 <div className="relative ml-3">
                   <button
@@ -263,62 +256,62 @@ function Navbar({ onOpenSidebar }) {
                 </div>
               </div>
 
-              {/* Mobile avatar dropdown for admins */}
-              <div className="md:hidden flex items-center">
-                <button
-                  type="button"
-                  className="flex rounded-full items-center"
-                  onClick={toggleMenu}
-                >
-                  <Avatar src={user.avatar} alt={user.username} size="sm" />
-                </button>
-                {isMenuOpen && (
-                  <div className="absolute top-0 inset-x-0 p-2 transition transform origin-top-right md:hidden z-40">
-                    <div className="rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 overflow-hidden">
-                      <div className="pt-4 pb-3 border-t border-gray-200">
-                        <div className="flex items-center px-4">
-                          <Avatar src={user.avatar} alt={user.username} size="md" />
-                          <div className="ml-3">
-                            <div className="text-base font-medium text-gray-800">
-                              {user.username}
+              {(isAdmin || isTemp) && (
+                <div className="md:hidden flex items-center">
+                  <button
+                    type="button"
+                    className="flex rounded-full items-center"
+                    onClick={toggleMenu}
+                  >
+                    <Avatar src={user.avatar} alt={user.username} size="sm" />
+                  </button>
+                  {isMenuOpen && (
+                    <div className="absolute top-0 inset-x-0 p-2 transition transform origin-top-right md:hidden z-40">
+                      <div className="rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 overflow-hidden">
+                        <div className="pt-4 pb-3 border-t border-gray-200">
+                          <div className="flex items-center px-4">
+                            <Avatar src={user.avatar} alt={user.username} size="md" />
+                            <div className="ml-3">
+                              <div className="text-base font-medium text-gray-800">
+                                {user.username}
+                              </div>
+                              <div className="text-sm font-medium text-gray-500">
+                                {user.email}
+                              </div>
                             </div>
-                            <div className="text-sm font-medium text-gray-500">
-                              {user.email}
-                            </div>
+                            <button
+                              type="button"
+                              className="ml-auto flex-shrink-0 rounded-full p-1 text-gray-400 hover:text-gray-500"
+                              onClick={toggleMenu}
+                            >
+                              <span className="sr-only">Close menu</span>
+                              <X className="h-6 w-6" aria-hidden="true" />
+                            </button>
                           </div>
-                          <button
-                            type="button"
-                            className="ml-auto flex-shrink-0 rounded-full p-1 text-gray-400 hover:text-gray-500"
-                            onClick={toggleMenu}
-                          >
-                            <span className="sr-only">Close menu</span>
-                            <X className="h-6 w-6" aria-hidden="true" />
-                          </button>
-                        </div>
-                        <div className="mt-3 space-y-1">
-                          <a
-                            href="/admin-profile"
-                            className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
-                            onClick={() => setIsMenuOpen(false)}
-                          >
-                            Your Profile
-                          </a>
-                          <button
-                            onClick={handleLogout}
-                            className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
-                          >
-                            Sign out
-                          </button>
+                          <div className="mt-3 space-y-1">
+                            <a
+                              href="/admin-profile"
+                              className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                              onClick={() => setIsMenuOpen(false)}
+                            >
+                              Your Profile
+                            </a>
+                            <button
+                              onClick={handleLogout}
+                              className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                            >
+                              Sign out
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
-          {/* Unauthenticated / regular user on mobile: show login button if not signed in */}
           {!isAuthenticated && (
             <div className="flex items-center md:flex-none">
               <Button
@@ -335,5 +328,4 @@ function Navbar({ onOpenSidebar }) {
     </header>
   )
 }
-
 export default Navbar
