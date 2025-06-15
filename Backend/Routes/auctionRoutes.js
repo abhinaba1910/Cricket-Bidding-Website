@@ -259,7 +259,8 @@ router.get("/get-auction/:id", AuthMiddleWare, async (req, res) => {
     // Filter available players
     const filteredPlayers = await Player.find({
       _id: { $in: auction.selectedPlayers },
-      availability: "Available",
+      // availability: "Available",
+      availability: { $in: ["Available", "Unsold"] },
     });
 
     // Last sold player

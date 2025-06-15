@@ -123,7 +123,7 @@ router.get("/get-player/available", authMiddleware, async (req, res) => {
 
     const players = await Player.find({
       createdBy: userId,
-      availability: "Available", // ✅ Only fetch players who are "Available"
+      availability: { $in: ["Available", "Unsold"] },
     }).sort({ createdAt: -1 });
 
     res.status(200).json(players);
@@ -132,6 +132,7 @@ router.get("/get-player/available", authMiddleware, async (req, res) => {
     res.status(500).json({ error: "Failed to fetch players." });
   }
 });
+
 
 
 

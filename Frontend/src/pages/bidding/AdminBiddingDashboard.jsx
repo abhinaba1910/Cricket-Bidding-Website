@@ -1474,7 +1474,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import api from "../../userManagement/Api";
@@ -1769,41 +1769,86 @@ export default function AdminBiddingDashboard() {
       const data = res.data;
       console.log("Fetched auction data:", data);
 
-      setAuctionData((prev) => ({
-        ...prev,
-        lastSold: {
-          name: data.lastSoldPlayer?.player?.name || prev.lastSold.name,
-          price: data.lastSoldPlayer?.bidAmount || prev.lastSold.price,
-          team: data.lastSoldPlayer?.team?.shortName || prev.lastSold.team,
-        },
-        mostExpensive: {
-          name:
-            data.mostExpensivePlayer?.player?.name || prev.mostExpensive.name,
-          price:
-            data.mostExpensivePlayer?.bidAmount || prev.mostExpensive.price,
-          team:
-            data.mostExpensivePlayer?.team?.shortName ||
-            prev.mostExpensive.team,
-        },
-        currentLot: {
-          id: data.currentPlayerOnBid?._id || prev.currentLot.id,
-          name: data.currentPlayerOnBid?.name || prev.currentLot.name,
-          role: data.currentPlayerOnBid?.role || prev.currentLot.role,
-          batting:
-            data.currentPlayerOnBid?.battingStyle || prev.currentLot.batting,
-          bowling:
-            data.currentPlayerOnBid?.bowlingStyle || prev.currentLot.bowling,
-          basePrice:
-            data.currentPlayerOnBid?.basePrice || prev.currentLot.basePrice,
-          playerPic:
-            data.currentPlayerOnBid?.playerPic || prev.currentLot.avatarUrl,
-        },
-        currentBid: {
-          amount: data.currentBid?.amount || prev.currentBid.amount,
-          team: data.currentBid?.team?.teamName || prev.currentBid.team,
-          teamLogo: data.currentBid?.team?.logoUrl || prev.currentBid.teamLogo,
-        },
-      }));
+      // setAuctionData((prev) => ({
+      //   ...prev,
+      //   lastSold: {
+      //     name: data.lastSoldPlayer?.player?.name || prev.lastSold.name,
+      //     price: data.lastSoldPlayer?.bidAmount || prev.lastSold.price,
+      //     team: data.lastSoldPlayer?.team?.shortName || prev.lastSold.team,
+      //   },
+      //   mostExpensive: {
+      //     name:
+      //       data.mostExpensivePlayer?.player?.name || prev.mostExpensive.name,
+      //     price:
+      //       data.mostExpensivePlayer?.bidAmount || prev.mostExpensive.price,
+      //     team:
+      //       data.mostExpensivePlayer?.team?.shortName ||
+      //       prev.mostExpensive.team,
+      //   },
+      //   currentLot: {
+      //     id: data.currentPlayerOnBid?._id || prev.currentLot.id,
+      //     name: data.currentPlayerOnBid?.name || prev.currentLot.name,
+      //     role: data.currentPlayerOnBid?.role || prev.currentLot.role,
+      //     batting:
+      //       data.currentPlayerOnBid?.battingStyle || prev.currentLot.batting,
+      //     bowling:
+      //       data.currentPlayerOnBid?.bowlingStyle || prev.currentLot.bowling,
+      //     basePrice:
+      //       data.currentPlayerOnBid?.basePrice || prev.currentLot.basePrice,
+      //     playerPic:
+      //       data.currentPlayerOnBid?.playerPic || prev.currentLot.playerPic,
+      //   },
+      //   currentBid: {
+      //     amount: data.currentBid?.amount || prev.currentBid.amount,
+      //     team: data.currentBid?.team?.teamName || prev.currentBid.team,
+      //     teamLogo: data.currentBid?.team?.logoUrl || prev.currentBid.teamLogo,
+      //   },
+      // }));
+
+      setAuctionData((prev) => {
+        const newPlayer = data.currentPlayerOnBid || {};
+        const prevPlayer = prev.currentLot || {};
+
+        // Prevent unnecessary update if player ID and image are the same
+        const isSamePlayer =
+          newPlayer._id === prevPlayer.id &&
+          newPlayer.playerPic === prevPlayer.playerPic;
+
+        return {
+          ...prev,
+          lastSold: {
+            name: data.lastSoldPlayer?.player?.name || prev.lastSold.name,
+            price: data.lastSoldPlayer?.bidAmount || prev.lastSold.price,
+            team: data.lastSoldPlayer?.team?.shortName || prev.lastSold.team,
+          },
+          mostExpensive: {
+            name:
+              data.mostExpensivePlayer?.player?.name || prev.mostExpensive.name,
+            price:
+              data.mostExpensivePlayer?.bidAmount || prev.mostExpensive.price,
+            team:
+              data.mostExpensivePlayer?.team?.shortName ||
+              prev.mostExpensive.team,
+          },
+          currentLot: isSamePlayer
+            ? prevPlayer // Don't update if same
+            : {
+                id: newPlayer._id || prevPlayer.id,
+                name: newPlayer.name || prevPlayer.name,
+                role: newPlayer.role || prevPlayer.role,
+                batting: newPlayer.battingStyle || prevPlayer.batting,
+                bowling: newPlayer.bowlingStyle || prevPlayer.bowling,
+                basePrice: newPlayer.basePrice || prevPlayer.basePrice,
+                playerPic: newPlayer.playerPic || prevPlayer.playerPic,
+              },
+          currentBid: {
+            amount: data.currentBid?.amount || prev.currentBid.amount,
+            team: data.currentBid?.team?.teamName || prev.currentBid.team,
+            teamLogo:
+              data.currentBid?.team?.logoUrl || prev.currentBid.teamLogo,
+          },
+        };
+      });
 
       setBiddingStarted(data.biddingStarted || false);
       setSelectionMode(data.selectionMode || "automatic");
@@ -1836,6 +1881,14 @@ export default function AdminBiddingDashboard() {
       console.error("Error while fetching auction:", err);
     }
   };
+
+  const PlayerAvatar = React.memo(({ src, alt }) => (
+    <img
+      src={src}
+      alt={alt}
+      className="w-full h-full object-cover rounded-full"
+    />
+  ));
 
   const getNextPlayer = async () => {
     try {
@@ -2149,7 +2202,91 @@ export default function AdminBiddingDashboard() {
   const toggleFullScreen = () => setFullScreen((fs) => !fs);
   const onStopBidding = () => setStatus("paused");
   const onSell = () => setStatus("selling");
-  const onMoveToUnsell = () => setStatus("live");
+  const onMoveToUnsell = async () => {
+    try {
+      const response = await api.patch(`/unsold/${id}`);
+  
+      const {
+        nextPlayer,
+        isLastPlayer,
+        currentQueuePosition,
+        totalQueueLength,
+        remainingPlayers,
+        isPaused,
+      } = response.data;
+  
+      // ✅ Update auction queue-related data
+      setAuctionData(prev => ({
+        ...prev,
+        currentQueuePosition,
+        totalQueueLength,
+        remainingPlayers,
+        isPaused,
+      }));
+  
+      if (nextPlayer) {
+        // ✅ Update currentLot like in handleManualSell
+        setAuctionData((prev) => ({
+          ...prev,
+          currentLot: {
+            id: nextPlayer._id,
+            name: nextPlayer.name,
+            role: nextPlayer.role,
+            batting: nextPlayer.battingStyle,
+            bowling: nextPlayer.bowlingStyle,
+            basePrice: nextPlayer.basePrice,
+            avatarUrl: nextPlayer.photo,
+          },
+          currentBid: {
+            amount: nextPlayer.basePrice || 0,
+            team: null,
+            teamLogo: null,
+          },
+        }));
+  
+        setBidAmount(nextPlayer.basePrice || 0);
+        setStatus("live");
+  
+        if (selectionMode === "manual") {
+          setCurrentQueuePosition(currentQueuePosition);
+          setQueueDisplay((prev) => ({
+            current: currentQueuePosition + 1,
+            total: totalQueueLength,
+          }));
+        }
+      } else {
+        // ✅ No next player - mark auction complete
+        setAuctionData((prev) => ({
+          ...prev,
+          currentLot: {
+            id: "--/--",
+            name: "No more players",
+            role: "--/--",
+            batting: "--/--",
+            bowling: "--/--",
+            basePrice: 0,
+            avatarUrl: null,
+          },
+          currentBid: {
+            amount: 0,
+            team: null,
+            teamLogo: null,
+          },
+        }));
+        setBiddingStarted(false);
+        setStatus("completed");
+        setCanChangeMode(true);
+      }
+  
+      toast.success("Player marked as Unsold and moved to next.");
+      await fetchAuctionData();
+      await fetchQueueStatus();
+    } catch (error) {
+      console.error("Error marking unsold:", error);
+      toast.error("Failed to mark player as Unsold.");
+    }
+  };
+  
   const onEditBid = () => setShowEdit(true);
 
   const onApplyBid = async () => {
@@ -2420,18 +2557,21 @@ export default function AdminBiddingDashboard() {
             transition={{ type: "spring", stiffness: 300 }}
           >
             {/* <img src={auctionData.currentBid.logoUrl} alt="player avatar" /> */}
-            <div className="mx-auto mb-4 rounded-full bg-gray-700 w-24 h-24 sm:w-32 sm:h-32 flex items-center justify-center">
+            <motion.div
+              className="mx-auto mb-4 rounded-full bg-gradient-to-br from-indigo-700 to-blue-800 w-24 h-24 sm:w-32 sm:h-32 flex items-center justify-center overflow-hidden border-2 border-cyan-400/30"
+              animate={{ scale: [1, 1.05, 1] }}
+              transition={{ duration: 4, repeat: Infinity }}
+            >
               {/* <span className="text-4xl">👤</span> */}
               {auctionData.currentLot?.playerPic ? (
-                <img
+                <PlayerAvatar
                   src={auctionData.currentLot.playerPic}
                   alt={auctionData.currentLot.name}
-                  className="w-full h-full object-cover rounded-full"
                 />
               ) : (
                 <span className="text-4xl">👤</span>
               )}
-            </div>
+            </motion.div>
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -2542,37 +2682,6 @@ export default function AdminBiddingDashboard() {
                 </button>
               </div>
 
-              {/* Mode change options when bidding has started */}
-              {/* {biddingStarted && (
-                <div className="p-3 bg-indigo-900/30 rounded-lg">
-                  <p className="text-xs text-center mb-2 text-yellow-300">
-                    Change Selection Mode:
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleModeToggle("automatic")}
-                      className={`flex-1 px-2 py-1 rounded text-xs transition-colors ${
-                        selectionMode === "automatic"
-                          ? "bg-emerald-500 text-white"
-                          : "bg-gray-600 text-gray-300 hover:bg-gray-500"
-                      }`}
-                    >
-                      Auto
-                    </button>
-                    <button
-                      onClick={() => handleModeToggle("manual")}
-                      className={`flex-1 px-2 py-1 rounded text-xs transition-colors ${
-                        selectionMode === "manual"
-                          ? "bg-amber-500 text-white"
-                          : "bg-gray-600 text-gray-300 hover:bg-gray-500"
-                      }`}
-                    >
-                      Manual
-                    </button>
-                  </div>
-                </div>
-              )} */}
-
               {/* Role Selector for Automatic Mode */}
               {selectionMode === "automatic" && (
                 <motion.div
@@ -2630,25 +2739,15 @@ export default function AdminBiddingDashboard() {
             </div>
 
             <motion.button
-              onClick={onMoveToUnsell}
-              className="w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-500 rounded-xl hover:from-purple-700 hover:to-indigo-600 text-sm shadow-lg"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              Move to Unsell
-            </motion.button>
-            {/* <motion.button
-              onClick={togglePause}
-              className={`w-full px-4 py-2 rounded text-xs sm:text-sm shadow-md transition ${
-                status === "live"
-                  ? "bg-amber-500 hover:bg-amber-600 text-white"
-                  : "bg-green-500 hover:bg-green-600 text-white"
-              }`}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              Pause Auction
-            </motion.button> */}
+  onClick={onMoveToUnsell}
+  className="w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-500 rounded-xl hover:from-purple-700 hover:to-indigo-600 text-sm shadow-lg"
+  whileHover={{ scale: 1.02 }}
+  whileTap={{ scale: 0.98 }}
+>
+  Move to Unsell
+</motion.button>
+
+        
 
             <motion.button
               onClick={togglePause}

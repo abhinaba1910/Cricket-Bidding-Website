@@ -11,7 +11,7 @@ const playerSchema = new mongoose.Schema(
     basePrice: { type: Number, required: true },
     grade: { type: String },
     points: { type: Number },
-    availability: { type: String, enum: ["Available", "Sold", "Retained","Unsold"] },
+    availability: { type: String, enum: ["Available", "Sold", "Retained", "Unsold"] },
     playerId: { type: String },
     matchesPlayed: { type: Number },
     runs: { type: Number },

@@ -76,6 +76,7 @@ const [showModal, setShowModal] = useState(false);
   const openPlayerModal = () => {
     if (auctionData.currentPlayer) {
       setSelectedPlayer(auctionData.currentPlayer);
+      console.log(auctionData.currentPlayer)
       setShowModal(true);
     }
   };
