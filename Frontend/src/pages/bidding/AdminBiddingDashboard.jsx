@@ -1472,22 +1472,7 @@
 //   );
 // }
 
-
-
-
-
-
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
-
-
-
-
-
-
 
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
@@ -1810,8 +1795,8 @@ export default function AdminBiddingDashboard() {
             data.currentPlayerOnBid?.bowlingStyle || prev.currentLot.bowling,
           basePrice:
             data.currentPlayerOnBid?.basePrice || prev.currentLot.basePrice,
-          avatarUrl:
-            data.currentPlayerOnBid?.photo || prev.currentLot.avatarUrl,
+          playerPic:
+            data.currentPlayerOnBid?.playerPic || prev.currentLot.avatarUrl,
         },
         currentBid: {
           amount: data.currentBid?.amount || prev.currentBid.amount,
@@ -1831,7 +1816,7 @@ export default function AdminBiddingDashboard() {
         setRole(data.automaticFilter);
       }
 
-      if (data.bidAmount?.amount!== undefined) {
+      if (data.bidAmount?.amount !== undefined) {
         setBidAmount(data.bidAmount.amount);
       } else if (data.currentPlayerOnBid?.basePrice) {
         setBidAmount(data.currentPlayerOnBid.basePrice);
@@ -1961,18 +1946,23 @@ export default function AdminBiddingDashboard() {
         `/manual-sell/${id}/${auctionData.currentLot.id}`
       );
 
-      const { nextPlayer, isLastPlayer, biddingEnded, soldTo, amount,isPaused } =
-        response.data;
+      const {
+        nextPlayer,
+        isLastPlayer,
+        biddingEnded,
+        soldTo,
+        amount,
+        isPaused,
+      } = response.data;
 
       // Show success message
-      console.log("AUCTIONNNNNNNNNNNNN",response.data)
-      if(isPaused){
-        toast.success("Auction Paused")
+      console.log("AUCTIONNNNNNNNNNNNN", response.data);
+      if (isPaused) {
+        toast.success("Auction Paused");
       }
       if (biddingEnded || isLastPlayer || !isPaused) {
         toast.success("Auction completed! No more players available.");
-      } 
-      else{
+      } else {
         toast.success(`Player sold for ₹${amount.toLocaleString()}!`);
       }
 
@@ -2190,14 +2180,14 @@ export default function AdminBiddingDashboard() {
       const response = await api.patch(`/pause-auction/${id}`, {
         isPaused: true,
       });
-  
+
       console.log(response.data.message); // You can show this as a toast or alert
       setIsPaused(true);
       setBiddingStarted(false); // Optional
       toast.success("Auction Paused");
     } catch (err) {
       toast.error("Failed to pause/resume:", err);
-  
+
       // Extract and show backend message
       if (err.response && err.response.data && err.response.data.message) {
         toast.error(`Error: ${err.response.data.message}`);
@@ -2206,7 +2196,6 @@ export default function AdminBiddingDashboard() {
       }
     }
   };
-  
 
   useEffect(() => {
     const checkIsPaused = async () => {
@@ -2244,18 +2233,17 @@ export default function AdminBiddingDashboard() {
     });
   };
 
-const handleEndAuction = async () => {
+  const handleEndAuction = async () => {
     try {
-      const res = await api.patch(`/end-auction/${auctionId}`)
-      toast.success(res.data.message || 'Auction ended')
+      const res = await api.patch(`/end-auction/${auctionId}`);
+      toast.success(res.data.message || "Auction ended");
       // inform parent to refresh or navigate away
-      onAuctionEnded && onAuctionEnded()
+      onAuctionEnded && onAuctionEnded();
     } catch (err) {
-      console.error('End-auction error:', err)
-      toast.error(err.response?.data?.error || 'Failed to end auction')
+      console.error("End-auction error:", err);
+      toast.error(err.response?.data?.error || "Failed to end auction");
     }
-  }
-
+  };
 
   // 5) RENDER. Everywhere you previously used SAMPLE_AUCTION, use auctionData instead.
   const containerClasses = [
@@ -2374,7 +2362,6 @@ const handleEndAuction = async () => {
             >
               {status === "live" ? "Pause Auction" : "Resume Auction"}
             </motion.button>
-            
           </div>
 
           <div className="flex flex-wrap gap-2 justify-center">
@@ -2434,7 +2421,16 @@ const handleEndAuction = async () => {
           >
             {/* <img src={auctionData.currentBid.logoUrl} alt="player avatar" /> */}
             <div className="mx-auto mb-4 rounded-full bg-gray-700 w-24 h-24 sm:w-32 sm:h-32 flex items-center justify-center">
-              <span className="text-4xl">👤</span>
+              {/* <span className="text-4xl">👤</span> */}
+              {auctionData.currentLot?.playerPic ? (
+                <img
+                  src={auctionData.currentLot.playerPic}
+                  alt={auctionData.currentLot.name}
+                  className="w-full h-full object-cover rounded-full"
+                />
+              ) : (
+                <span className="text-4xl">👤</span>
+              )}
             </div>
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
@@ -2595,9 +2591,13 @@ const handleEndAuction = async () => {
                   >
                     <option value="All">All</option>
                     <option value="Batsman">Batsman</option>
-                    <option value="Bowler">Bowler</option>
-                    <option value="All-Rounder">All-Rounder</option>
-                    <option value="Wicket-keeper">Wicket-keeper</option>
+                    <option value="Fast all-rounder">Fast All Rounder</option>
+                    <option value="Spin all-rounder">Spin All Rounder</option>
+                    <option value="Wicket keeper batsman">
+                      Wicket Keeper Batsman
+                    </option>
+                    <option value="Spin bowler">Spin Bowler</option>
+                    <option value="Fast bowler">Fast Bowler</option>
                   </select>
                 </motion.div>
               )}
@@ -2663,15 +2663,14 @@ const handleEndAuction = async () => {
             >
               {isPaused ? "Paused Auction" : "Pause Auction"}
             </motion.button>
-                         <motion.button
-        className="w-32 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-xl text-white shadow-lg"
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        // onClick={handleEndAuction}
-      >
-        End Auction
-      </motion.button>
-
+            <motion.button
+              className="w-32 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-xl text-white shadow-lg"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              // onClick={handleEndAuction}
+            >
+              End Auction
+            </motion.button>
           </div>
 
           <motion.div
@@ -2691,10 +2690,12 @@ const handleEndAuction = async () => {
             )}
             <p className="text-xs sm:text-sm opacity-75 mt-2">Bid By</p>
             <h3 className="text-sm sm:text-base font-semibold mt-1">
-              {auctionData.currentBid.team} <p className="text-xs sm:text-sm opacity-75 mt-2">₹{auctionData.currentBid.amount}</p>
+              {auctionData.currentBid.team}{" "}
+              <p className="text-xs sm:text-sm opacity-75 mt-2">
+                ₹{auctionData.currentBid.amount}
+              </p>
             </h3>
           </motion.div>
-          
         </div>
       </div>
 
@@ -2996,7 +2997,6 @@ const handleEndAuction = async () => {
               </motion.button>
             </div>
           </motion.div>
-          
         </motion.div>
       )}
     </div>

@@ -1,6 +1,11 @@
 // src/App.js
 import React, { useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, Outlet } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Outlet,
+} from "react-router-dom";
 import SplashScreen from "./components/splashScreen";
 import AuthPage from "./pages/authentication/AuthPage";
 import Layout from "./components/layout/Layout";
@@ -75,17 +80,20 @@ function App() {
   return (
     <Router>
       <Toaster position="top-right" />
-      <AutoLogout/>
+      <AutoLogout />
       <Routes>
         <Route
           path="/"
           element={<AuthPage onLoginSuccess={() => setIsAuthenticated(true)} />}
         />
-        <Route path="/set-password" element={<SetPassword/>} />
+        <Route path="/set-password" element={<SetPassword />} />
         {/* <Route path="/user-bidding-portal" element={<UserBiddngPortalDesktop/>} /> */}
         {/* <Route path="/user-bidding-portal" element={<UserBiddingDashboardMobile/>} /> */}
-        <Route path="/user-bidding-portal/:id" element={<UserBiddingRoute />}/>
-        <Route path="/user-char-selection/:id" element={<UserBiddingCharSelection/>}/>
+        <Route path="/user-bidding-portal/:id" element={<UserBiddingRoute />} />
+        <Route
+          path="/user-char-selection/:id"
+          element={<UserBiddingCharSelection />}
+        />
         <Route
           path="/user-bidding-portal/:id/players"
           element={<UserBiddingPlayerList />}
@@ -95,11 +103,14 @@ function App() {
           element={<UserBiddingPlayerView />}
         />
 
-
-
-
-        <Route path="/user-bidding-portal/user-bidding-player-list/:id" element={<UserBiddingPlayerList />} />
-        <Route path="/user-bidding-portal/user-bidding-player-view/:id" element={<UserBiddingPlayerView />} />
+        <Route
+          path="/user-bidding-portal/user-bidding-player-list/:id"
+          element={<UserBiddingPlayerList />}
+        />
+        <Route
+          path="/user-bidding-portal/user-bidding-player-view/:id"
+          element={<UserBiddingPlayerView />}
+        />
         <Route element={<ProtectedLayout isAuthenticated={isAuthenticated} />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/create-auction" element={<CreateAuction />} />
@@ -107,7 +118,10 @@ function App() {
           <Route path="/create-team" element={<CreateTeam />} />
           <Route path="/add-players" element={<AddPlayer />} />
           <Route path="/admin-auction-info" element={<AuctionsInfo />} />
-          <Route path="/admins-my-auction-info" element={<AdminMyAuctionInfo />} />
+          <Route
+            path="/admins-my-auction-info"
+            element={<AdminMyAuctionInfo />}
+          />
           <Route path="/admin-teams-info" element={<TeamsInfo />} />
           <Route path="/admin-players-info" element={<PlayersInfo />} />
           <Route path="/admin-profile" element={<AdminProfilePage />} />
@@ -115,12 +129,26 @@ function App() {
           <Route path="/admin/player/:id/edit" element={<EditPlayer />} />
           <Route path="/admin/teams/:id" element={<ViewTeam />} />
           <Route path="/admin/teams/:id/edit" element={<EditTeam />} />
-          <Route path="/admin/admin-bidding-dashboard/:id" element={<AdminBiddingDashboard />} />
-          <Route path="/admin/admin-manual-player-selection/:id" element={<ManualPlayerSelection />} />
-          <Route path="/admin/bidding-teams-list/:id" element={<AdminBiddingTeamsList />} />
-          <Route path="/admin/bidding-teams-view/:id/:teamId" element={<AdminBiddingTeamView />} />
-          <Route path="/bidding/players-list/:id" element={<BiddingPlayerList/>} />
-          
+          <Route
+            path="/admin/admin-bidding-dashboard/:id"
+            element={<AdminBiddingDashboard />}
+          />
+          <Route
+            path="/admin/admin-manual-player-selection/:id"
+            element={<ManualPlayerSelection />}
+          />
+          <Route
+            path="/admin/bidding-teams-list/:id"
+            element={<AdminBiddingTeamsList />}
+          />
+          <Route
+            path="/admin/bidding-teams-view/:id/:teamId"
+            element={<AdminBiddingTeamView />}
+          />
+          <Route
+            path="/bidding/players-list/:id"
+            element={<BiddingPlayerList />}
+          />
         </Route>
       </Routes>
     </Router>

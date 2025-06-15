@@ -228,8 +228,7 @@ const [showModal, setShowModal] = useState(false);
     fullScreen ? "fixed inset-0 z-[9999] overflow-auto" : "relative mx-auto",
     "h-screen overflow-auto",
   ].join(" ");
-  const purseBalance =
-    auctionData.team?.purse || auctionData.purseBalance || "--/--";
+
   const nextBidAmount = auctionData.bidAmount || "--/--";
 
   return (
@@ -395,13 +394,13 @@ const [showModal, setShowModal] = useState(false);
             </span>
           </div>
           <motion.div className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 py-3 font-bold text-xl text-black shadow-lg mb-3">
-            ₹{auctionData.bidAmount?.toLocaleString() ?? "--/--"}
+            ₹{auctionData.currentBid?.amount.toLocaleString() ?? "--/--"}
           </motion.div>
           <div className="flex items-center justify-center mb-3">
             <div className="bg-gray-700 rounded-full w-8 h-8 flex items-center justify-center mr-2 border border-gray-500">
-              {auctionData.currentBid?.teamLogo ? (
+              {auctionData.currentBid?.team?.logoUrl?(
                 <img
-                  src={auctionData.currentBid.teamLogo}
+                  src={auctionData.currentBid.team.logoUrl}
                   alt={auctionData.currentBid.team}
                   className="w-6 h-6"
                 />
@@ -416,15 +415,6 @@ const [showModal, setShowModal] = useState(false);
                 : auctionData.currentBid?.team?.teamName ?? "--/--"}
             </p>
           </div>
-          {/* <button
-            onClick={() => {
-              if (rtmCount > 0) setRtmCount((c) => c - 1);
-              else alert("No RTMs left");
-            }}
-            className="mt-2 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 rounded-xl text-white font-medium text-sm shadow-md w-full"
-          >
-            RTM-{rtmCount}
-          </button> */}
           <button
             onClick={handleUseRTM}
             className="mt-2 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 rounded-xl text-white font-medium text-sm shadow-md w-full"

@@ -973,7 +973,8 @@ router.get("/bidding-portal/:auctionId", auth, async (req, res) => {
       .populate("biddingHistory.player")
       .populate("biddingHistory.team")
       .populate("isPaused")
-      .populate("selectedTeams.rtmCount");
+      .populate("selectedTeams.rtmCount")
+      .populate("selectedPlayers");
 
     if (!auction) {
       return res.status(404).json({ message: "Auction not found" });
@@ -1037,6 +1038,7 @@ router.get("/bidding-portal/:auctionId", auth, async (req, res) => {
         bidAmount: entry.bidAmount,
         time: entry.time,
       })),
+      selectedPlayers: auction.selectedPlayers || [],
     });
   } catch (error) {
     console.error("Error fetching bidding data:", error);

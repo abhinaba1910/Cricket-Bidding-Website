@@ -11,19 +11,7 @@ const allRoles = [
   "Spin bowler",
   "Fast bowler",
 ];
-// const allBattingStyles = ["Right Handed Batsman", "Left Handed Batsman"];
-// const allBowlingStyles = [
-//   "Right Arm Fast",
-//   "Left Arm Fast",
-//   "Right Arm Medium",
-//   "Left Arm Medium",
-//   "Right Arm Off Break",
-//   "Left Arm Orthodox",
-//   "Right Arm Leg Break",
-//   "Chinaman",
-//   "Left Arm Fast Medium",
-//   "Right Arm Fast Medium",
-// ];
+
 const allRanks = ["A+", "A", "B", "C"];
 
 export default function ManualPlayerSelection() {
@@ -45,21 +33,7 @@ export default function ManualPlayerSelection() {
   const [selectedPlayers, setSelectedPlayers] = useState([]);
   const [queuedIds, setQueuedIds] = useState(new Set());
 
-  // useEffect(() => {
-  //   if (!id) return;
-  //   api
-  //     .get(`/get-auction/${id}`)
-  //     .then((res) => {
-  //       const { savailablePlayers } = res.data;
-  //       setPlayers(savailablePlayers || []);
 
-  //       // If adding to existing queue, don't pre-select any players
-  //       if (!addToExistingQueue) {
-  //         setSelectedPlayers(savailablePlayers || []);
-  //       }
-  //     })
-  //     .catch((err) => console.error("Failed to fetch auction data", err));
-  // }, [id, addToExistingQueue]);
 
   useEffect(() => {
     if (!id) return;
@@ -76,27 +50,13 @@ export default function ManualPlayerSelection() {
         setQueuedIds(queuedPlayerIds);
 
         if (!addToExistingQueue) {
-          setSelectedPlayers(savailablePlayers || []);
-        }
+          setSelectedPlayers([]); // Start with no player selected
+        }        
       })
       .catch((err) => console.error("Failed to fetch auction data", err));
   }, [id, addToExistingQueue]);
 
-  // const togglePlayerSelection = (player) => {
-  //   setSelectedPlayers((prev) => {
-  //     const isSelected = prev.some((p) => p._id === player._id);
-  //     if (isSelected) {
-  //       return prev.filter((p) => p._id !== player._id);
-  //     } else {
-  //       // Limit selection to 4 players for new queue, unlimited for adding to existing
-  //       if (!addToExistingQueue && prev.length >= 4) {
-  //         alert("You can select maximum 4 players at a time");
-  //         return prev;
-  //       }
-  //       return [...prev, player];
-  //     }
-  //   });
-  // };
+
 
   const togglePlayerSelection = (player) => {
     if (queuedIds.has(player._id)) return; // Ignore already queued
@@ -344,34 +304,6 @@ export default function ManualPlayerSelection() {
                   </option>
                 ))}
               </select>
-
-              {/* Batting */}
-              {/* <select
-                value={battingFilter}
-                onChange={(e) => setBattingFilter(e.target.value)}
-                className="min-w-[220px] border rounded-lg px-3 py-2 focus:outline-none"
-              >
-                <option value="">All Batting Styles</option>
-                {allBattingStyles.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
-
-            
-              <select
-                value={bowlingFilter}
-                onChange={(e) => setBowlingFilter(e.target.value)}
-                className="min-w-[220px] border rounded-lg px-3 py-2 focus:outline-none"
-              >
-                <option value="">All Bowling Styles</option>
-                {allBowlingStyles.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select> */}
 
               {/* Rank */}
               <select

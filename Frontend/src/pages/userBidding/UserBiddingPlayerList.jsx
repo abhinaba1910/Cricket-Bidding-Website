@@ -3,7 +3,14 @@ import { FiSearch, FiArrowLeft, FiEye } from "react-icons/fi";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../userManagement/Api";
 
-const allRoles = ["Batsman", "Bowler", "All-Rounder", "Wicket-Keeper"];
+const allRoles = [
+  "Batsman",
+  "Fast all-rounder",
+  "Spin all-rounder",
+  "Wicket keeper batsman",
+  "Spin bowler",
+  "Fast bowler",
+];
 const allBattingStyles = ["Right Handed Batsman", "Left Handed Batsman"];
 const allBowlingStyles = [
   "Right Arm Fast",
@@ -39,8 +46,7 @@ export default function UserBiddingPlayerList() {
     if (!id) return;
 
     // Fetch auction data to get selectedPlayers
-    api
-      .get(`/get-auction/${id}`)
+    api.get(`/bidding-portal/${id}`)
       .then((res) => {
         setPlayers(res.data.selectedPlayers || []);
         console.log("Players", res.data.selectedPlayers);
@@ -109,7 +115,7 @@ export default function UserBiddingPlayerList() {
         {/* Back + Tab */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <button
-            // onClick={() => navigate(`/admin/admin-bidding-dashboard/${id}`)}
+            onClick={() => navigate(`/user-bidding-portal/${id}`)}
             className="flex items-center px-3 py-2 bg-gray-200 rounded-full hover:bg-gray-300"
           >
             <FiArrowLeft className="mr-2 text-gray-700" /> Back
