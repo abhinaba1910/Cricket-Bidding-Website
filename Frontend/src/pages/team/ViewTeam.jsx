@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { FiChevronLeft } from "react-icons/fi";
 import api from "../../userManagement/Api";
 import toast from "react-hot-toast";
+import MobileStickyNav from "../../components/layout/MobileStickyNav";
 
 export default function ViewTeam() {
   const { id } = useParams();
@@ -160,6 +161,7 @@ export default function ViewTeam() {
           </button>
         </div>
       </div>
+      <MobileStickyNav/>
     </div>
   );
 }

@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../userManagement/Api";
+import MobileStickyNav from "../../components/layout/MobileStickyNav";
 
 export default function ViewPlayer() {
   const { id } = useParams();
@@ -126,12 +127,13 @@ export default function ViewPlayer() {
             onClick={() => {
               window.location.href=`/admin/player/${id}/edit`
             }}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+            className="px-4 py-2 max-md:mb-10 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
           >
             Edit Player
           </button>
         </div>
       </div>
+      <MobileStickyNav/>
     </div>
   );
 }
