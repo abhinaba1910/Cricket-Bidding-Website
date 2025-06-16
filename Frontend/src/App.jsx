@@ -6,7 +6,7 @@ import {
   Route,
   Outlet,
 } from "react-router-dom";
-import SplashScreen from "./components/splashScreen";
+import SplashScreen from "./components/SplashScreen";
 import AuthPage from "./pages/authentication/AuthPage";
 import Layout from "./components/layout/Layout";
 import Dashboard from "./pages/Dashboard";
