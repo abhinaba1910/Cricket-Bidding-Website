@@ -334,36 +334,53 @@ router.get("/get-auction/:id", AuthMiddleWare, async (req, res) => {
 });
 
 
-router.patch("/end-auction/:id", AuthMiddleWare, async (req, res) => {
+router.patch("/edit-auction/:id", AuthMiddleWare, async (req, res) => {
   try {
-    const auction = await Auction.findById(req.params.id);
-    if (!auction) return res.status(404).json({ error: "Auction not found" });
-
     const userId = req.user.id;
-    const userRole = req.user.role;
+    const user = await Person.findById(userId);
 
-    const isOwner = auction.createdBy.toString() === userId.toString();
-    const isAdmin = userRole === "admin" || userRole === "temp-admin";
-
-    if (!isOwner && !isAdmin) {
-      return res
-        .status(403)
-        .json({ error: "You are not authorized to start this auction" });
+    if (!user || !["admin", "temp-admin"].includes(user.role)) {
+      return res.status(403).json({ error: "Unauthorized access" });
     }
 
-    if (auction.status === "live") {
-      auction.status = "completed";
-      await auction.save();
-      return res.json({
-        message: "Auction ended successfully",
-        status: "completed",
+    const { id } = req.params;
+    const { auctionName, selectedPlayers, selectedTeams } = req.body;
+
+    const auction = await Auction.findById(id);
+
+    if (!auction) {
+      return res.status(404).json({ error: "Auction not found" });
+    }
+
+    console.log("Auction status:", auction.status);
+console.log("Is auction paused:", auction.isPaused);
+
+    if (auction.status !== "live" || !auction.isPaused) {
+      return res.status(400).json({
+        error:
+          "Auction can only be edited when it is 'live' and currently paused.",
       });
-    } else {
-      return res.status(400).json({ error: "Only live auctions can be ended" });
     }
-  } catch (err) {
-    console.error("End auction error:", err);
-    res.status(500).json({ error: "Server error ending auction" });
+
+    // Update fields
+    if (auctionName) auction.auctionName = auctionName;
+    if (selectedPlayers) auction.selectedPlayers = selectedPlayers;
+
+    if (selectedTeams && Array.isArray(selectedTeams)) {
+      auction.selectedTeams = selectedTeams.map((teamObj) => ({
+        team: teamObj.team,
+        // manager: teamObj.manager || null,
+        // avatar: teamObj.avatar || null,
+        // rtmCount: teamObj.rtmCount || 0,
+      }));
+    }
+
+    await auction.save();
+
+    res.json({ message: "Auction updated successfully.", auction });
+  } catch (error) {
+    console.error("Error updating auction:", error);
+    res.status(500).json({ error: "Internal server error." });
   }
 });
 

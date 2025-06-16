@@ -16,6 +16,7 @@ export function AddTeamsModal({ auctionId, existingTeamIds, onClose, onAdd }) {
   useEffect(() => {
     api.get("/get-teams")
       .then(res => {
+        console.log(res.data)
         const nonSelected = res.data.filter(t => !existingTeamIds.includes(t._id));
         setTeams(nonSelected);
       })
@@ -37,9 +38,11 @@ export function AddTeamsModal({ auctionId, existingTeamIds, onClose, onAdd }) {
     setToAdd(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
   const commit = () => {
-    onAdd(toAdd);
+    const selectedFullTeams = teams.filter((t) => toAdd.includes(t._id));
+    onAdd(selectedFullTeams); // ✅ send full objects, not just IDs
     onClose();
   };
+  
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">

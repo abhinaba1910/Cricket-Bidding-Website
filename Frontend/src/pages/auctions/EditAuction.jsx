@@ -5,6 +5,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { AddPlayersModal } from "./AddPlayersModal";
 import { AddTeamsModal } from "./AddTeamsModal";
 import MobileStickyNav from "../../components/layout/MobileStickyNav";
+import toast from "react-hot-toast";
 
 export default function EditAuction() {
   const { id } = useParams();
@@ -17,13 +18,15 @@ export default function EditAuction() {
 
   // Load existing auction data
   useEffect(() => {
-    api.get(`/get-auction/${id}`)
-      .then(res => {
-        setAuctionName(res.data.name);
-        setSelectedPlayers(res.data.players || []);
-        setSelectedTeams(res.data.teams || []);
+    api
+      .get(`/get-auction/${id}`)
+      .then((res) => {
+        setAuctionName(res.data.auctionName);
+        setSelectedPlayers(res.data.selectedPlayers || []);
+        setSelectedTeams(res.data.selectedTeams || []);
+        console.log(res.data);
       })
-      .catch(err => console.error("Error loading auction", err));
+      .catch((err) => console.error("Error loading auction", err));
   }, [id]);
 
   // Modal toggles
@@ -31,29 +34,48 @@ export default function EditAuction() {
   const [showTeamModal, setShowTeamModal] = useState(false);
 
   // Handlers for adding items
-  const handleAddPlayers = (newPlayerIds) => {
-    setSelectedPlayers(prev => [...prev, ...newPlayerIds]);
-    // TODO: optionally persist immediately:
-    // api.patch(`/get-auction/${id}`, { players: [...selectedPlayers, ...newPlayerIds] })
+  const handleAddPlayers = (newPlayers) => {
+    const newPlayerIds = new Set(selectedPlayers.map((p) => p._id));
+    const updatedPlayers = [
+      ...selectedPlayers,
+      ...newPlayers.filter((p) => !newPlayerIds.has(p._id)),
+    ];
+    setSelectedPlayers(updatedPlayers);
   };
 
-  const handleAddTeams = (newTeamIds) => {
-    setSelectedTeams(prev => [...prev, ...newTeamIds]);
-    // TODO: optionally persist immediately:
-    // api.patch(`/get-auction/${id}`, { teams: [...selectedTeams, ...newTeamIds] })
+  const handleAddTeams = (newTeams) => {
+    const newTeamIds = new Set(selectedTeams.map((t) => t._id));
+    const updatedTeams = [
+      ...selectedTeams,
+      ...newTeams.filter((t) => !newTeamIds.has(t._id)),
+    ];
+    setSelectedTeams(updatedTeams);
   };
+  
 
   // Save full auction
   const saveAuction = () => {
-    api.patch(`/get-auction/${id}`, {
-      name: auctionName,
-      players: selectedPlayers,
-      teams: selectedTeams,
-    })
-      .then(() => alert("Auction updated!"))
-      .catch(err => {
+    if (!selectedPlayers.length || !selectedTeams.length) {
+      alert("Please add both players and teams before saving.");
+      return;
+    }
+
+    api
+      .patch(`/edit-auction/${id}`, {
+        auctionName,
+        selectedPlayers: selectedPlayers.map((p) => p._id),
+        selectedTeams: selectedTeams.map((team) => ({
+          team: team._id,
+          // manager: team.manager || null,
+          // avatar: team.avatar || null,
+          // rtmCount: team.rtmCount || 0,
+        })),
+      })
+      .then(() => toast.success("Auction updated!"))
+      .then(()=> window.location.href="/admins-my-auction-info")
+      .catch((err) => {
         console.error("Save failed", err);
-        alert("Failed to save auction.");
+        toast.error("Failed to save auction.");
       });
   };
 
@@ -75,7 +97,7 @@ export default function EditAuction() {
         <input
           type="text"
           value={auctionName}
-          onChange={e => setAuctionName(e.target.value)}
+          onChange={(e) => setAuctionName(e.target.value)}
           className="mt-1 w-full border rounded px-3 py-2"
         />
       </div>
@@ -84,12 +106,12 @@ export default function EditAuction() {
       <div>
         <h2 className="font-semibold mb-2">Players in Auction:</h2>
         <div className="flex flex-wrap gap-2">
-          {selectedPlayers.map(pid => (
+          {selectedPlayers.map((player) => (
             <span
-              key={pid}
+              key={player._id}
               className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm"
             >
-              {pid}
+              {player.name}
             </span>
           ))}
         </div>
@@ -105,14 +127,16 @@ export default function EditAuction() {
       <div>
         <h2 className="font-semibold mb-2">Teams in Auction:</h2>
         <div className="flex flex-wrap gap-2">
-          {selectedTeams.map(tid => (
-            <span
-              key={tid}
-              className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm"
-            >
-              {tid}
-            </span>
-          ))}
+          {selectedTeams
+            .filter((team) => team && team._id)
+            .map((team) => (
+              <span
+                key={team._id}
+                className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm"
+              >
+                {team.teamName}
+              </span>
+            ))}
         </div>
         <button
           onClick={() => setShowTeamModal(true)}
@@ -134,7 +158,8 @@ export default function EditAuction() {
       {showPlayerModal && (
         <AddPlayersModal
           auctionId={id}
-          existingPlayerIds={selectedPlayers}
+          // existingPlayerIds={selectedPlayers}
+          existingPlayerIds={selectedPlayers.map((p) => p._id)}
           onClose={() => setShowPlayerModal(false)}
           onAdd={handleAddPlayers}
         />
@@ -142,12 +167,12 @@ export default function EditAuction() {
       {showTeamModal && (
         <AddTeamsModal
           auctionId={id}
-          existingTeamIds={selectedTeams}
+          existingTeamIds={selectedTeams.map((t) => t._id)}
           onClose={() => setShowTeamModal(false)}
           onAdd={handleAddTeams}
         />
       )}
-      <MobileStickyNav/>
+      <MobileStickyNav />
     </div>
   );
 }

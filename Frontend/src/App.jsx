@@ -115,6 +115,7 @@ function App() {
         <Route element={<ProtectedLayout isAuthenticated={isAuthenticated} />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/create-auction" element={<CreateAuction />} />
+          <Route path="/edit-auction/:id" element={<EditAuction />} />
           <Route path="/add-temp-admin" element={<AddTempAdmin />} />
           <Route path="/create-team" element={<CreateTeam />} />
           <Route path="/add-players" element={<AddPlayer />} />

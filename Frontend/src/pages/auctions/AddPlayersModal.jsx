@@ -5,13 +5,25 @@ import api from "../../userManagement/Api";
 const allRoles = ["Batsman", "Bowler", "All-Rounder", "Wicket-Keeper"];
 const allBattingStyles = ["Right Handed Batsman", "Left Handed Batsman"];
 const allBowlingStyles = [
-  "Right Arm Fast","Left Arm Fast","Right Arm Medium","Left Arm Medium",
-  "Right Arm Off Break","Left Arm Orthodox","Right Arm Leg Break","Chinaman",
-  "Left Arm Fast Medium","Right Arm Fast Medium"
+  "Right Arm Fast",
+  "Left Arm Fast",
+  "Right Arm Medium",
+  "Left Arm Medium",
+  "Right Arm Off Break",
+  "Left Arm Orthodox",
+  "Right Arm Leg Break",
+  "Chinaman",
+  "Left Arm Fast Medium",
+  "Right Arm Fast Medium",
 ];
-const allRanks = ["A+","A","B","C"];
+const allRanks = ["A+", "A", "B", "C"];
 
-export function AddPlayersModal({ auctionId, existingPlayerIds, onClose, onAdd }) {
+export function AddPlayersModal({
+  auctionId,
+  existingPlayerIds,
+  onClose,
+  onAdd,
+}) {
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -27,34 +39,46 @@ export function AddPlayersModal({ auctionId, existingPlayerIds, onClose, onAdd }
 
   // Fetch all players, then filter out existing
   useEffect(() => {
-    api.get("/players")
-      .then(res => {
-        const nonSelected = res.data.filter(p => !existingPlayerIds.includes(p.id));
+    api
+      .get("/get-player/available")
+      .then((res) => {
+        const nonSelected = res.data.filter(
+          (p) => !existingPlayerIds.includes(p._id)
+        );
         setPlayers(nonSelected);
       })
-      .catch(err => console.error("Error loading players", err))
+
+      .catch((err) => console.error("Error loading players", err))
       .finally(() => setLoading(false));
   }, [existingPlayerIds]);
 
   // Apply search + filters
   const filtered = useMemo(() => {
     const term = search.toLowerCase();
-    return players.filter(p => {
+    return players.filter((p) => {
       return (
         p.name.toLowerCase().includes(term) &&
-        (!roleFilter    || p.role         === roleFilter) &&
+        (!roleFilter || p.role === roleFilter) &&
         (!battingFilter || p.battingStyle === battingFilter) &&
         (!bowlingFilter || p.bowlingStyle === bowlingFilter) &&
-        (!rankFilter    || p.grade        === rankFilter)
+        (!rankFilter || p.grade === rankFilter)
       );
     });
   }, [players, search, roleFilter, battingFilter, bowlingFilter, rankFilter]);
 
-  const toggle = (id) =>
-    setToAdd(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const toggle = (player) => {
+    setToAdd((prev) => {
+      const exists = prev.find((p) => p._id === player._id);
+      if (exists) {
+        return prev.filter((p) => p._id !== player._id);
+      } else {
+        return [...prev, player];
+      }
+    });
+  };
 
   const commit = () => {
-    onAdd(toAdd);
+    onAdd(toAdd); // full player objects
     onClose();
   };
 
@@ -64,7 +88,9 @@ export function AddPlayersModal({ auctionId, existingPlayerIds, onClose, onAdd }
         {/* header */}
         <div className="flex justify-between items-center p-4 border-b">
           <h3 className="text-lg font-semibold">Add Players</h3>
-          <button onClick={onClose}><FiX size={20} /></button>
+          <button onClick={onClose}>
+            <FiX size={20} />
+          </button>
         </div>
 
         <div className="p-4 space-y-4">
@@ -75,36 +101,57 @@ export function AddPlayersModal({ auctionId, existingPlayerIds, onClose, onAdd }
               <input
                 className="w-full border rounded pl-10 pr-3 py-2"
                 placeholder="Search by name…"
-                value={search} onChange={e => setSearch(e.target.value)}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
               />
             </div>
             <select
               className="border rounded px-3 py-2"
-              value={roleFilter} onChange={e => setRoleFilter(e.target.value)}
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
             >
               <option value="">All Roles</option>
-              {allRoles.map(r => <option key={r} value={r}>{r}</option>)}
+              {allRoles.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
             </select>
             <select
               className="border rounded px-3 py-2"
-              value={battingFilter} onChange={e => setBattingFilter(e.target.value)}
+              value={battingFilter}
+              onChange={(e) => setBattingFilter(e.target.value)}
             >
               <option value="">All Batting Styles</option>
-              {allBattingStyles.map(r => <option key={r} value={r}>{r}</option>)}
+              {allBattingStyles.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
             </select>
             <select
               className="border rounded px-3 py-2"
-              value={bowlingFilter} onChange={e => setBowlingFilter(e.target.value)}
+              value={bowlingFilter}
+              onChange={(e) => setBowlingFilter(e.target.value)}
             >
               <option value="">All Bowling Styles</option>
-              {allBowlingStyles.map(r => <option key={r} value={r}>{r}</option>)}
+              {allBowlingStyles.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
             </select>
             <select
               className="border rounded px-3 py-2"
-              value={rankFilter} onChange={e => setRankFilter(e.target.value)}
+              value={rankFilter}
+              onChange={(e) => setRankFilter(e.target.value)}
             >
               <option value="">All Ranks</option>
-              {allRanks.map(r => <option key={r} value={r}>{r}</option>)}
+              {allRanks.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -115,15 +162,15 @@ export function AddPlayersModal({ auctionId, existingPlayerIds, onClose, onAdd }
             <p className="text-center py-8 text-gray-500">No players found.</p>
           ) : (
             <div className="space-y-2 max-h-80 overflow-auto">
-              {filtered.map(p => (
+              {filtered.map((p) => (
                 <label
-                  key={p.id}
+                  key={p._id}
                   className="flex items-center gap-3 border rounded px-3 py-2 hover:bg-gray-50"
                 >
                   <input
                     type="checkbox"
-                    checked={toAdd.includes(p.id)}
-                    onChange={() => toggle(p.id)}
+                    checked={toAdd.some((x) => x._id === p._id)}
+                    onChange={() => toggle(p)}
                   />
                   <img
                     src={p.playerPic || "https://placehold.co/40x40"}
@@ -133,7 +180,8 @@ export function AddPlayersModal({ auctionId, existingPlayerIds, onClose, onAdd }
                   <div className="flex-1">
                     <div className="font-medium">{p.name}</div>
                     <div className="text-xs text-gray-500">
-                      {p.role} • {p.country} • ₹{p.basePrice?.toLocaleString() || 0}
+                      {p.role} • {p.country} • ₹
+                      {p.basePrice?.toLocaleString() || 0}
                     </div>
                   </div>
                 </label>

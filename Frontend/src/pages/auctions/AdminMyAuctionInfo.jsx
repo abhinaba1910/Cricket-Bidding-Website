@@ -232,7 +232,7 @@ export default function AuctionsInfo() {
                     </button>
                   )}
                   <Link
-                    to={`/admin-edit-auction `}
+                    to={`/edit-auction/${a.id} `}
                     className="inline-flex m-2  items-center bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-[9px] rounded text-sm"
                   >
                     <FiEdit className="mr-1" size={14} /> Edit
