@@ -188,7 +188,7 @@ export default function AddPlayer() {
                     {[
                       "Batsman",
                       "Fast all-rounde",
-                      "ASpin all-rounder",
+                      "Spin all-rounder",
                       "Wicket keeper batsman",
                       "Spin bowler",
                       "Fast bowler",

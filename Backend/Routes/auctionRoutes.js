@@ -334,6 +334,60 @@ router.get("/get-auction/:id", AuthMiddleWare, async (req, res) => {
 });
 
 
+// router.patch("/edit-auction/:id", AuthMiddleWare, async (req, res) => {
+//   try {
+//     const userId = req.user.id;
+//     const user = await Person.findById(userId);
+
+//     if (!user || !["admin", "temp-admin"].includes(user.role)) {
+//       return res.status(403).json({ error: "Unauthorized access" });
+//     }
+
+//     const { id } = req.params;
+//     const { auctionName, selectedPlayers, selectedTeams } = req.body;
+
+//     const auction = await Auction.findById(id);
+
+//     if (!auction) {
+//       return res.status(404).json({ error: "Auction not found" });
+//     }
+
+//     // Update fields
+//     if (auctionName) auction.auctionName = auctionName;
+//     if (selectedPlayers) auction.selectedPlayers = selectedPlayers;
+    
+
+//     if (selectedTeams && Array.isArray(selectedTeams)) {
+//       const existingTeamsMap = new Map();
+//       auction.selectedTeams.forEach((teamEntry) => {
+//         existingTeamsMap.set(String(teamEntry.team), teamEntry);
+//       });
+    
+//       selectedTeams.forEach((newTeamObj) => {
+//         const teamIdStr = String(newTeamObj.team);
+//         if (!existingTeamsMap.has(teamIdStr)) {
+//           existingTeamsMap.set(teamIdStr, {
+//             team: newTeamObj.team,
+//             manager: newTeamObj.manager || null,
+//             avatar: newTeamObj.avatar || null,
+//             rtmCount: newTeamObj.rtmCount || 0,
+//           });
+//         }
+//       });
+    
+//       auction.selectedTeams = Array.from(existingTeamsMap.values());
+//     }
+    
+
+//     await auction.save();
+
+//     res.json({ message: "Auction updated successfully.", auction });
+//   } catch (error) {
+//     console.error("Error updating auction:", error);
+//     res.status(500).json({ error: "Internal server error." });
+//   }
+// });
+
 router.patch("/edit-auction/:id", AuthMiddleWare, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -352,27 +406,35 @@ router.patch("/edit-auction/:id", AuthMiddleWare, async (req, res) => {
       return res.status(404).json({ error: "Auction not found" });
     }
 
-    console.log("Auction status:", auction.status);
-console.log("Is auction paused:", auction.isPaused);
-
-    if (auction.status !== "live" || !auction.isPaused) {
-      return res.status(400).json({
-        error:
-          "Auction can only be edited when it is 'live' and currently paused.",
-      });
-    }
-
     // Update fields
     if (auctionName) auction.auctionName = auctionName;
     if (selectedPlayers) auction.selectedPlayers = selectedPlayers;
 
     if (selectedTeams && Array.isArray(selectedTeams)) {
-      auction.selectedTeams = selectedTeams.map((teamObj) => ({
-        team: teamObj.team,
-        // manager: teamObj.manager || null,
-        // avatar: teamObj.avatar || null,
-        // rtmCount: teamObj.rtmCount || 0,
-      }));
+      const existingTeamsMap = new Map();
+      auction.selectedTeams.forEach((teamEntry) => {
+        existingTeamsMap.set(String(teamEntry.team), teamEntry);
+      });
+
+      // Determine common RTM count from existing teams
+      const existingRTMCounts = Array.from(existingTeamsMap.values()).map((t) => t.rtmCount);
+      const defaultRTM = existingRTMCounts.length
+        ? Math.round(existingRTMCounts.reduce((a, b) => a + b, 0) / existingRTMCounts.length)
+        : 0;
+
+      selectedTeams.forEach((newTeamObj) => {
+        const teamIdStr = String(newTeamObj.team);
+        if (!existingTeamsMap.has(teamIdStr)) {
+          existingTeamsMap.set(teamIdStr, {
+            team: newTeamObj.team,
+            manager: newTeamObj.manager || null,
+            avatar: newTeamObj.avatar || null,
+            rtmCount: defaultRTM, // Inherit from others
+          });
+        }
+      });
+
+      auction.selectedTeams = Array.from(existingTeamsMap.values());
     }
 
     await auction.save();
@@ -383,6 +445,7 @@ console.log("Is auction paused:", auction.isPaused);
     res.status(500).json({ error: "Internal server error." });
   }
 });
+
 
 router.get("/get-all-auctions", AuthMiddleWare, async (req, res) => {
   try {

@@ -531,6 +531,7 @@ router.get("/queue-status/:auctionId", auth, async (req, res) => {
         await Auction.findByIdAndUpdate(auction._id, {
           manualPlayerQueue: [],
           currentQueuePosition: 0,
+          isPaused: true,
         });
         validQueue = [];
 
@@ -704,7 +705,9 @@ router.post("/start-automatic-bidding/:auctionId", auth, async (req, res) => {
 
     if (automaticFilter !== "All") {
       filterQuery.role =
-        automaticFilter === "Wicket keeper batsman" ? "Wicket keeper batsman" : automaticFilter;
+        automaticFilter === "Wicket keeper batsman"
+          ? "Wicket keeper batsman"
+          : automaticFilter;
     }
 
     // ✅ Limit to only selected players
@@ -835,117 +838,6 @@ router.get("/get-auction-pause-status/:id", auth, async (req, res) => {
   }
 });
 
-// router.patch("/unsold/:auctionId", auth, async (req, res) => {
-//   try {
-//     const { auctionId } = req.params;
-
-//     const auction = await Auction.findById(auctionId)
-//       .populate("currentPlayerOnBid")
-//       .populate("manualPlayerQueue.player");
-
-//     if (!auction || !auction.currentPlayerOnBid) {
-//       return res.status(400).json({ message: "No current player on bid." });
-//     }
-
-//     const player = await Player.findById(auction.currentPlayerOnBid._id);
-//     if (!player) {
-//       return res.status(404).json({ message: "Player not found." });
-//     }
-
-//     // ✅ Step 1: Mark player as Unsold
-//     player.availability = "Unsold";
-//     await player.save();
-
-//     // ✅ Step 2: Remove any accidental bid record (safety)
-//     auction.biddingHistory = auction.biddingHistory.filter(
-//       (bid) => String(bid.player) !== String(player._id)
-//     );
-
-//     // ✅ Step 3: Find next player (manual or automatic)
-//     let nextPlayer = null;
-//     let newQueuePosition = auction.currentQueuePosition;
-
-//     if (auction.selectionMode === "manual") {
-//       const nextPosition = auction.currentQueuePosition + 1;
-//       const sortedQueue = auction.manualPlayerQueue.sort(
-//         (a, b) => a.position - b.position
-//       );
-
-//       if (sortedQueue.length > nextPosition) {
-//         nextPlayer = await Player.findById(sortedQueue[nextPosition].player);
-//         newQueuePosition = nextPosition;
-//       }
-
-//       // Push unsold player to the end of queue
-//       const maxPos = sortedQueue.reduce(
-//         (max, q) => Math.max(max, q.position || 0),
-//         0
-//       );
-//       auction.manualPlayerQueue.push({
-//         player: player._id,
-//         position: maxPos + 1,
-//       });
-
-//     } else {
-//       // Automatic mode
-//       const filterQuery =
-//         auction.automaticFilter === "All"
-//           ? { availability: "Available" }
-//           : {
-//               availability: "Available",
-//               role:
-//                 auction.automaticFilter === "Wicket-keeper"
-//                   ? "Wicket-keeper"
-//                   : auction.automaticFilter,
-//             };
-
-//       nextPlayer = await Player.findOne({
-//         ...filterQuery,
-//         _id: { $in: auction.selectedPlayers, $ne: player._id },
-//       });
-//     }
-
-//     // ✅ Step 4: Update auction state
-//     if (nextPlayer) {
-//       auction.currentPlayerOnBid = nextPlayer._id;
-//       auction.currentBid = { team: null, amount: 0 };
-//       auction.bidAmount = {
-//         player: nextPlayer._id,
-//         amount: nextPlayer.basePrice,
-//       };
-//       auction.currentQueuePosition = newQueuePosition;
-//       auction.biddingStarted = true;
-//     } else {
-//       // No next player
-//       auction.currentPlayerOnBid = null;
-//       auction.currentBid = { team: null, amount: 0 };
-//       auction.bidAmount = { player: null, amount: 0 };
-//       auction.biddingStarted = false;
-//     }
-
-//     await auction.save();
-
-//     const isLastPlayer = !nextPlayer;
-//     const remainingPlayers =
-//       auction.selectionMode === "manual"
-//         ? Math.max(0, auction.manualPlayerQueue.length - newQueuePosition - 1)
-//         : 0;
-
-//     return res.status(200).json({
-//       message: "Player marked as Unsold. Moved to next.",
-//       nextPlayer: nextPlayer || null,
-//       isLastPlayer,
-//       currentQueuePosition: auction.currentQueuePosition,
-//       totalQueueLength: auction.manualPlayerQueue?.length || 0,
-//       remainingPlayers,
-//       isPaused: auction.isPaused,
-//     });
-//   } catch (err) {
-//     console.error("Unsold Error:", err);
-//     return res.status(500).json({ message: "Server error." });
-//   }
-// });
-
 router.patch("/unsold/:auctionId", auth, async (req, res) => {
   try {
     const { auctionId } = req.params;
@@ -1047,6 +939,32 @@ router.patch("/unsold/:auctionId", auth, async (req, res) => {
   }
 });
 
+// router.patch("/end-auction/:auctionId", auth, async (req, res) => {
+//   try {
+//     const { auctionId } = req.params;
+
+//     const auction = await Auction.findById(auctionId);
+//     if (!auction) {
+//       return res.status(404).json({ message: "Auction not found." });
+//     }
+
+//     auction.status = "completed";
+//     auction.currentPlayerOnBid = null;
+//     auction.currentBid = { team: null, amount: 0 };
+//     auction.bidAmount = { player: null, amount: 0 };
+//     auction.isPaused = true;
+
+//     await auction.save();
+
+//     return res
+//       .status(200)
+//       .json({ message: "Auction ended successfully.", auction });
+//   } catch (err) {
+//     console.error("End Auction Error:", err);
+//     return res.status(500).json({ message: "Server error." });
+//   }
+// });
+
 router.patch("/end-auction/:auctionId", auth, async (req, res) => {
   try {
     const { auctionId } = req.params;
@@ -1056,22 +974,35 @@ router.patch("/end-auction/:auctionId", auth, async (req, res) => {
       return res.status(404).json({ message: "Auction not found." });
     }
 
+    // Finalize auction status and clear current bid data
     auction.status = "completed";
     auction.currentPlayerOnBid = null;
     auction.currentBid = { team: null, amount: 0 };
     auction.bidAmount = { player: null, amount: 0 };
     auction.isPaused = true;
 
+    // For each selected team in the auction, update their purse
+    for (const teamEntry of auction.selectedTeams) {
+      const team = await Team.findById(teamEntry.team);
+      if (team) {
+        const remainingAmount = team.remaining || 0;
+        team.purse += remainingAmount;
+        team.remaining = 0;
+        await team.save();
+      }
+    }
+
     await auction.save();
 
     return res
       .status(200)
-      .json({ message: "Auction ended successfully.", auction });
+      .json({ message: "Auction ended successfully. Teams updated.", auction });
   } catch (err) {
     console.error("End Auction Error:", err);
     return res.status(500).json({ message: "Server error." });
   }
 });
+
 
 // 8. Get real-time bidding data
 router.get("/get-bidding-data/:auctionId", auth, async (req, res) => {
@@ -1355,8 +1286,7 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
   }
 });
 
-
-const activeRTMWindow = new Map(); 
+const activeRTMWindow = new Map();
 
 // routes/auction.js
 router.post("/use-rtm/:auctionId", auth, async (req, res) => {
@@ -1372,6 +1302,9 @@ router.post("/use-rtm/:auctionId", auth, async (req, res) => {
       .populate("selectedTeams.manager");
 
     if (!auction) return res.status(404).json({ message: "Auction not found" });
+    if (auction.status === "completed") {
+      return res.status(404).json({ message: "Auction completed" });
+    }
 
     // Find the selected team & manager
     const selectedTeam = auction.selectedTeams.find(

@@ -8,7 +8,7 @@ export default defineConfig({
   server:{
     proxy:{
       "/api":{
-        target: isLocal ? "http://localhost:6001":"https", 
+        target: isLocal ? "http://localhost:6001":"https://cricket-bidding-website-backend.onrender.com", 
         changeOrigin: true,
         secure: false,
       },
