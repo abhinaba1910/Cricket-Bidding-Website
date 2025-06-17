@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { useNavigate, useParams } from "react-router-dom";
 import BidButton from "../../components/ui/BidButton";
@@ -8,9 +8,10 @@ import toast from "react-hot-toast";
 import { FaUserTie, FaUsers } from "react-icons/fa";
 import { GiMoneyStack, GiCardRandom } from "react-icons/gi";
 import Api from "../../userManagement/Api";
+import { io } from "socket.io-client";
 
 // ─── Shared “CriteriaTable” for Desktop ────────────────────────────
-// Bid paddle animation variants
+// Bid paddle animation variants (unchanged)
 const paddleVariants = {
   rest: {
     rotate: -15,
@@ -103,17 +104,17 @@ const DesktopTeamCard = ({ team }) => {
   );
 };
 
-// ─── Main Desktop Component ─────────────────────────────────────────
 export default function UserBiddingDashboardDesktop() {
   const navigate = useNavigate();
   const [fullScreen, setFullScreen] = useState(false);
   const [isBidding, setIsBidding] = useState(false);
-  const { id } = useParams();
+  const { id } = useParams(); // auctionId
   const [emoteToPlay, setEmoteToPlay] = useState(null);
   const [lastSoldTeam, setLastSoldTeam] = useState(null);
   const [rtmCount, setRtmCount] = useState(0);
   const toggleFullScreen = () => setFullScreen((fs) => !fs);
-  // ─── Sample Auction Data ────────────────────────────────────────
+
+  // ─── Sample Auction Data for initialization ────────────────────
   const sampleAuction = {
     lastSold: { name: "--/--", price: "--/--", team: "--/--" },
     mostExpensive: { name: "--/--", price: "--/--", team: "--/--" },
@@ -147,18 +148,90 @@ export default function UserBiddingDashboardDesktop() {
       },
     },
     adminImageUrl: null,
+    team: null, // will fill from API
+    biddingHistory: [],
+    lastSoldPlayer: null,
+    mostExpensivePlayer: null,
+    currentPlayer: null,
+    bidAmount: null,
   };
 
   const [showModal, setShowModal] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
-  // const openPlayerModal = () => {
-  //   if (auctionData.currentPlayer) {
-  //     setSelectedPlayer(auctionData.currentPlayer);
-  //     console.log(auctionData.currentPlayer)
-  //     setShowModal(true);
-  //   }
-  // };
 
+  // Auction data state
+  const [auctionData, setAuctionData] = useState(sampleAuction);
+  const [avatarUrl, setAvatarUrl] = useState(null);
+  const [error, setError] = useState(null);
+
+  // Socket ref
+  const socketRef = useRef(null);
+
+  // Fetch function to get bidding-portal data
+  const fetchAuctionData = async () => {
+    try {
+      const response = await Api.get(`/bidding-portal/${id}`);
+      const data = response.data;
+      console.log("Fetched Auction Data:", data);
+
+      // Update state
+      setAuctionData(data);
+
+      // Avatar processing
+      if (data.team?.avatar) {
+        const raw = data.team.avatar;
+        const idx = raw.indexOf("/models");
+        const publicPath = idx >= 0 ? raw.slice(idx) : raw;
+        setAvatarUrl(publicPath);
+      }
+
+      // RTM count
+      setRtmCount(data.team?.rtmCount || 0);
+
+      // Emote logic for last sold:
+      const history = data.biddingHistory || [];
+      const lastEntry = history[history.length - 1] || null;
+      if (lastEntry) {
+        const soldTeamId = lastEntry.team._id || lastEntry.team;
+        if (soldTeamId !== lastSoldTeam) {
+          setLastSoldTeam(soldTeamId);
+          if (soldTeamId === data.team.teamId) {
+            setEmoteToPlay("BidWon");
+          } else {
+            setEmoteToPlay("LostBid");
+          }
+          setTimeout(() => setEmoteToPlay(null), 5000);
+        }
+      }
+
+      // Update “lastSold” and “mostExpensive” display
+      const formatPlayerData = (entry) => {
+        if (!entry || !entry.player || !entry.team)
+          return {
+            name: "--/--",
+            price: "--/--",
+            team: "--/--",
+          };
+        return {
+          name: entry.player.name || "--/--",
+          price: entry.bidAmount || "--/--",
+          team: entry.team.shortName || "--/--",
+        };
+      };
+      setAuctionData((prev) => ({
+        ...prev,
+        lastSold: formatPlayerData(data.lastSoldPlayer),
+        mostExpensive: formatPlayerData(data.mostExpensivePlayer),
+        // currentLot, currentBid, etc. assumed inside data.currentPlayer, data.currentBid
+      }));
+    } catch (error) {
+      console.error("Error fetching auction data:", error);
+      toast.error("Error fetching auction data");
+      setError(error);
+    }
+  };
+
+  // Open player detail modal
   const openPlayerModal = () => {
     const p = auctionData.currentPlayer;
     if (p) {
@@ -181,82 +254,12 @@ export default function UserBiddingDashboardDesktop() {
       setShowModal(true);
     }
   };
-
-  // Helper to close
   const closePlayerModal = () => {
     setShowModal(false);
     setSelectedPlayer(null);
   };
 
-  const [auctionData, setAuctionData] = useState(sampleAuction);
-  const [avatarUrl, setAvatarUrl] = useState(null);
-  const [error, setError] = useState(null);
-  useEffect(() => {
-    const fetchAuctionData = async () => {
-      try {
-        const response = await Api.get(`/bidding-portal/${id}`);
-        const data = response.data;
-        console.log("Fetched Auction Data:", data);
-        setAuctionData(data);
-        if (data.team?.avatar) {
-          const raw = data.team.avatar; // e.g. "Frontend/public/models/char2.glb"
-          const idx = raw.indexOf("/models"); // find where the real path starts
-          const publicPath = idx >= 0 ? raw.slice(idx) : raw; // "/models/char2.glb"
-          console.log("Loading GLB from:", publicPath);
-          setAvatarUrl(publicPath);
-        }
-
-        setRtmCount(data.team.rtmCount);
-        console.error("avatar from back:", data.team.avatar);
-        const history = data.biddingHistory || [];
-        const lastEntry = history[history.length - 1] || null;
-        if (lastEntry) {
-          const soldTeamId = lastEntry.team._id || lastEntry.team;
-          if (soldTeamId !== lastSoldTeam) {
-            setLastSoldTeam(soldTeamId);
-
-            if (soldTeamId === data.team.teamId) {
-              setEmoteToPlay("BidWon");
-            } else {
-              setEmoteToPlay("LostBid");
-            }
-            setTimeout(() => setEmoteToPlay(null), 5000);
-          }
-        }
-        const formatPlayerData = (entry) => {
-          if (!entry || !entry.player || !entry.team)
-            return {
-              name: "--/--",
-              price: "--/--",
-              team: "--/--",
-            };
-
-          return {
-            name: entry.player.name || "--/--",
-            price: entry.bidAmount || "--/--",
-            team: entry.team.shortName || "--/--",
-          };
-        };
-
-        setAuctionData((prev) => ({
-          ...prev,
-          lastSold: formatPlayerData(data.lastSoldPlayer),
-          mostExpensive: formatPlayerData(data.mostExpensivePlayer),
-        }));
-      } catch (error) {
-        toast.error("Error fetching auction data:", error);
-      }
-    };
-
-    fetchAuctionData();
-    const interval = setInterval(fetchAuctionData, 800);
-
-    // Cleanup to stop interval on unmount
-    return () => clearInterval(interval);
-  }, [id, lastSoldTeam]);
-
-  const { tableNumbers, currentLot, adminImageUrl } = auctionData;
-
+  // Handle placing a bid
   const handleBid = async () => {
     const playerId = auctionData?.currentPlayer?._id;
     const teamId = auctionData?.team?.teamId;
@@ -266,29 +269,22 @@ export default function UserBiddingDashboardDesktop() {
       alert("Missing team or player information.");
       return;
     }
-
     if (!visibleBid || visibleBid <= 0) {
       alert("Invalid bid amount.");
       return;
     }
-
     const payload = {
-      auctionId: id,
       playerId,
       teamId,
-      bidAmount: visibleBid, // ✅ send what is visible, NOT incremented
+      bidAmount: visibleBid,
     };
-
     try {
       setIsBidding(true);
       const res = await Api.post(`/place-bid/${id}`, payload);
-      setEmoteToPlay(null);
-      setTimeout(() => setEmoteToPlay("HandRaise"), 10);
-
       toast.success("Bid Placed Successfully");
-      // Refresh data
-      const updated = await Api.get(`/bidding-portal/${id}`);
-      setAuctionData(updated.data);
+      // After placing bid, we rely on socket event to refresh data,
+      // but we can also fetch immediately:
+      fetchAuctionData();
     } catch (error) {
       console.error("Failed to place bid:", error);
       toast.error(error.response?.data?.error || "Failed to place bid");
@@ -297,32 +293,110 @@ export default function UserBiddingDashboardDesktop() {
     }
   };
 
+  // Handle RTM
   const handleUseRTM = async () => {
     if (rtmCount <= 0) {
       alert("No RTMs left");
       return;
     }
-
     const myTeamId = auctionData?.team?.teamId;
     try {
       const response = await Api.post(`/use-rtm/${id}`, {
-        teamId: myTeamId, // The current user's selected team ID
+        teamId: myTeamId,
       });
-
       toast.success("RTM successful!");
       setRtmCount((prev) => prev - 1);
-
-      // Optionally refetch auction state or update local UI
-      // await fetchAuctionData();
+      // rely on socket update for full state refresh if backend emits
+      fetchAuctionData();
     } catch (err) {
       console.error("RTM error:", err);
       toast.error(err.response?.data?.message || "Failed to use RTM");
-    } finally {
-      setTimeout(() => setToast(null), 3000);
     }
   };
 
-  // ─── Container Classes (Full-screen toggle) ───────────────────
+  // ─── Setup Socket.IO ─────────────────────────────────────────────
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.warn("No auth token; skipping socket connect");
+      return;
+    }
+    // ⚠️ Specify your backend URL here:
+    const socket = io("http://localhost:6001", {
+      auth: { token },
+      // only websocket transport (optional but more reliable)
+      transports: ["websocket"],
+    });
+    socketRef.current = socket;
+
+    socket.on("connect", () => {
+      console.log("Socket connected (user bidding):", socket.id);
+      if (id) {
+        socket.emit("join-auction", id);
+      }
+    });
+    socket.on("disconnect", (reason) => {
+      console.log("Socket disconnected:", reason);
+    });
+
+    // Listen for auction updates
+     // —— listen on the *specific* event channels your server emits — no need to duplicate
+    socket.on("bid:placed",       payload => { console.log("bid:placed", payload); fetchAuctionData(); toast.success(`New bid ₹${payload.newBid.amount.toLocaleString()}`); });
+    socket.on("player:sold",      payload => { console.log("player:sold", payload); fetchAuctionData(); toast.success(`Sold for ₹${payload.amount.toLocaleString()}`); });
+    socket.on("player:rtm",       payload => { console.log("player:rtm", payload); fetchAuctionData(); toast.success("RTM used"); });
+    socket.on("auction:paused",   ()      => { console.log("auction:paused"); toast.info("Auction paused"); });
+    socket.on("auction:resumed",  ()      => { console.log("auction:resumed"); toast.info("Auction resumed"); });
+    socket.on("auction:ended",    ()      => { console.log("auction:ended"); toast.info("Auction ended"); });
+    socket.on("bidding:started",  payload => { console.log("bidding:started", payload); fetchAuctionData(); });
+
+    // In case backend emits other specific events:
+    socket.on("bid:placed", (payload) => {
+      console.log("Received bid:placed:", payload);
+      fetchAuctionData();
+      if (payload.amount) {
+        toast.success(`New bid: ₹${payload.amount.toLocaleString()}`);
+      }
+    });
+    socket.on("player:sold", (payload) => {
+      console.log("Received player:sold:", payload);
+      fetchAuctionData();
+      if (payload.amount) {
+        toast.success(`Player sold: ₹${payload.amount.toLocaleString()}`);
+      }
+    });
+    socket.on("player:rtm", (payload) => {
+      console.log("Received player:rtm:", payload);
+      fetchAuctionData();
+      toast.success("RTM event occurred");
+    });
+    socket.on("auction:paused", () => {
+      console.log("Received auction:paused");
+      toast.info("Auction paused");
+    });
+    socket.on("auction:resumed", () => {
+      console.log("Received auction:resumed");
+      toast.info("Auction resumed");
+    });
+    socket.on("auction:ended", () => {
+      console.log("Received auction:ended");
+      toast.info("Auction ended");
+    });
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.emit("leave-auction", id);
+        socketRef.current.disconnect();
+      }
+    };
+  }, [id]);
+
+  // Initial fetch once
+  useEffect(() => {
+  fetchAuctionData();
+  }, [id]);
+
+  // ─── Render ───────────────────────────────────────────────────────
+  // Container classes
   const containerClasses = [
     "text-white bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900",
     fullScreen ? "fixed inset-0 z-[9999] overflow-auto" : "relative mx-auto",
@@ -388,7 +462,7 @@ export default function UserBiddingDashboardDesktop() {
         {/* ─ Current Player Details ─ */}
         <motion.div
           onClick={openPlayerModal}
-          className="bg-gradient-to-br from-indigo-800/50 to-blue-700/50 rounded-xl p-6 w-full max-w-md text-center shadow-xl border border-indigo-600/30"
+          className="bg-gradient-to-br from-indigo-800/50 to-blue-700/50 rounded-xl p-6 w-full max-w-md text-center shadow-xl border border-indigo-600/30 cursor-pointer"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ type: "spring", delay: 0.2 }}
@@ -439,13 +513,6 @@ export default function UserBiddingDashboardDesktop() {
       <div className="col-span-2 flex flex-col items-center space-y-4">
         {/* Navigation Buttons */}
         <div className="flex flex-wrap gap-2 justify-center w-full">
-          {/* <motion.button
-            onClick={() => navigate("/user/teams-list")}
-            className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-blue-500 rounded-xl text-xs sm:text-sm shadow-md"
-            whileHover={{ scale: 1.05 }}
-          >
-            Teams List 
-          </motion.button> */}
           <motion.button
             onClick={() => navigate(`/user-bidding-portal/${id}/players`)}
             className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-blue-500 rounded-xl text-xs sm:text-sm shadow-md"
@@ -476,7 +543,7 @@ export default function UserBiddingDashboardDesktop() {
           animate={{ opacity: 1, y: 0 }}
         >
           <h3 className="text-xs font-medium mb-1">Bid Now</h3>
-          <BidButton onClick={handleBid} />
+          <BidButton onClick={handleBid} disabled={isBidding} />
           <p className="mt-1 text-xs opacity-75">Price: ₹{nextBidAmount}</p>
         </motion.div>
 
@@ -492,14 +559,14 @@ export default function UserBiddingDashboardDesktop() {
             </span>
           </div>
           <motion.div className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 py-3 font-bold text-xl text-black shadow-lg mb-3">
-            ₹{auctionData.currentBid?.amount.toLocaleString() ?? "--/--"}
+            ₹{auctionData.currentBid?.amount?.toLocaleString() ?? "--/--"}
           </motion.div>
           <div className="flex items-center justify-center mb-3">
             <div className="bg-gray-700 rounded-full w-8 h-8 flex items-center justify-center mr-2 border border-gray-500">
               {auctionData.currentBid?.team?.logoUrl ? (
                 <img
                   src={auctionData.currentBid.team.logoUrl}
-                  alt={auctionData.currentBid.team}
+                  alt={auctionData.currentBid.team.teamName}
                   className="w-6 h-6"
                 />
               ) : (
@@ -534,7 +601,7 @@ export default function UserBiddingDashboardDesktop() {
         </motion.div>
 
         <motion.div
-          className="bg-gradient-to-br mb-4  from-indigo-900/50 to-blue-800/50 rounded-xl text-center shadow-lg self-end  border border-indigo-700/30"
+          className="bg-gradient-to-br mb-4 from-indigo-900/50 to-blue-800/50 rounded-xl text-center shadow-lg self-end border border-indigo-700/30"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
@@ -545,6 +612,7 @@ export default function UserBiddingDashboardDesktop() {
           )}
         </motion.div>
       </div>
+
       {showModal && selectedPlayer && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-md"

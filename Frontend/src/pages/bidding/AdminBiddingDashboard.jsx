@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { io } from "socket.io-client";
 import { motion } from "framer-motion";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
@@ -27,14 +28,12 @@ export default function AdminBiddingDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const incoming = location.state?.selectedPlayers || [];
-  const { id } = useParams();
+  const socketRef = useRef(null);
+  const { id } = useParams(); // auctionId
 
-  // 2) STATE: hold ALL auction‐related fields in a single object
-  //    Initialize with SAMPLE so the UI doesn’t break if the fetch is still pending.
+  // STATE
   const [auctionData, setAuctionData] = useState(SAMPLE_AUCTION);
-
-  // status / UI state
-  const [status, setStatus] = useState("live");
+  const [status, setStatus] = useState("live"); // may be updated from fetchAuctionData
   const [showEdit, setShowEdit] = useState(false);
   const [bidAmount, setBidAmount] = useState(SAMPLE_AUCTION.currentBid.amount);
   const [fullScreen, setFullScreen] = useState(false);
@@ -56,25 +55,298 @@ export default function AdminBiddingDashboard() {
   const [queueDisplay, setQueueDisplay] = useState({ current: 0, total: 0 });
   const lastBidTeamRef = useRef(null); // holds previous team name
 
-  const handleStartBidding = async () => {
-    setShowStartPopup(true);
-
-    try {
-      await Api.patch(`/pause-auction/${id}`, {
-        isPaused: false,
-      });
-      setIsPaused(false);
-    } catch (error) {
-      console.error("Error starting bidding:", error);
-      alert("Internal server error");
+  // -------------------------------
+  // SOCKET.IO: connect, join room, listeners
+  // -------------------------------
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.warn("No auth token found. Cannot connect socket.");
+      return;
     }
-  };
+    const SOCKET_SERVER_URL = "http://localhost:6001";  // ← replace with your real URL
+    const socket = io(SOCKET_SERVER_URL, {
+      auth: { token },
+      transports: ["websocket"],   // enforce WS transport for reliability
+    });
+
+    socketRef.current = socket;
+
+    socket.on("connect", () => {
+      console.log("Socket connected:", socket.id);
+      if (id) {
+        socket.emit("join-auction", id);
+        console.log(`Joined auction room ${id}`);
+      }
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log("Socket disconnected:", reason);
+    });
+
+     // ── CATCH THE OTHER BID EVENT (some routes emit “bid:updated”) ──
+    socket.on("bid:updated", (payload) => {
+      console.log("Received bid:updated", payload);
+      // update your current bid amount
+      setAuctionData(prev => ({
+        ...prev,
+        currentBid: { amount: payload.newBidAmount, team: prev.currentBid.team, teamLogo: prev.currentBid.teamLogo }
+      }));
+      setBidAmount(payload.newBidAmount);
+      toast.success(`Bid updated: ₹${payload.newBidAmount.toLocaleString()}`);
+    });
+
+    // 1. Bidding started
+    socket.on("bidding:started", (payload) => {
+      console.log("Received bidding:started", payload);
+      const { currentPlayer, selectionMode: newMode, automaticFilter: newFilter } = payload;
+      if (currentPlayer) {
+        setAuctionData(prev => ({
+          ...prev,
+          currentLot: {
+            id: currentPlayer._id,
+            name: currentPlayer.name,
+            role: currentPlayer.role,
+            batting: currentPlayer.battingStyle,
+            bowling: currentPlayer.bowlingStyle,
+            basePrice: currentPlayer.basePrice,
+            avatarUrl: currentPlayer.photo,
+          },
+          currentBid: {
+            amount: currentPlayer.basePrice || 0,
+            team: null,
+            teamLogo: null,
+          },
+        }));
+        setBidAmount(currentPlayer.basePrice || 0);
+        setBiddingStarted(true);
+      }
+      if (newMode) setSelectionMode(newMode);
+      if (newFilter) setAutomaticFilter(newFilter);
+      fetchQueueStatus();
+    });
+    
+    // 2. Bid placed
+    socket.on("bid:placed", (data) => {
+      console.log("Received bid:placed", data);
+      const { newBid } = data;
+      if (newBid) {
+        setAuctionData(prev => ({
+          ...prev,
+          currentBid: {
+            amount: newBid.amount,
+            team: prev.currentBid.team,
+            teamLogo: prev.currentBid.teamLogo,
+          },
+        }));
+        setBidAmount(newBid.amount);
+        toast.success(`New bid: ₹${newBid.amount.toLocaleString()}`);
+      }
+    });
+
+    // 3. Player sold
+    socket.on("player:sold", (payload) => {
+      console.log("Received player:sold", payload);
+      const {
+        nextPlayer,
+        amount,
+        currentQueuePosition: newPos,
+        totalQueueLength,
+        isPaused: pausedFlag,
+      } = payload;
+      toast.success(`Player sold for ₹${amount.toLocaleString()}`);
+      setIsPaused(pausedFlag);
+      if (nextPlayer) {
+        setAuctionData(prev => ({
+          ...prev,
+          currentLot: {
+            id: nextPlayer._id,
+            name: nextPlayer.name,
+            role: nextPlayer.role,
+            batting: nextPlayer.battingStyle,
+            bowling: nextPlayer.bowlingStyle,
+            basePrice: nextPlayer.basePrice,
+            avatarUrl: nextPlayer.photo,
+          },
+          currentBid: {
+            amount: nextPlayer.basePrice || 0,
+            team: null,
+            teamLogo: null,
+          },
+        }));
+        setBidAmount(nextPlayer.basePrice || 0);
+        setCurrentQueuePosition(newPos);
+        setQueueDisplay({
+          current: newPos + 1,
+          total: totalQueueLength,
+        });
+      } else {
+        // Ended
+        setAuctionData(prev => ({
+          ...prev,
+          currentLot: {
+            id: "--/--",
+            name: "No more players",
+            role: "--/--",
+            batting: "--/--",
+            bowling: "--/--",
+            basePrice: 0,
+            avatarUrl: null,
+          },
+          currentBid: {
+            amount: 0,
+            team: null,
+            teamLogo: null,
+          },
+        }));
+        setBiddingStarted(false);
+        setStatus("completed");
+        setCanChangeMode(true);
+      }
+      fetchAuctionData();
+      fetchQueueStatus();
+    });
+
+    // 4. Auction paused
+    socket.on("auction:paused", (payload) => {
+      console.log("Received auction:paused", payload);
+      toast.info("Auction paused");
+      setIsPaused(true);
+    });
+    // 5. Auction resumed
+    socket.on("auction:resumed", (payload) => {
+      console.log("Received auction:resumed", payload);
+      toast.info("Auction resumed");
+      setIsPaused(false);
+    });
+    // 6. Pending pause
+    socket.on("auction:pause-pending", (payload) => {
+      console.log("Received auction:pause-pending", payload);
+      toast.info("Auction will pause after current player is sold");
+    });
+    // 7. Auction ended
+    socket.on("auction:ended", (payload) => {
+      console.log("Received auction:ended", payload);
+      toast.info("Auction ended");
+      setStatus("completed");
+      setBiddingStarted(false);
+      setIsPaused(true);
+    });
+
+    // 8. Player unsold
+    socket.on("player:unsold", (payload) => {
+      console.log("Received player:unsold", payload);
+      toast.success("Player marked as Unsold, moving to next");
+      const { nextPlayer, currentQueuePosition: newPos, totalQueueLength, isPaused: pausedFlag } = payload;
+      setIsPaused(pausedFlag);
+      if (nextPlayer) {
+        fetchAuctionData();
+      } else {
+        setAuctionData(prev => ({
+          ...prev,
+          currentLot: {
+            id: "--/--",
+            name: "No more players",
+            role: "--/--",
+            batting: "--/--",
+            bowling: "--/--",
+            basePrice: 0,
+            avatarUrl: null,
+          },
+          currentBid: {
+            amount: 0,
+            team: null,
+            teamLogo: null,
+          },
+        }));
+        setBiddingStarted(false);
+        setStatus("completed");
+      }
+      setCurrentQueuePosition(newPos);
+      setQueueDisplay({
+        current: newPos + 1,
+        total: totalQueueLength,
+      });
+      fetchQueueStatus();
+    });
+
+    // 9. Team joined
+    socket.on("team:joined", (payload) => {
+      console.log("Received team:joined", payload);
+      toast.success("A manager joined the auction");
+      // Optionally refetch teams
+    });
+
+    // 10. RTM used
+    socket.on("player:rtm", (payload) => {
+      console.log("Received player:rtm", payload);
+      toast.success("RTM used: player transferred");
+      fetchAuctionData();
+    });
+
+    // 11. Selection-mode updated
+    socket.on("selection-mode:updated", (payload) => {
+      console.log("Received selection-mode:updated", payload);
+      const { selectionMode: newMode, automaticFilter: newFilter } = payload;
+      setSelectionMode(newMode);
+      if (newFilter) setAutomaticFilter(newFilter);
+      fetchQueueStatus();
+    });
+
+    // 12. Queue updated
+    socket.on("queue:updated", (payload) => {
+      console.log("Received queue:updated", payload);
+      const { manualPlayerQueue: newQueue, currentQueuePosition: newPos } = payload;
+      setManualPlayerQueue(newQueue);
+      setCurrentQueuePosition(newPos);
+      setQueueDisplay({
+        current: newPos + 1,
+        total: newQueue.length,
+      });
+    });
+
+    // Cleanup
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.emit("leave-auction", id);  // always leave room
+        socketRef.current.disconnect();
+      }
+    };
+  }, [id]);
+
+  // Initial fetch once
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    fetchAuctionData();
+    fetchQueueStatus();
+  }, [id]);
+
+  // -------------------------------
+  // Helper functions and handlers
+  // -------------------------------
+
+  // near the top of AdminBiddingDashboard, alongside other handlers:
+const handleStartBidding = async () => {
+  // show popup to choose manual/automatic
+  setShowStartPopup(true);
+
+  try {
+    // In case auction was paused, resume it:
+    await Api.patch(`/pause-auction/${id}`, {
+      isPaused: false,
+    });
+    setIsPaused(false);
+  } catch (error) {
+    console.error("Error starting bidding:", error);
+    alert("Internal server error");
+  }
+};
 
   const fetchQueueStatus = async () => {
     try {
       const response = await Api.get(`/queue-status/${id}`);
       const data = response.data;
-
       console.log("Fetched queue status:", data);
 
       setCanChangeMode(data.canChangeMode);
@@ -82,36 +354,25 @@ export default function AdminBiddingDashboard() {
       setSelectionMode(data.selectionMode);
       setAutomaticFilter(data.automaticFilter);
 
-      // Update current queue position
       const currentPos = data.currentQueuePosition;
       setCurrentQueuePosition(currentPos);
 
-      // Update manual player queue
       const manualQueue = data.manualPlayerQueue || [];
       setManualPlayerQueue(manualQueue);
 
-      // Update queue display for manual mode
       if (data.selectionMode === "manual" && manualQueue.length > 0) {
-        const queueDisplay = {
-          current: Math.max(1, currentPos + 1), // Ensure at least 1
+        const queueDisplayObj = {
+          current: Math.max(1, currentPos + 1),
           total: manualQueue.length,
         };
-
-        console.log("Queue display updated:", queueDisplay);
-        setQueueDisplay(queueDisplay);
-
-        // Show add more players option when queue is running low
+        setQueueDisplay(queueDisplayObj);
         const remainingPlayers = manualQueue.length - currentPos - 1;
         setShowAddMorePlayers(remainingPlayers <= 1);
-
-        console.log("Remaining players in queue:", remainingPlayers);
       } else {
-        // Reset queue display for automatic mode
         setQueueDisplay({ current: 0, total: 0 });
         setShowAddMorePlayers(false);
       }
 
-      // Update current player if available
       if (data.currentPlayer) {
         setAuctionData((prev) => ({
           ...prev,
@@ -141,15 +402,11 @@ export default function AdminBiddingDashboard() {
 
   const startBiddingWithPlayer = async () => {
     try {
-      // Use the backend's start-bidding route instead of passing playerId
       const response = await Api.post(`/start-bidding/${id}`, {
         selectionMode: selectionMode,
         automaticFilter: automaticFilter,
       });
-
       console.log("Bidding started successfully:", response.data);
-
-      // Update local state based on backend response
       setAuctionData((prev) => ({
         ...prev,
         currentLot: {
@@ -167,17 +424,14 @@ export default function AdminBiddingDashboard() {
           teamLogo: null,
         },
       }));
-
       setBiddingStarted(true);
       setBidAmount(response.data.currentPlayer?.basePrice || 0);
-
       await fetchQueueStatus();
       return true;
     } catch (error) {
       toast.error("Error starting bidding:", error);
       toast.error(
-        error.response?.data?.error ||
-          "Failed to start bidding. Please try again."
+        error.response?.data?.error || "Failed to start bidding. Please try again."
       );
       return false;
     }
@@ -185,24 +439,17 @@ export default function AdminBiddingDashboard() {
 
   const getFirstAvailablePlayer = async () => {
     try {
-      // First check if we have incoming players (manual selection)
       if (incoming.length > 0) {
         return incoming[0]?.id || incoming[0]?._id;
       }
-
-      // Otherwise, get from auction's selectedPlayers
       const response = await Api.get(`/get-auction/${id}`);
       const selectedPlayers = response.data.selectedPlayers;
-
       if (selectedPlayers && selectedPlayers.length > 0) {
-        // If it's an array of IDs, return the first one
         if (typeof selectedPlayers[0] === "string") {
           return selectedPlayers[0];
         }
-        // If it's an array of objects, return the _id
         return selectedPlayers[0]._id || selectedPlayers[0].id;
       }
-
       return null;
     } catch (error) {
       toast.error("Error getting first available player:", error);
@@ -213,44 +460,33 @@ export default function AdminBiddingDashboard() {
   const handleSaveStartSelection = async () => {
     try {
       const filterToUse = popupSelection === "automatic" ? role : "All";
-
-      // Update selection mode first
       await updateSelectionMode(popupSelection, filterToUse);
-
       setSelectionMode(popupSelection);
       setAutomaticFilter(filterToUse);
 
       if (popupSelection === "manual") {
         if (incoming.length > 0) {
-          // Set up manual queue with proper numbering
           const playerQueue = incoming.map((player, index) => ({
             player: player.id || player._id,
             position: index + 1,
-            playerData: player, // Store full player data for queue display
+            playerData: player,
           }));
-
           await Api.post(`/set-manual-queue/${id}`, { playerQueue });
           setManualPlayerQueue(playerQueue);
           setQueueDisplay({ current: 1, total: playerQueue.length });
         }
-
-        // Start bidding with manual mode
         const success = await startBiddingWithPlayer();
         if (success) {
           setBiddingStarted(true);
-          setCanChangeMode(false); // Disable mode switching once started
+          setCanChangeMode(false);
           setShowStartPopup(false);
           return;
         }
       } else if (popupSelection === "automatic") {
-        // Use the specific backend route for automatic bidding
         const response = await Api.post(`/start-automatic-bidding/${id}`, {
           automaticFilter: filterToUse,
         });
-
         console.log("Automatic bidding started:", response.data);
-
-        // Update state with response data
         setAuctionData((prev) => ({
           ...prev,
           currentLot: {
@@ -268,26 +504,22 @@ export default function AdminBiddingDashboard() {
             teamLogo: null,
           },
         }));
-
         setBiddingStarted(true);
         setBidAmount(response.data.currentPlayer?.basePrice || 0);
-        setCanChangeMode(false); // Disable mode switching once started
+        setCanChangeMode(false);
         setShowStartPopup(false);
         await fetchQueueStatus();
         return;
       }
-      await Api.patch(`/pause-auction/${id}`, {
-        isPaused: false,
-      });
+      // If reached here: resume from paused
+      await Api.patch(`/pause-auction/${id}`, { isPaused: false });
       setIsPaused(false);
     } catch (error) {
       toast.error("Error in handleSaveStartSelection:", error);
       toast.error(
-        error.response?.data?.error ||
-          "An error occurred while starting bidding."
+        error.response?.data?.error || "An error occurred while starting bidding."
       );
     }
-
     setShowStartPopup(false);
   };
 
@@ -298,17 +530,13 @@ export default function AdminBiddingDashboard() {
       console.log("Fetched auction data:", data);
 
       const newBidTeam = data.currentBid?.team?.teamName;
-
-      // 👇 Trigger popup if bid team changed
       if (
         newBidTeam &&
         lastBidTeamRef.current &&
         newBidTeam !== lastBidTeamRef.current
       ) {
-        setShowEdit(true); // show popup
+        setShowEdit(true);
       }
-
-      // Update lastBidTeamRef
       lastBidTeamRef.current = newBidTeam;
 
       setAuctionData((prev) => ({
@@ -372,7 +600,6 @@ export default function AdminBiddingDashboard() {
         );
       }
 
-      // Fetch queue status after updating auction data
       await fetchQueueStatus();
     } catch (err) {
       console.error("Error while fetching auction:", err);
@@ -388,15 +615,13 @@ export default function AdminBiddingDashboard() {
       return null;
     }
   };
+
   const fetchPlayerPic = async () => {
     try {
       const res = await Api.get(`/get-auction/${id}`);
       const data = res.data;
-
       const newPlayer = data.currentPlayerOnBid;
       const newPlayerId = newPlayer?._id;
-
-      // Only update if new player is different
       if (newPlayerId && newPlayerId !== currentPlayerId) {
         console.log("New player entered:", newPlayer.name);
         setPlayerPic(newPlayer.playerPic || null);
@@ -407,35 +632,8 @@ export default function AdminBiddingDashboard() {
     }
   };
 
-  // useEffect(() => {
-  //   fetchPlayerPic(); // Initial load
-  //   const interval = setInterval(fetchPlayerPic, 800);
-  //   return () => clearInterval(interval);
-  // }, [id, currentPlayerId]);
+  // Removed old polling useEffect
 
-  // Modified useEffect to use the extracted function
-  useEffect(() => {
-    if (incoming.length > 0) {
-      setSelectionMode("manual");
-    }
-
-    const token = localStorage.getItem("token");
-    if (!token) {
-      console.warn("No auth token found. Cannot fetch auction.");
-      return;
-    }
-
-    if (showEdit) return;
-
-    const interval = setInterval(() => {
-      fetchAuctionData();
-      fetchPlayerPic();
-    }, 800);
-
-    return () => clearInterval(interval);
-  }, [id, incoming, showEdit, currentPlayerId]); // ⬅️ Add showEdit as a dependency
-
-  // 3. ADD NEW FUNCTION: Update selection mode in backend
   const updateSelectionMode = async (newMode, filter = "All") => {
     try {
       await Api.post(`/update-selection-mode/${id}`, {
@@ -451,33 +649,25 @@ export default function AdminBiddingDashboard() {
 
   const startAutomaticBiddingWithRole = async (selectedRole) => {
     try {
-      // Get auction data to access selectedPlayers
       const response = await Api.get(`/get-auction/${id}`);
       const selectedPlayers = response.data.selectedPlayers;
-
       if (!selectedPlayers || selectedPlayers.length === 0) {
         alert("No players available for bidding.");
         return false;
       }
-
-      // If selectedPlayers contains full player objects, filter by role
       let playerToStart = null;
-
       if (
         selectedPlayers.length > 0 &&
         typeof selectedPlayers[0] === "object"
       ) {
-        // Filter by role if player objects are available
         const playersWithRole = selectedPlayers.filter(
           (player) => player.role === selectedRole
         );
         playerToStart =
           playersWithRole.length > 0 ? playersWithRole[0] : selectedPlayers[0];
       } else {
-        // If it's just an array of IDs, take the first one
         playerToStart = { _id: selectedPlayers[0] };
       }
-
       const playerId = playerToStart._id || playerToStart.id;
       return await startBiddingWithPlayer(playerId);
     } catch (error) {
@@ -486,13 +676,10 @@ export default function AdminBiddingDashboard() {
     }
   };
 
-  // You can also modify the role-based automatic selection if needed
-  // This would be called when automatic mode is selected and a specific role is chosen
   const handleRoleBasedStart = async () => {
     if (selectionMode === "automatic") {
       const success = await startAutomaticBiddingWithRole(role);
       if (!success) {
-        // Fallback to any available player
         const firstPlayerId = await getFirstAvailablePlayer();
         if (firstPlayerId) {
           await startBiddingWithPlayer(firstPlayerId);
@@ -506,27 +693,23 @@ export default function AdminBiddingDashboard() {
       alert("No player currently on bid");
       return;
     }
-
     try {
       const response = await Api.post(
         `/manual-sell/${id}/${auctionData.currentLot.id}`
       );
-
       const {
         nextPlayer,
         isLastPlayer,
         biddingEnded,
         soldTo,
         amount,
-        isPaused,
+        isPaused: pausedFlag,
       } = response.data;
 
-      // Show success message
-      console.log("AUCTIONNNNNNNNNNNNN", response.data);
-      if (isPaused) {
+      if (pausedFlag) {
         toast.success("Auction Paused");
       }
-      if (biddingEnded || isLastPlayer || !isPaused) {
+      if (biddingEnded || isLastPlayer || !pausedFlag) {
         toast.success("Auction completed! No more players available.");
       } else {
         toast.success(`Player sold for ₹${amount.toLocaleString()}!`);
@@ -550,9 +733,7 @@ export default function AdminBiddingDashboard() {
             teamLogo: null,
           },
         }));
-
         setBidAmount(nextPlayer.basePrice || 0);
-
         if (selectionMode === "manual") {
           setCurrentQueuePosition((prev) => prev + 1);
           setQueueDisplay((prev) => ({
@@ -583,15 +764,13 @@ export default function AdminBiddingDashboard() {
         setCanChangeMode(true);
       }
 
-      // Refresh state for latest auction snapshot
       await fetchAuctionData();
       await fetchQueueStatus();
     } catch (error) {
       console.error("Sell error:", error);
       toast.error("Error selling player.");
       toast.error(
-        error.response?.data?.error ||
-          "Failed to sell player. Please try again."
+        error.response?.data?.error || "Failed to sell player. Please try again."
       );
     }
   };
@@ -607,10 +786,7 @@ export default function AdminBiddingDashboard() {
       }
       return;
     }
-
-    // Additional check for manual to auto switch
     if (selectionMode === "manual" && newMode === "automatic") {
-      // Check if queue is empty and last player is currently in bid
       const queueRemaining =
         manualPlayerQueue.length - currentQueuePosition - 1;
       if (queueRemaining > 0) {
@@ -622,27 +798,19 @@ export default function AdminBiddingDashboard() {
     }
     try {
       const filterToUse = newMode === "automatic" ? role : "All";
-
       await Api.post(`/update-selection-mode/${id}`, {
         selectionMode: newMode,
         automaticFilter: filterToUse,
       });
-
-      setSelectionMode(newMode);
-      setAutomaticFilter(filterToUse);
-
-      // Refresh status after mode change
-      await fetchQueueStatus();
-
+      // setSelectionMode(newMode);
+      // setAutomaticFilter(filterToUse);
+      // await fetchQueueStatus();
       if (
         newMode === "manual" &&
         (!manualPlayerQueue || manualPlayerQueue.length === 0)
       ) {
-        // If switching to manual but no queue set, navigate to selection
         handleManualSelect();
       }
-
-      console.log(`Mode changed to ${newMode} with filter ${filterToUse}`);
     } catch (error) {
       console.error("Error updating selection mode:", error);
       alert(error.response?.data?.error || "Failed to update selection mode");
@@ -651,18 +819,13 @@ export default function AdminBiddingDashboard() {
 
   const handleRoleChange = async (newRole) => {
     setRole(newRole);
-
     if (selectionMode === "automatic") {
       try {
         await Api.post(`/update-selection-mode/${id}`, {
           selectionMode: "automatic",
           automaticFilter: newRole,
         });
-
         setAutomaticFilter(newRole);
-        console.log(`Automatic filter updated to ${newRole}`);
-
-        // Refresh queue status to get updated player count
         await fetchQueueStatus();
       } catch (error) {
         console.error("Error updating automatic filter:", error);
@@ -676,8 +839,6 @@ export default function AdminBiddingDashboard() {
         playerQueue,
       });
       setManualPlayerQueue(response.data.auction.manualPlayerQueue);
-
-      // If bidding should start with next player
       if (response.data.shouldStartNext && response.data.nextPlayer) {
         setAuctionData((prev) => ({
           ...prev,
@@ -692,9 +853,7 @@ export default function AdminBiddingDashboard() {
           },
         }));
       }
-
       await fetchQueueStatus();
-      console.log("Manual queue updated successfully");
     } catch (error) {
       console.error("Error updating manual queue:", error);
       alert("Failed to update player queue");
@@ -704,41 +863,39 @@ export default function AdminBiddingDashboard() {
   const handleAddMorePlayers = () => {
     navigate(`/admin/admin-manual-player-selection/${id}`, {
       state: {
-        addToExistingQueue: true,
+        addToExistingQueue: biddingStarted && selectionMode === "manual",
         currentQueue: manualPlayerQueue,
         currentPosition: currentQueuePosition,
       },
     });
   };
 
-  // 4) HANDLERS / UI TOGGLES
   const toggleFullScreen = () => setFullScreen((fs) => !fs);
+
   const onStopBidding = () => setStatus("paused");
   const onSell = () => setStatus("selling");
+
   const onMoveToUnsell = async () => {
     try {
       const response = await Api.patch(`/unsold/${id}`);
-
       const {
         nextPlayer,
         isLastPlayer,
         currentQueuePosition,
         totalQueueLength,
         remainingPlayers,
-        isPaused,
+        isPaused: pausedFlag,
       } = response.data;
 
-      // ✅ Update auction queue-related data
       setAuctionData((prev) => ({
         ...prev,
         currentQueuePosition,
         totalQueueLength,
         remainingPlayers,
-        isPaused,
+        isPaused: pausedFlag,
       }));
 
       if (nextPlayer) {
-        // ✅ Update currentLot like in handleManualSell
         setAuctionData((prev) => ({
           ...prev,
           currentLot: {
@@ -756,10 +913,8 @@ export default function AdminBiddingDashboard() {
             teamLogo: null,
           },
         }));
-
         setBidAmount(nextPlayer.basePrice || 0);
         setStatus("live");
-
         if (selectionMode === "manual") {
           setCurrentQueuePosition(currentQueuePosition);
           setQueueDisplay((prev) => ({
@@ -768,7 +923,6 @@ export default function AdminBiddingDashboard() {
           }));
         }
       } else {
-        // ✅ No next player - mark auction complete
         setAuctionData((prev) => ({
           ...prev,
           currentLot: {
@@ -805,15 +959,9 @@ export default function AdminBiddingDashboard() {
   const onApplyBid = async () => {
     try {
       setShowEdit(false);
-
-      await Api.patch(`/update-bid/${id}`, {
-        amount: bidAmount,
-      });
-
-      toast.success("Bid updated!");
-
-      // ✅ Refresh data manually after update
-      await fetchAuctionData();
+      await Api.patch(`/update-bid/${id}`, { amount: bidAmount });
+            toast.success("Bid updated!");
+      // server emits "bid:updated" → socket listener will update bidAmount
     } catch (error) {
       console.error("Error updating bid:", error);
       toast.error("Failed to update bid");
@@ -825,55 +973,54 @@ export default function AdminBiddingDashboard() {
     setShowEdit(false);
   };
 
+  // Pause/Resume handler
   const togglePause = async () => {
     try {
-      const response = await Api.patch(`/pause-auction/${id}`, {
-        isPaused: true,
-      });
-
-      console.log(response.data.message); // You can show this as a toast or alert
-      setIsPaused(true);
-      setBiddingStarted(false); // Optional
-      toast.success("Auction Paused");
+      if (isPaused) {
+        // Resume
+        const response = await Api.patch(`/pause-auction/${id}`, {
+          isPaused: false,
+        });
+        console.log(response.data.message);
+        // setIsPaused(false);
+        toast.success("Auction Resumed");
+      } else {
+        // Pause
+        const response = await Api.patch(`/pause-auction/${id}`, {
+          isPaused: true,
+        });
+        console.log(response.data.message);
+        setIsPaused(true);
+        // Optionally stop biddingStarted locally
+        setBiddingStarted(false);
+        toast.success("Auction Paused");
+      }
     } catch (err) {
-      toast.error("Failed to pause/resume:", err);
-
-      // Extract and show backend message
+      toast.error("Failed to pause/resume auction");
       if (err.response && err.response.data && err.response.data.message) {
         toast.error(`Error: ${err.response.data.message}`);
-      } else {
-        toast.error("An unexpected error occurred while pausing the auction.");
       }
     }
   };
 
-  useEffect(() => {
-    const checkIsPaused = async () => {
-      try {
-        const res = await Api.get(`/get-auction-pause-status/${id}`);
-        const paused = res.data.isPaused;
-        setIsPaused(res.data.isPaused);
-
-        // setIsPaused(paused);
-        if (paused) setBiddingStarted(false); // disable Start Bidding
-      } catch (err) {
-        console.error("Failed to fetch pause status");
-      }
-    };
-
-    const interval = setInterval(checkIsPaused, 800);
-    checkIsPaused();
-
-    return () => clearInterval(interval);
-  }, [id]);
+  // Poll pause status occasionally (optional fallback)
+  // useEffect(() => {
+  //   const checkIsPaused = async () => {
+  //     try {
+  //       const res = await Api.get(`/get-auction-pause-status/${id}`);
+  //       const paused = res.data.isPaused;
+  //       setIsPaused(paused);
+  //       if (paused) setBiddingStarted(false);
+  //     } catch (err) {
+  //       console.error("Failed to fetch pause status");
+  //     }
+  //   };
+  //   const interval = setInterval(checkIsPaused, 5000);
+  //   checkIsPaused();
+  //   return () => clearInterval(interval);
+  // }, [id]);
 
   const handleManualSelect = () => {
-    console.log("Navigating to manual selection with current queue:", {
-      currentQueue: manualPlayerQueue,
-      currentPosition: currentQueuePosition,
-      addToExistingQueue: biddingStarted && selectionMode === "manual",
-    });
-
     navigate(`/admin/admin-manual-player-selection/${id}`, {
       state: {
         addToExistingQueue: biddingStarted && selectionMode === "manual",
@@ -884,13 +1031,12 @@ export default function AdminBiddingDashboard() {
   };
 
   const [ending, setEnding] = useState(false);
-
   const handleEndAuction = async () => {
     setEnding(true);
     try {
       const res = await Api.patch(`/end-auction/${id}`);
       toast.success(res.data.message || "Auction ended");
-      onAuctionEnded?.();
+      // Optionally further logic
     } catch (err) {
       console.error("End-auction error:", err);
       toast.error(err.response?.data?.message || "Failed to end auction");
@@ -899,7 +1045,7 @@ export default function AdminBiddingDashboard() {
     }
   };
 
-  // 5) RENDER. Everywhere you previously used SAMPLE_AUCTION, use auctionData instead.
+  // RENDER
   const containerClasses = [
     "p-4 text-white bg-gradient-to-br from-gray-900 pb-20 via-blue-900 to-indigo-900",
     fullScreen
@@ -927,9 +1073,9 @@ export default function AdminBiddingDashboard() {
           {fullScreen ? "Exit Full Screen" : "Full Screen"}
         </button>
       </div>
-      {/* Responsive grid: 1-col mobile, 4-col md+ */}
+      {/* Responsive grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:h-[calc(85vh-4rem)]">
-        {/* === Left Sidebar (desktop only) === */}
+        {/* Left Sidebar (desktop only) */}
         <div className="hidden md:flex flex-col space-y-4 md:h-full md:justify-between">
           <div>
             {[
@@ -952,8 +1098,7 @@ export default function AdminBiddingDashboard() {
               </motion.div>
             ))}
           </div>
-
-          {/* Bottom item only on desktop */}
+          {/* Current lot summary */}
           <motion.div
             className="bg-gradient-to-br from-indigo-800 to-blue-700 rounded-xl p-4 text-center shadow-xl"
             initial={{ opacity: 0, y: 20 }}
@@ -982,9 +1127,9 @@ export default function AdminBiddingDashboard() {
           </motion.div>
         </div>
 
-        {/* === Center Section === */}
+        {/* Center Section */}
         <div className="md:col-span-2 flex flex-col items-center space-y-4">
-          {/* Top Buttons */}
+          {/* Top Buttons: Player List, Teams */}
           <div className="flex flex-wrap gap-2 justify-center">
             <motion.button
               onClick={() => navigate(`/bidding/players-list/${id}`)}
@@ -1003,21 +1148,25 @@ export default function AdminBiddingDashboard() {
             >
               Teams
             </motion.button>
+          </div>
 
+          {/* Mobile pause/resume button */}
+          <div className="md:hidden flex justify-center mb-2">
             <motion.button
               onClick={togglePause}
-              className={`w-24 rounded-xl py-2 text-xs sm:text-sm shadow-md transition md:hidden ${
-                status === "live"
-                  ? "bg-amber-500 hover:bg-amber-600 text-white md:hidden"
-                  : "bg-green-500 hover:bg-green-600 text-white md:hidden"
+              className={`w-32 rounded-xl py-2 text-xs sm:text-sm shadow-md transition ${
+                isPaused
+                  ? "bg-green-500 hover:bg-green-600 text-white"
+                  : "bg-amber-500 hover:bg-amber-600 text-white"
               }`}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              {status === "live" ? "Pause Auction" : "Resume Auction"}
+              {isPaused ? "Resume Auction" : "Pause Auction"}
             </motion.button>
           </div>
 
+          {/* Edit Bid / Reset / Start Bidding */}
           <div className="flex flex-wrap gap-2 justify-center">
             <motion.button
               onClick={onEditBid}
@@ -1035,20 +1184,6 @@ export default function AdminBiddingDashboard() {
             >
               Reset Bid
             </motion.button>
-            {/* <motion.button
-              onClick={handleStartBidding}
-              disabled={biddingStarted}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm shadow-md ${
-                biddingStarted
-                  ? "bg-gray-500 cursor-not-allowed opacity-50"
-                  : "bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600"
-              }`}
-              whileHover={!biddingStarted ? { scale: 1.05 } : {}}
-              whileTap={!biddingStarted ? { scale: 0.95 } : {}}
-            >
-              {biddingStarted ? "Bidding Started" : "Start Bidding"}
-            </motion.button> */}
-
             <motion.button
               onClick={handleStartBidding}
               disabled={biddingStarted && !isPaused}
@@ -1060,9 +1195,7 @@ export default function AdminBiddingDashboard() {
               whileHover={!(biddingStarted && !isPaused) ? { scale: 1.05 } : {}}
               whileTap={!(biddingStarted && !isPaused) ? { scale: 0.95 } : {}}
             >
-              {biddingStarted && !isPaused
-                ? "Bidding Started"
-                : "Start Bidding"}
+              {biddingStarted && !isPaused ? "Bidding Started" : "Start Bidding"}
             </motion.button>
           </div>
 
@@ -1122,17 +1255,26 @@ export default function AdminBiddingDashboard() {
 
             {/* Bid Team Info Card */}
             <div className="bg-gradient-to-r from-indigo-900/50 to-blue-800/50 rounded-xl p-3 text-center flex flex-col justify-center">
-              <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 mx-auto" />
+              {auctionData.currentBid.teamLogo ? (
+                <img
+                  src={auctionData.currentBid.teamLogo}
+                  alt="Team Logo"
+                  className="w-12 h-12 rounded-xl object-contain mx-auto border-2"
+                />
+              ) : (
+                <div className="bg-gray-200 border-2 border-dashed rounded-xl w-12 h-12 mx-auto" />
+              )}
               <p className="text-[10px] opacity-75 mt-1">Bid By</p>
               <h3 className="text-xs font-semibold truncate">
                 {auctionData.currentBid.team}
               </h3>
             </div>
           </div>
+
           <div className="flex gap-4 mt-4">
             <motion.button
               onClick={handleManualSell}
-              className="w-32 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-500 rounded-xl hover:from-green-700 hover:to-emerald-600 text-sm  sm:text-sm shadow-lg"
+              className="w-32 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-500 rounded-xl hover:from-green-700 hover:to-emerald-600 text-sm sm:text-sm shadow-lg"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -1140,7 +1282,7 @@ export default function AdminBiddingDashboard() {
             </motion.button>
             <motion.button
               onClick={onMoveToUnsell}
-              className=" md:hidden px-4 py-2 bg-gradient-to-r from-red-600 to-orange-500 rounded-xl hover:from-orange-700 hover:to-red-600 text-sm shadow-lg"
+              className="md:hidden px-4 py-2 bg-gradient-to-r from-red-600 to-orange-500 rounded-xl hover:from-orange-700 hover:to-red-600 text-sm shadow-lg"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -1149,7 +1291,7 @@ export default function AdminBiddingDashboard() {
           </div>
         </div>
 
-        {/* === Right Sidebar (desktop only) === */}
+        {/* Right Sidebar (desktop only) */}
         <div className="hidden md:flex space-y-4 md:col-span-1 md:h-full md:flex-col md:justify-between">
           <div className="space-y-3">
             <div className="bg-gradient-to-r from-indigo-900/50 to-blue-800/50 rounded-xl p-4 shadow-lg">
@@ -1157,8 +1299,7 @@ export default function AdminBiddingDashboard() {
                 Player Selection
               </h3>
 
-              {/* Main Toggle Switch - Only show when bidding hasn't started */}
-
+              {/* Main Toggle Switch */}
               <div className="relative h-10 w-full bg-indigo-800/30 rounded-full overflow-hidden">
                 <motion.div
                   className={`absolute top-0 h-full w-1/2 rounded-full z-0 ${
@@ -1180,8 +1321,6 @@ export default function AdminBiddingDashboard() {
                       ? "text-white"
                       : "text-gray-300"
                   }`}
-                  whileHover={!biddingStarted ? { scale: 1.05 } : {}}
-                  whileTap={!biddingStarted ? { scale: 0.95 } : {}}
                 >
                   Auto
                 </button>
@@ -1192,8 +1331,6 @@ export default function AdminBiddingDashboard() {
                   className={`relative h-full w-1/2 z-10 text-sm font-medium ${
                     selectionMode === "manual" ? "text-white" : "text-gray-300"
                   }`}
-                  whileHover={!biddingStarted ? { scale: 1.05 } : {}}
-                  whileTap={!biddingStarted ? { scale: 0.95 } : {}}
                 >
                   Manual
                 </button>
@@ -1255,6 +1392,7 @@ export default function AdminBiddingDashboard() {
               )}
             </div>
 
+            {/* Move to Unsell */}
             <motion.button
               onClick={onMoveToUnsell}
               className="w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-500 rounded-xl hover:from-purple-700 hover:to-indigo-600 text-sm shadow-lg"
@@ -1264,6 +1402,7 @@ export default function AdminBiddingDashboard() {
               Move to Unsell
             </motion.button>
 
+            {/* Desktop Pause button */}
             <motion.button
               onClick={togglePause}
               disabled={isPaused || !biddingStarted}
@@ -1277,6 +1416,8 @@ export default function AdminBiddingDashboard() {
             >
               {isPaused ? "Paused Auction" : "Pause Auction"}
             </motion.button>
+
+            {/* End Auction */}
             <motion.button
               disabled={ending}
               className={`w-32 px-4 py-2 rounded-xl text-white shadow-lg ${
@@ -1292,6 +1433,7 @@ export default function AdminBiddingDashboard() {
             </motion.button>
           </div>
 
+          {/* Current Bid info (team logo & amount) */}
           <motion.div
             className="bg-gradient-to-r from-indigo-900/50 to-blue-800/50 rounded-xl p-4 text-center shadow-lg"
             initial={{ opacity: 0, y: 20 }}
@@ -1318,14 +1460,12 @@ export default function AdminBiddingDashboard() {
         </div>
       </div>
 
-      {/* === Mobile-only Bottom Section === */}
+      {/* MOBILE-only Bottom Section */}
       <div className="md:hidden mt-4 space-y-4">
         <div className="bg-gradient-to-r from-indigo-900/50 to-blue-800/50 rounded-xl p-4 shadow-lg">
           <h3 className="text-sm font-semibold mb-3 text-center">
             Player Selection
           </h3>
-
-          {/* Mobile Toggle - Only show when bidding hasn't started */}
           {!biddingStarted && (
             <div className="relative h-10 w-full bg-indigo-800/30 rounded-full overflow-hidden">
               <motion.div
@@ -1339,7 +1479,6 @@ export default function AdminBiddingDashboard() {
                 }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
               />
-
               <button
                 onClick={() => handleModeToggle("automatic")}
                 className={`relative h-full w-1/2 z-10 text-sm font-medium ${
@@ -1348,7 +1487,6 @@ export default function AdminBiddingDashboard() {
               >
                 Auto
               </button>
-
               <button
                 onClick={() => handleModeToggle("manual")}
                 className={`relative h-full w-1/2 z-10 text-sm font-medium ${
@@ -1359,8 +1497,6 @@ export default function AdminBiddingDashboard() {
               </button>
             </div>
           )}
-
-          {/* Mobile mode change options when bidding has started */}
           {biddingStarted && (
             <div className="p-3 bg-indigo-900/30 rounded-lg">
               <p className="text-xs text-center mb-2 text-yellow-300">
@@ -1396,8 +1532,6 @@ export default function AdminBiddingDashboard() {
               </div>
             </div>
           )}
-
-          {/* Mobile Role Selector */}
           {selectionMode === "automatic" && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
@@ -1425,8 +1559,6 @@ export default function AdminBiddingDashboard() {
               </select>
             </motion.div>
           )}
-
-          {/* Mobile Queue Status */}
           {selectionMode === "manual" && manualPlayerQueue.length > 0 && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
@@ -1435,7 +1567,7 @@ export default function AdminBiddingDashboard() {
               className="mt-3 p-2 bg-amber-900/30 rounded-lg"
             >
               <p className="text-xs text-center text-amber-300">
-                Queue: {queueDisplay.current} by {queueDisplay.total}
+                Queue: {queueDisplay.current} of {queueDisplay.total}
               </p>
               {queueDisplay.current === queueDisplay.total && (
                 <p className="text-xs text-center text-red-300 mt-1">
@@ -1452,7 +1584,8 @@ export default function AdminBiddingDashboard() {
           )}
         </div>
 
-        <div className="flex gap-3">
+        {/* Last Sold / Most Expensive bottom row */}
+        <div className="flex gap-3 md:hidden">
           {[
             ["Last Sold", auctionData.lastSold],
             ["Most Expensive", auctionData.mostExpensive],
@@ -1517,7 +1650,7 @@ export default function AdminBiddingDashboard() {
               </motion.button>
             </div>
 
-            {/* Show role selector for automatic mode in popup */}
+            {/* Role selector if automatic */}
             {popupSelection === "automatic" && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
@@ -1550,15 +1683,6 @@ export default function AdminBiddingDashboard() {
                 <p className="text-xs text-amber-300 mb-2">
                   No players selected for manual mode
                 </p>
-                {/* <button
-                  onClick={() => {
-                    setShowStartPopup(false);
-                    handleManualSelect();
-                  }}
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 rounded-lg text-xs"
-                >
-                  Select Players First
-                </button> */}
               </div>
             )}
 
@@ -1585,7 +1709,7 @@ export default function AdminBiddingDashboard() {
         </motion.div>
       )}
 
-      {/* --- Edit Bid Modal --- */}
+      {/* Edit Bid Modal */}
       {showEdit && (
         <motion.div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 px-4"
