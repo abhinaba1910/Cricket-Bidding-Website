@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { FiSearch, FiPlus, FiEdit } from "react-icons/fi";
 import { Link, useNavigate } from "react-router-dom";
-import api from "../../userManagement/Api";
+import {api} from "../../userManagement/Api";
 import MobileStickyNav from "../../components/layout/MobileStickyNav";
 
 const TABS = [
