@@ -4,7 +4,8 @@ import { FiChevronLeft } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 
 import toast from "react-hot-toast";
-import api from "../../userManagement/Api";
+import Api from "../../userManagement/Api";
+
 
 export default function AddPlayer() {
   const {
@@ -33,7 +34,7 @@ export default function AddPlayer() {
         }
       }
 
-      const res = await api.post("/add-player", formData);
+      const res = await Api.post("/add-player", formData);
       toast.success("Player added successfully!");
       reset();
       setPreview(null);

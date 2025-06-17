@@ -3,8 +3,8 @@ import React, { useState } from 'react'
 import { Lock, User } from 'lucide-react'
 import Input from '../../components/ui/Input'
 import Button from '../../components/ui/Button'
-import api from '../../userManagement/Api'
 import { toast } from "react-hot-toast";
+import Api from '../../userManagement/Api';
 
 function LoginForm({ onSuccess, onToggleForm }) {
   const [username, setUsername] = useState('')
@@ -18,7 +18,7 @@ function LoginForm({ onSuccess, onToggleForm }) {
     setError("");
   
     try {
-      const response = await api.post("/login", { username, password });
+      const response = await Api.post("/login", { username, password });
   
       const { token, user } = response.data;
       const { role, email, firstTime } = user;

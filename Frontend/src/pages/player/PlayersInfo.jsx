@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { FiSearch, FiEye, FiEdit, FiPlus } from "react-icons/fi";
 import MobileStickyNav from "../../components/layout/MobileStickyNav";
-import api from "../../userManagement/Api";
+import Api from "../../userManagement/Api";
 
 // Filters that match actual backend structure
 const allRoles = [
@@ -41,7 +41,7 @@ export default function PlayersInfo() {
   useEffect(() => {
     const fetchPlayers = async () => {
       try {
-        const res = await api.get("/get-player");
+        const res = await Api.get("/get-player");
         setPlayers(res.data);
         console.log(res.data);
       } catch (err) {

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { FiSearch, FiEye, FiArrowLeft } from "react-icons/fi";
 import { useNavigate, useParams } from "react-router-dom";
-import api from "../../userManagement/Api";
+import Api from "../../userManagement/Api";
 
 export default function AdminBiddingTeamsList() {
   const { id } = useParams(); // This is the auction ID
@@ -13,7 +13,7 @@ export default function AdminBiddingTeamsList() {
 
   // Fetch auction details and selected teams
   useEffect(() => {
-    api
+    Api
       .get(`/get-auction/${id}`)
       .then((res) => {
         setAuctionDetails(res.data);

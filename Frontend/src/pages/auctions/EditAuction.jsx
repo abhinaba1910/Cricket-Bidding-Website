@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { FiPlus, FiArrowLeft } from "react-icons/fi";
-import api from "../../userManagement/Api";
 import { useParams, useNavigate } from "react-router-dom";
 import { AddPlayersModal } from "./AddPlayersModal";
 import { AddTeamsModal } from "./AddTeamsModal";
 import MobileStickyNav from "../../components/layout/MobileStickyNav";
 import toast from "react-hot-toast";
+import Api from "../../userManagement/Api";
 
 export default function EditAuction() {
   const { id } = useParams();
@@ -18,7 +18,7 @@ export default function EditAuction() {
 
   // Load existing auction data
   useEffect(() => {
-    api
+    Api
       .get(`/get-auction/${id}`)
       .then((res) => {
         setAuctionName(res.data.auctionName);
@@ -60,7 +60,7 @@ export default function EditAuction() {
       return;
     }
 
-    api
+    Api
       .patch(`/edit-auction/${id}`, {
         auctionName,
         selectedPlayers: selectedPlayers.map((p) => p._id),

@@ -169,7 +169,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         <div className="h-full flex flex-col">
           <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200 md:hidden">
             <div className="flex-1 flex justify-center">
-              <span className="text-xl font-bold text-primary-600">BidMaster</span>
+              <span className="text-xl font-bold text-primary-600">CricBid</span>
             </div>
             <button
               type="button"

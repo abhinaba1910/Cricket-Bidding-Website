@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { FiSearch, FiX } from "react-icons/fi";
-import api from "../../userManagement/Api";
+import Api from "../../userManagement/Api";
 
 const allRoles = ["Batsman", "Bowler", "All-Rounder", "Wicket-Keeper"];
 const allBattingStyles = ["Right Handed Batsman", "Left Handed Batsman"];
@@ -39,7 +39,7 @@ export function AddPlayersModal({
 
   // Fetch all players, then filter out existing
   useEffect(() => {
-    api
+    Api
       .get("/get-player/available")
       .then((res) => {
         const nonSelected = res.data.filter(

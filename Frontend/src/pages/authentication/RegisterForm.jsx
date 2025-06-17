@@ -3,9 +3,9 @@ import { Mail, Lock, User } from "lucide-react";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
 import AvatarUpload from "./AvatarUpload";
-import api from "../../userManagement/Api";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
+import Api from "../../userManagement/Api";
 
 
 function RegisterForm({ onToggleForm }) {
@@ -42,7 +42,7 @@ function RegisterForm({ onToggleForm }) {
     setIsLoading(true);
   
     try {
-      const response = await api.post("/register", formData);
+      const response = await Api.post("/register", formData);
   
       if (response.status === 201) {
         toast.success("Registration successful! Redirecting...");

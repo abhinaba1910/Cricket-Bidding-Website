@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { FiSearch, FiX } from "react-icons/fi";
-import api from "../../userManagement/Api";
+import Api from "../../userManagement/Api";
 
 export function AddTeamsModal({ auctionId, existingTeamIds, onClose, onAdd }) {
   const [teams, setTeams] = useState([]);
@@ -14,7 +14,7 @@ export function AddTeamsModal({ auctionId, existingTeamIds, onClose, onAdd }) {
 
   // Fetch all teams, then filter out existing
   useEffect(() => {
-    api.get("/get-teams")
+    Api.get("/get-teams")
       .then(res => {
         console.log(res.data)
         const nonSelected = res.data.filter(t => !existingTeamIds.includes(t._id));

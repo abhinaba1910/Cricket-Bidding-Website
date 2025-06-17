@@ -7,7 +7,8 @@ import CharacterCard from "../characters/CharacterCard";
 import toast from "react-hot-toast";
 import { FaUserTie, FaWallet, FaUsers, FaRegIdBadge } from "react-icons/fa";
 import { GiMoneyStack, GiCardRandom, GiTeamIdea } from "react-icons/gi";
-import api from "../../userManagement/Api";
+import Api from "../../userManagement/Api";
+
 
 // ─── Shared "CriteriaTable" for Mobile ──────────────────────────────────
 // function CriteriaTable({ tableNumbers }) {
@@ -306,7 +307,7 @@ export default function UserBiddingDashboardMobile() {
   useEffect(() => {
     const fetchAuctionData = async () => {
       try {
-        const response = await api.get(`/bidding-portal/${id}`);
+        const response = await Api.get(`/bidding-portal/${id}`);
         const data = response.data;
         console.log("Fetched Auction Data:", data);
         setAuctionData(data);
@@ -399,13 +400,13 @@ export default function UserBiddingDashboardMobile() {
 
     try {
       setIsBidding(true);
-      const res = await api.post(`/place-bid/${id}`, payload);
+      const res = await Api.post(`/place-bid/${id}`, payload);
       setEmoteToPlay(null);
       setTimeout(() => setEmoteToPlay("HandRaise"), 10);
 
       toast.success("Bid Placed Successfully");
       // Refresh data
-      const updated = await api.get(`/bidding-portal/${id}`);
+      const updated = await Api.get(`/bidding-portal/${id}`);
       setAuctionData(updated.data);
     } catch (error) {
       console.error("Failed to place bid:", error);
@@ -424,7 +425,7 @@ export default function UserBiddingDashboardMobile() {
 
     const myTeamId = auctionData?.team?.teamId;
     try {
-      const response = await api.post(`/use-rtm/${id}`, {
+      const response = await Api.post(`/use-rtm/${id}`, {
         teamId: myTeamId, // The current user's selected team ID
       });
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import api from "../../userManagement/Api";
 import toast from "react-hot-toast";
+import Api from "../../userManagement/Api";
 
 // const placeholderAvatars = [
 //   { id: "avatar1", src: "/avatars/avatar1.png", alt: "Avatar 1" },
@@ -61,7 +61,7 @@ export default function UserBiddingCharSelection() {
   useEffect(() => {
     const fetchTeams = async () => {
       try {
-        const res = await api.get(`/join-auction/${id}/teams`);
+        const res = await Api.get(`/join-auction/${id}/teams`);
         setTeams(res.data.teams);
         if(res.data.alreadyManager){
           navigate(`/user-bidding-portal/${id}`);

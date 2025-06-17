@@ -2,9 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FiChevronLeft, FiX } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
-import api from "../../userManagement/Api";
 import toast from "react-hot-toast";
-import MobileStickyNav from "../../components/layout/MobileStickyNav";
+import Api from "../../userManagement/Api";
 
 export default function AdminBiddingTeamView() {
   const { id, teamId } = useParams();
@@ -23,7 +22,7 @@ export default function AdminBiddingTeamView() {
     async function loadData() {
       try {
         // Fetch auction detail (includes selectedTeams with purse/remaining/totalSpent and boughtPlayers)
-        const { data: auction } = await api.get(`/get-auction/${id}`);
+        const { data: auction } = await Api.get(`/get-auction/${id}`);
         console.log(auction)
 
         const selectedTeam = auction.selectedTeams.find(t => t._id === teamId);

@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { FiSearch, FiPlus, FiEdit } from "react-icons/fi";
 import { Link, useNavigate } from "react-router-dom";
-import api from "../../userManagement/Api";
 import MobileStickyNav from "../../components/layout/MobileStickyNav";
+import Api from "../../userManagement/Api";
 
 const TABS = [
   { key: "upcoming", label: "Upcoming" },
@@ -27,7 +27,7 @@ export default function AuctionsInfo() {
   // Fetch auctions from backend and set state
   const fetchAuctions = async () => {
     try {
-      const res = await api.get("/get-auction");
+      const res = await Api.get("/get-auction");
       const data = res.data.auctions;
       console.log(data);
 
@@ -60,7 +60,7 @@ export default function AuctionsInfo() {
     if (status !== "upcoming") return;
 
     try {
-      const res = await api.patch(`/start-auction/${id}`);
+      const res = await Api.patch(`/start-auction/${id}`);
 
       if (res.data.status === "live") {
         // Update auction status locally to live and clear countdown timer

@@ -71,7 +71,7 @@
 //   };
 
 //   const onSubmit = async (data) => {
-//     await new Promise(r => setTimeout(r, 1000)); // simulate API
+//     await new Promise(r => setTimeout(r, 1000)); // simulate Api
 //     setToast({ type: 'success', message: 'Auction Created!' });
 //     setCurrentStep(4);
 //     setTimeout(() => setToast(null), 3000);
@@ -261,7 +261,7 @@ import {
   auctionStep2Schema,
   auctionStep3Schema,
 } from "../../lib/schemas";
-import api from "../../userManagement/Api";
+import Api from "../../userManagement/Api";
 
 const stepSchemas = [
   auctionStep1Schema,
@@ -309,8 +309,8 @@ export default function CreateAuctionForm() {
     const fetchData = async () => {
       try {
         const [teamRes, playerRes] = await Promise.all([
-          api.get("/get-teams"),
-          api.get("/get-player/available"),
+          Api.get("/get-teams"),
+          Api.get("/get-player/available"),
         ]);
         setTeams(teamRes.data);
         setPlayers(playerRes.data);
@@ -367,7 +367,7 @@ export default function CreateAuctionForm() {
         formData.append("auctionImage", data.auctionImage[0]);
       }
 
-      await api.post("/create-auction", formData, {
+      await Api.post("/create-auction", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },

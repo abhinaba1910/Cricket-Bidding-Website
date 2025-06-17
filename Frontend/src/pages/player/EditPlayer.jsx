@@ -3,8 +3,8 @@ import React, { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { FiChevronLeft } from "react-icons/fi";
 import { useNavigate, useParams } from "react-router-dom";
-import api from "../../userManagement/Api";
 import toast from "react-hot-toast";
+import Api from "../../userManagement/Api";
 
 export default function EditPlayer() {
   const { id } = useParams();
@@ -25,7 +25,7 @@ export default function EditPlayer() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await api.get(`/get-player/${id}`); // 🔗 TODO: adjust endpoint
+        const res = await Api.get(`/get-player/${id}`); // 🔗 TODO: adjust endpoint
         const p = res.data;
         // fill form
         reset({
@@ -72,7 +72,7 @@ export default function EditPlayer() {
         }
       });
 
-      await api.put(`/update-player/${id}`, formData); // 🔗 TODO: adjust endpoint
+      await Api.put(`/update-player/${id}`, formData); // 🔗 TODO: adjust endpoint
       toast.success("Player updated successfully!");
       setTimeout(() => navigate(-1), 1000);
     } catch (err) {

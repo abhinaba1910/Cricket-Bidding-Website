@@ -1,46 +1,45 @@
-import React, { useState } from 'react'
-import api from '../../userManagement/Api'
-
+import React, { useState } from "react";
+import Api from "../../userManagement/Api";
 
 function SetPassword() {
-  const [newPassword, setNewPassword] = useState('')
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [newPassword, setNewPassword] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
-    setSuccess('')
-    setIsLoading(true)
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    setIsLoading(true);
 
     try {
-      const token = localStorage.getItem('token')
-      const response = await api.post(
-        '/set-password',
+      const token = localStorage.getItem("token");
+      const response = await Api.post(
+        "/set-password",
         { newPassword },
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         }
-      )
+      );
 
       if (response.status === 200) {
-        setSuccess('Password updated! Redirecting to login...')
+        setSuccess("Password updated! Redirecting to login...");
         setTimeout(() => {
-          localStorage.removeItem('token') // force re-login
-          window.location.href='/';
-        }, 1500)
+          localStorage.removeItem("token"); // force re-login
+          window.location.href = "/";
+        }, 1500);
       } else {
-        setError('Something went wrong.')
+        setError("Something went wrong.");
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to set password.')
+      setError(err.response?.data?.error || "Failed to set password.");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
@@ -50,7 +49,10 @@ function SetPassword() {
         </h2>
         <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
           <div>
-            <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">
+            <label
+              htmlFor="newPassword"
+              className="block text-sm font-medium text-gray-700"
+            >
               New Password
             </label>
             <input
@@ -73,13 +75,13 @@ function SetPassword() {
               disabled={isLoading}
               className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
             >
-              {isLoading ? 'Setting Password...' : 'Set Password'}
+              {isLoading ? "Setting Password..." : "Set Password"}
             </button>
           </div>
         </form>
       </div>
     </div>
-  )
+  );
 }
 
-export default SetPassword
+export default SetPassword;

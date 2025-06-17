@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { FiChevronLeft } from "react-icons/fi";
-import api from "../../userManagement/Api";
 import toast from "react-hot-toast";
+import Api from "../../userManagement/Api";
 
 export default function CreateTeam() {
   const {
@@ -24,7 +24,7 @@ export default function CreateTeam() {
       formData.append("purse", data.purse);
       formData.append("logoFile", data.logoFile);
 
-      const response = await api.post("/create-team", formData, {
+      const response = await Api.post("/create-team", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 

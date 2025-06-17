@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from "react";
 import { FiPlus, FiEye, FiEdit, FiSearch } from "react-icons/fi";
 import MobileStickyNav from "../../components/layout/MobileStickyNav";
-import api from "../../userManagement/Api";
 import { useNavigate } from "react-router-dom";
+import Api from "../../userManagement/Api";
 
 const TABS = [
   { key: "upcoming", label: "Upcoming" },
@@ -37,7 +37,7 @@ export default function AuctionsInfo() {
     const fetchAuctions = async () => {
       setLoading(true);
       try {
-        const res = await api.get("/get-all-auctions");
+        const res = await Api.get("/get-all-auctions");
         const grouped = {
           upcoming: [],
           live: [],
@@ -81,7 +81,7 @@ export default function AuctionsInfo() {
 
   const handleJoinSubmit = async () => {
     try {
-      const res = await api.post(`/join-auction/${selectedAuctionId}`, {
+      const res = await Api.post(`/join-auction/${selectedAuctionId}`, {
         joinCode,
       });
   

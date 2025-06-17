@@ -1,7 +1,8 @@
 // src/components/PlayerDetailsPage.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import api from "../../userManagement/Api";
+import Api from "../../userManagement/Api";
+
 
 export default function UserBiddingPlayerView() {
   const { id } = useParams();
@@ -12,7 +13,7 @@ export default function UserBiddingPlayerView() {
   useEffect(() => {
     const fetchPlayer = async () => {
       try {
-        const res = await api.get(`/get-player/${id}`); // ✅ Call the backend
+        const res = await Api.get(`/get-player/${id}`); // ✅ Call the backend
         const p = res.data;
 
         // Optionally restructure data if needed

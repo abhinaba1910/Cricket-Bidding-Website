@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FiChevronLeft } from "react-icons/fi";
-import api from "../../userManagement/Api";
 import toast from "react-hot-toast";
 import MobileStickyNav from "../../components/layout/MobileStickyNav";
+import Api from "../../userManagement/Api";
 
 export default function ViewTeam() {
   const { id } = useParams();
@@ -16,7 +16,7 @@ export default function ViewTeam() {
   
     async function loadTeam() {
       try {
-        const res = await api.get(`/get-team/${id}`);
+        const res = await Api.get(`/get-team/${id}`);
         setTeam(res.data);
       } catch (err) {
         console.error("Failed to load team:", err);

@@ -3,7 +3,8 @@ import { Users, TrendingUp, Briefcase, Clock, PlusCircle } from "lucide-react";
 import Card, { CardContent, CardHeader } from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import MobileStickyNav from "../components/layout/MobileStickyNav";
-import api from "../userManagement/Api";
+import Api from "../userManagement/Api";
+
 
 
 const Dashboard = () => {
@@ -14,7 +15,7 @@ const Dashboard = () => {
 
   const fetchStats = async () => {
     try {
-      const res = await api.get("/dashboard-stats");
+      const res = await Api.get("/dashboard-stats");
       setPlayersCount(res.data.totalPlayers);
       setTeamsCount(res.data.totalTeams);
       setAuctions(res.data.auctions);

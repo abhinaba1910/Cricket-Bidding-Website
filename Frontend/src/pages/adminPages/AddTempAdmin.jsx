@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import api from "../../userManagement/Api";
+import Api from "../../userManagement/Api";
 
 const AddTempAdmin = () => {
   const [form, setForm] = useState({ name: "", email: "" });
@@ -25,7 +25,7 @@ const AddTempAdmin = () => {
     setError(null);
 
     try {
-      const res = await api.post("/add-temp-admin", form);
+      const res = await Api.post("/add-temp-admin", form);
       setMessage(res.data.message || "Temp admin added successfully.");
       setForm({ name: "", email: "" });
     } catch (err) {

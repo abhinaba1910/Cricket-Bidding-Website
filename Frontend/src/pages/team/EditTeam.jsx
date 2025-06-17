@@ -3,8 +3,8 @@ import React, { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { FiChevronLeft } from "react-icons/fi";
 import { useNavigate, useParams } from "react-router-dom";
-import api from "../../userManagement/Api";
 import toast from "react-hot-toast";
+import Api from "../../userManagement/Api";
 
 export default function EditTeam() {
   const { id } = useParams();
@@ -29,7 +29,7 @@ export default function EditTeam() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await api.get(`/get-team/${id}`);
+        const res = await Api.get(`/get-team/${id}`);
         const t = res.data;
         console.log(t)
         reset({ teamName: t.teamName, shortName: t.shortName, purse: t.purse });
@@ -68,7 +68,7 @@ export default function EditTeam() {
         formData.append("logoFile", data.logoFile);
       }
 
-      await api.put(`/update-team/${id}`, formData, {
+      await Api.put(`/update-team/${id}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 

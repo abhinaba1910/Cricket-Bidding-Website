@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { FiSearch, FiArrowLeft } from "react-icons/fi";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import api from "../../userManagement/Api";
+import Api from "../../userManagement/Api";
+
 
 const allRoles = [
   "Batsman",
@@ -37,7 +38,7 @@ export default function ManualPlayerSelection() {
 
   useEffect(() => {
     if (!id) return;
-    api
+    Api
       .get(`/get-auction/${id}`)
       .then((res) => {
         const { savailablePlayers, manualPlayerQueue } = res.data;
@@ -113,7 +114,7 @@ export default function ManualPlayerSelection() {
         console.log("New players being added:", newQueuePlayers);
 
         // Send the proper data structure to backend
-        const response = await api.post(`/set-manual-queue/${id}`, {
+        const response = await Api.post(`/set-manual-queue/${id}`, {
           newPlayers: newQueuePlayers,
           existingQueue: currentQueue,
         });
