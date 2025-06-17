@@ -3,6 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import Api from "../../userManagement/Api";
 
+
+
 // const placeholderAvatars = [
 //   { id: "avatar1", src: "/avatars/avatar1.png", alt: "Avatar 1" },
 //   { id: "avatar2", src: "/avatars/avatar2.png", alt: "Avatar 2" },
@@ -83,7 +85,7 @@ export default function UserBiddingCharSelection() {
       return;
     }
     try {
-      await api.post(`/join-auction/${id}/confirm`, {
+      await Api.post(`/join-auction/${id}/confirm`, {
         teamId: selectedTeam,
         avatarUrl: avatars.find(a => a.id === selectedAvatar).src,
       });
