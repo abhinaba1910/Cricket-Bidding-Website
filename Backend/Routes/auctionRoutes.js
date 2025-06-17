@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+
 const Auction = require("../Models/auction");
 const AuthMiddleWare = require("../Auth/Authentication");
 const multer = require("multer");
@@ -85,7 +86,18 @@ router.post(
 
       console.log(newAuction);
       await newAuction.save();
-      res
+      // res
+      //   .status(201)
+      //   .json({ message: "Auction created successfully", auction: newAuction });
+      // ── PUSH new-auction event ───────────────────────────
+      const io = req.app.get("io");
+      // broadcast to everyone (or you could use a "auctions" room)
+      io.emit("auction:update", {
+        type: "auction-created",
+        payload: newAuction
+      });
+
+      return res
         .status(201)
         .json({ message: "Auction created successfully", auction: newAuction });
     } catch (err) {
@@ -201,10 +213,22 @@ router.patch("/start-auction/:id", AuthMiddleWare, async (req, res) => {
       auction.status = "live";
       auction.countdownStartedAt = null; // stop countdown timer
       await auction.save();
-      return res.json({
-        message: "Auction started successfully",
-        status: auction.status,
-      });
+      // return res.json({
+      //   message: "Auction started successfully",
+      //   status: auction.status,
+      // });
+       // ── PUSH via WebSocket ───────────────────────────────
+     const io = req.app.get("io");
+     io.to(req.params.id).emit("auction:update", {
+       type: "auction-started",
+       payload: { status: auction.status }
+     });
+ 
+     return res.json({
+       message: "Auction started successfully",
+       status: auction.status,
+     });
+
     } else if (now > deadline) {
       return res
         .status(400)
@@ -223,7 +247,7 @@ router.patch("/start-auction/:id", AuthMiddleWare, async (req, res) => {
     res.status(500).json({ error: "Server error starting auction" });
   }
 });
-
+//vinay working
 router.get("/get-auction/:id", AuthMiddleWare, async (req, res) => {
   try {
     const auctionId = req.params.id;
@@ -439,6 +463,13 @@ router.patch("/edit-auction/:id", AuthMiddleWare, async (req, res) => {
 
     await auction.save();
 
+    // res.json({ message: "Auction updated successfully.", auction });
+    // ── PUSH updated auction details ───────────────────────
+    const io = req.app.get("io");
+    io.to(req.params.id).emit("auction:update", {
+      type: "auction-edited",
+      payload: { auction }
+    }); 
     res.json({ message: "Auction updated successfully.", auction });
   } catch (error) {
     console.error("Error updating auction:", error);
