@@ -188,7 +188,7 @@ export default function AddPlayer() {
                     <option value="">Select role...</option>
                     {[
                       "Batsman",
-                      "Fast all-rounde",
+                      "Fast all-rounder",
                       "Spin all-rounder",
                       "Wicket keeper batsman",
                       "Spin bowler",
