@@ -30,7 +30,7 @@ mongoose
   .then(() => console.log("MongoDB connected successfully."))
   .catch((err) => console.error("MongoDB connection error:", err));
 
-const allowedOrigins = ["http://localhost:5173"];
+const allowedOrigins = ["https://cricket-bidding-website.vercel.app/","http://localhost:5173"];
 app.use(
   cors({
     origin: function (origin, callback) {
