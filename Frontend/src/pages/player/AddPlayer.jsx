@@ -4,7 +4,7 @@ import { FiChevronLeft } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 
 import toast from "react-hot-toast";
-import api from "../../userManagement/api";
+import api from "../../userManagement/Api";
 
 export default function AddPlayer() {
   const {
