@@ -55,6 +55,7 @@ router.post(
         shortName: shortName.trim().toUpperCase(),
         logoUrl,
         purse,
+        remaining:purse,
         createdBy: req.user.id,
       });
 

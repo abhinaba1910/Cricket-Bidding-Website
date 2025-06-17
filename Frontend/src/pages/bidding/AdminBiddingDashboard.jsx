@@ -64,10 +64,10 @@ export default function AdminBiddingDashboard() {
       console.warn("No auth token found. Cannot connect socket.");
       return;
     }
-    const SOCKET_SERVER_URL = "http://localhost:6001";  // ← replace with your real URL
+    const SOCKET_SERVER_URL = "http://localhost:6001"; // ← replace with your real URL
     const socket = io(SOCKET_SERVER_URL, {
       auth: { token },
-      transports: ["websocket"],   // enforce WS transport for reliability
+      transports: ["websocket"], // enforce WS transport for reliability
     });
 
     socketRef.current = socket;
@@ -84,13 +84,17 @@ export default function AdminBiddingDashboard() {
       console.log("Socket disconnected:", reason);
     });
 
-     // ── CATCH THE OTHER BID EVENT (some routes emit “bid:updated”) ──
+    // ── CATCH THE OTHER BID EVENT (some routes emit “bid:updated”) ──
     socket.on("bid:updated", (payload) => {
       console.log("Received bid:updated", payload);
       // update your current bid amount
-      setAuctionData(prev => ({
+      setAuctionData((prev) => ({
         ...prev,
-        currentBid: { amount: payload.newBidAmount, team: prev.currentBid.team, teamLogo: prev.currentBid.teamLogo }
+        currentBid: {
+          amount: prev.newBidAmount,
+          team: prev.currentBid.team,
+          teamLogo: prev.currentBid.teamLogo,
+        },
       }));
       setBidAmount(payload.newBidAmount);
       toast.success(`Bid updated: ₹${payload.newBidAmount.toLocaleString()}`);
@@ -99,9 +103,13 @@ export default function AdminBiddingDashboard() {
     // 1. Bidding started
     socket.on("bidding:started", (payload) => {
       console.log("Received bidding:started", payload);
-      const { currentPlayer, selectionMode: newMode, automaticFilter: newFilter } = payload;
+      const {
+        currentPlayer,
+        selectionMode: newMode,
+        automaticFilter: newFilter,
+      } = payload;
       if (currentPlayer) {
-        setAuctionData(prev => ({
+        setAuctionData((prev) => ({
           ...prev,
           currentLot: {
             id: currentPlayer._id,
@@ -125,20 +133,21 @@ export default function AdminBiddingDashboard() {
       if (newFilter) setAutomaticFilter(newFilter);
       fetchQueueStatus();
     });
-    
+
     // 2. Bid placed
     socket.on("bid:placed", (data) => {
       console.log("Received bid:placed", data);
       const { newBid } = data;
       if (newBid) {
-        setAuctionData(prev => ({
+        setAuctionData((prev) => ({
           ...prev,
           currentBid: {
             amount: newBid.amount,
-            team: prev.currentBid.team,
-            teamLogo: prev.currentBid.teamLogo,
+            team: newBid.team, 
+            teamLogo: newBid.teamLogo,
           },
         }));
+        setShowEdit(true);
         setBidAmount(newBid.amount);
         toast.success(`New bid: ₹${newBid.amount.toLocaleString()}`);
       }
@@ -157,7 +166,7 @@ export default function AdminBiddingDashboard() {
       toast.success(`Player sold for ₹${amount.toLocaleString()}`);
       setIsPaused(pausedFlag);
       if (nextPlayer) {
-        setAuctionData(prev => ({
+        setAuctionData((prev) => ({
           ...prev,
           currentLot: {
             id: nextPlayer._id,
@@ -182,7 +191,7 @@ export default function AdminBiddingDashboard() {
         });
       } else {
         // Ended
-        setAuctionData(prev => ({
+        setAuctionData((prev) => ({
           ...prev,
           currentLot: {
             id: "--/--",
@@ -237,12 +246,17 @@ export default function AdminBiddingDashboard() {
     socket.on("player:unsold", (payload) => {
       console.log("Received player:unsold", payload);
       toast.success("Player marked as Unsold, moving to next");
-      const { nextPlayer, currentQueuePosition: newPos, totalQueueLength, isPaused: pausedFlag } = payload;
+      const {
+        nextPlayer,
+        currentQueuePosition: newPos,
+        totalQueueLength,
+        isPaused: pausedFlag,
+      } = payload;
       setIsPaused(pausedFlag);
       if (nextPlayer) {
         fetchAuctionData();
       } else {
-        setAuctionData(prev => ({
+        setAuctionData((prev) => ({
           ...prev,
           currentLot: {
             id: "--/--",
@@ -296,7 +310,8 @@ export default function AdminBiddingDashboard() {
     // 12. Queue updated
     socket.on("queue:updated", (payload) => {
       console.log("Received queue:updated", payload);
-      const { manualPlayerQueue: newQueue, currentQueuePosition: newPos } = payload;
+      const { manualPlayerQueue: newQueue, currentQueuePosition: newPos } =
+        payload;
       setManualPlayerQueue(newQueue);
       setCurrentQueuePosition(newPos);
       setQueueDisplay({
@@ -308,7 +323,7 @@ export default function AdminBiddingDashboard() {
     // Cleanup
     return () => {
       if (socketRef.current) {
-        socketRef.current.emit("leave-auction", id);  // always leave room
+        socketRef.current.emit("leave-auction", id); // always leave room
         socketRef.current.disconnect();
       }
     };
@@ -327,21 +342,21 @@ export default function AdminBiddingDashboard() {
   // -------------------------------
 
   // near the top of AdminBiddingDashboard, alongside other handlers:
-const handleStartBidding = async () => {
-  // show popup to choose manual/automatic
-  setShowStartPopup(true);
+  const handleStartBidding = async () => {
+    // show popup to choose manual/automatic
+    setShowStartPopup(true);
 
-  try {
-    // In case auction was paused, resume it:
-    await Api.patch(`/pause-auction/${id}`, {
-      isPaused: false,
-    });
-    setIsPaused(false);
-  } catch (error) {
-    console.error("Error starting bidding:", error);
-    alert("Internal server error");
-  }
-};
+    try {
+      // In case auction was paused, resume it:
+      await Api.patch(`/pause-auction/${id}`, {
+        isPaused: false,
+      });
+      setIsPaused(false);
+    } catch (error) {
+      console.error("Error starting bidding:", error);
+      alert("Internal server error");
+    }
+  };
 
   const fetchQueueStatus = async () => {
     try {
@@ -431,7 +446,8 @@ const handleStartBidding = async () => {
     } catch (error) {
       toast.error("Error starting bidding:", error);
       toast.error(
-        error.response?.data?.error || "Failed to start bidding. Please try again."
+        error.response?.data?.error ||
+          "Failed to start bidding. Please try again."
       );
       return false;
     }
@@ -517,7 +533,8 @@ const handleStartBidding = async () => {
     } catch (error) {
       toast.error("Error in handleSaveStartSelection:", error);
       toast.error(
-        error.response?.data?.error || "An error occurred while starting bidding."
+        error.response?.data?.error ||
+          "An error occurred while starting bidding."
       );
     }
     setShowStartPopup(false);
@@ -770,7 +787,8 @@ const handleStartBidding = async () => {
       console.error("Sell error:", error);
       toast.error("Error selling player.");
       toast.error(
-        error.response?.data?.error || "Failed to sell player. Please try again."
+        error.response?.data?.error ||
+          "Failed to sell player. Please try again."
       );
     }
   };
@@ -960,7 +978,7 @@ const handleStartBidding = async () => {
     try {
       setShowEdit(false);
       await Api.patch(`/update-bid/${id}`, { amount: bidAmount });
-            toast.success("Bid updated!");
+      toast.success("Bid updated!");
       // server emits "bid:updated" → socket listener will update bidAmount
     } catch (error) {
       console.error("Error updating bid:", error);
@@ -1195,7 +1213,9 @@ const handleStartBidding = async () => {
               whileHover={!(biddingStarted && !isPaused) ? { scale: 1.05 } : {}}
               whileTap={!(biddingStarted && !isPaused) ? { scale: 0.95 } : {}}
             >
-              {biddingStarted && !isPaused ? "Bidding Started" : "Start Bidding"}
+              {biddingStarted && !isPaused
+                ? "Bidding Started"
+                : "Start Bidding"}
             </motion.button>
           </div>
 

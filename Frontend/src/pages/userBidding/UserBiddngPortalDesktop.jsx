@@ -266,11 +266,11 @@ export default function UserBiddingDashboardDesktop() {
     const visibleBid = auctionData?.bidAmount;
 
     if (!playerId || !teamId) {
-      alert("Missing team or player information.");
+      toast.error("Missing team or player information.");
       return;
     }
     if (!visibleBid || visibleBid <= 0) {
-      alert("Invalid bid amount.");
+      toast.error("Invalid bid amount.");
       return;
     }
     const payload = {
@@ -296,7 +296,7 @@ export default function UserBiddingDashboardDesktop() {
   // Handle RTM
   const handleUseRTM = async () => {
     if (rtmCount <= 0) {
-      alert("No RTMs left");
+      toast.error("No RTMs left");
       return;
     }
     const myTeamId = auctionData?.team?.teamId;
@@ -341,6 +341,7 @@ export default function UserBiddingDashboardDesktop() {
 
     // Listen for auction updates
      // —— listen on the *specific* event channels your server emits — no need to duplicate
+    socket.on("bid:updated",       payload => { console.log("bid:updated", payload); fetchAuctionData(); toast.success(`New bid ₹${payload.newBidAmount.toLocaleString()}`); });
     socket.on("bid:placed",       payload => { console.log("bid:placed", payload); fetchAuctionData(); toast.success(`New bid ₹${payload.newBid.amount.toLocaleString()}`); });
     socket.on("player:sold",      payload => { console.log("player:sold", payload); fetchAuctionData(); toast.success(`Sold for ₹${payload.amount.toLocaleString()}`); });
     socket.on("player:rtm",       payload => { console.log("player:rtm", payload); fetchAuctionData(); toast.success("RTM used"); });
@@ -350,6 +351,13 @@ export default function UserBiddingDashboardDesktop() {
     socket.on("bidding:started",  payload => { console.log("bidding:started", payload); fetchAuctionData(); });
 
     // In case backend emits other specific events:
+    socket.on("bid:updated", (payload) => {
+      console.log("Received bid:updated:", payload);
+      fetchAuctionData();
+      if (payload.newBidAmount) {
+        toast.success(`New bid: ₹${payload.amount.toLocaleString()}`);
+      }
+    });
     socket.on("bid:placed", (payload) => {
       console.log("Received bid:placed:", payload);
       fetchAuctionData();
@@ -532,7 +540,7 @@ export default function UserBiddingDashboardDesktop() {
             Purse Balance
           </h3>
           <p className="text-xl font-mono text-green-400 text-center animate-pulse">
-            ₹{auctionData.team?.remaining?.toLocaleString() ?? "--/--"}
+            ₹{auctionData.team?.purse.toLocaleString() ?? "--/--"}
           </p>
         </motion.div>
 

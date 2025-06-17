@@ -292,7 +292,10 @@ router.post("/manual-sell/:auctionId/:playerId", auth, async (req, res) => {
         totalQueueLength: auction.manualPlayerQueue.length,
         remainingPlayers:
           auction.selectionMode === "manual"
-            ? Math.max(0, auction.manualPlayerQueue.length - newQueuePosition - 1)
+            ? Math.max(
+                0,
+                auction.manualPlayerQueue.length - newQueuePosition - 1
+              )
             : 0,
         isPaused: false,
       };
@@ -319,43 +322,6 @@ router.post("/manual-sell/:auctionId/:playerId", auth, async (req, res) => {
     });
   } catch (err) {
     console.error("Manual sell error:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// PATCH /update-bid/:auctionId
-router.patch("/update-bid/:auctionId", auth, async (req, res) => {
-  try {
-    const { auctionId } = req.params;
-    const { amount } = req.body;
-
-    const auction = await Auction.findById(auctionId);
-
-    if (!auction || !auction.currentPlayerOnBid) {
-      return res
-        .status(404)
-        .json({ error: "Auction or current player not found." });
-    }
-
-    // ✅ Only update bidAmount, NOT currentBid
-    auction.bidAmount = {
-      player: auction.currentPlayerOnBid,
-      amount: amount,
-    };
-
-    await auction.save();
-
-    // Emit updated bid to all participants
-    {
-      const io = req.app.get("io");
-      io.to(auctionId).emit("bid:updated", {
-        currentPlayerOnBid: auction.currentPlayerOnBid,
-        newBidAmount: amount,
-      });
-    }
-
-    res.json({ message: "Bid updated successfully", bidAmount: amount });
-  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
@@ -1057,7 +1023,7 @@ router.patch("/end-auction/:auctionId", auth, async (req, res) => {
       if (team) {
         const remainingAmount = team.remaining || 0;
         team.purse += remainingAmount;
-        team.remaining = 0;
+        // team.remaining = remainingAmount;
         await team.save();
       }
     }
@@ -1299,6 +1265,43 @@ router.get("/bidding-portal/:auctionId", auth, async (req, res) => {
   }
 });
 
+// PATCH /update-bid/:auctionId
+router.patch("/update-bid/:auctionId", auth, async (req, res) => {
+  try {
+    const { auctionId } = req.params;
+    const { amount } = req.body;
+
+    const auction = await Auction.findById(auctionId);
+
+    if (!auction || !auction.currentPlayerOnBid) {
+      return res
+        .status(404)
+        .json({ error: "Auction or current player not found." });
+    }
+
+    // ✅ Only update bidAmount, NOT currentBid
+    auction.bidAmount = {
+      player: auction.currentPlayerOnBid,
+      amount: amount,
+    };
+
+    await auction.save();
+
+    // Emit updated bid to all participants
+    {
+      const io = req.app.get("io");
+      io.to(auctionId).emit("bid:updated", {
+        currentPlayerOnBid: auction.currentPlayerOnBid,
+        newBidAmount: amount,
+      });
+    }
+
+    res.json({ message: "Bid updated successfully", bidAmount: amount });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Place bid: add emit after saving new bid
 router.post("/place-bid/:auctionId", auth, async (req, res) => {
   try {
@@ -1373,7 +1376,11 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
       const io = req.app.get("io");
       io.to(auctionId).emit("bid:placed", {
         currentPlayerOnBid: auction.currentPlayerOnBid,
-        newBid: { team: teamId, amount: bidAmount },
+        newBid: {
+          team: team.shortName,        
+          teamLogo: team.logoUrl,      
+          amount: bidAmount,
+        },
       });
     }
 
