@@ -2,8 +2,9 @@ import React, { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { FiChevronLeft } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
-import api from "../../userManagement/Api";
+
 import toast from "react-hot-toast";
+import api from "../../userManagement/api";
 
 export default function AddPlayer() {
   const {
