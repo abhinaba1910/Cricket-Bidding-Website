@@ -718,4 +718,18 @@ router.post("/join-auction/:id", AuthMiddleWare, async (req, res) => {
   }
 });
 
+router.delete('/delete-auction/:id', async (req, res) => {
+  try {
+    const result = await Auction.findByIdAndDelete(req.params.id);
+    if (!result) {
+      return res.status(404).json({ error: "Auction not found" });
+    }
+    res.status(204).end();
+  } catch (err) {
+    console.error("Delete Auction Error:", err);
+    res.status(500).json({ error: "Failed to delete auction" });
+  }
+});
+
+
 module.exports = router;

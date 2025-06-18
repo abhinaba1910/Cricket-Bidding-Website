@@ -83,6 +83,24 @@ export default function EditPlayer() {
     }
   };
 
+  // 🔥 Delete handler
+  const handleDelete = async () => {
+    if (!window.confirm("Are you sure you want to permanently delete this player?")) {
+      return;
+    }
+    try {
+      setSubmitting(true);
+      await Api.delete(`/delete-player/${id}`); // adjust your endpoint if needed
+      toast.success("Player deleted permanently.");
+      navigate(-1);
+    } catch (err) {
+      console.error("Failed to delete player", err);
+      toast.error(err.response?.data?.error || "Deletion failed");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // 3️⃣ handle image preview
   const handleFileChange = (e, onChange) => {
     const file = e.target.files?.[0];
@@ -370,13 +388,21 @@ export default function EditPlayer() {
             </section>
 
             {/* Submit */}
-            <div className="text-right">
+            <div className="text-right space-x-2">
               <button
                 type="submit"
                 disabled={submitting}
                 className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
               >
                 {submitting ? "Updating..." : "Update Player"}
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={submitting}
+                className="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+              >
+                Delete Player
               </button>
             </div>
           </form>

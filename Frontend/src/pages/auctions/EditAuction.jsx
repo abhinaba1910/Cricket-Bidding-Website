@@ -51,7 +51,20 @@ export default function EditAuction() {
     ];
     setSelectedTeams(updatedTeams);
   };
-  
+  const handleDeleteAuction = async () => {
+  const confirmDelete = window.confirm("Are you sure you want to delete this auction permanently?");
+  if (!confirmDelete) return;
+
+  try {
+    await Api.delete(`/delete-auction/${id}`);
+    toast.success("Auction deleted successfully!");
+    navigate("/admins-my-auction-info");
+  } catch (error) {
+    console.error("Failed to delete auction:", error);
+    toast.error("Failed to delete auction.");
+  }
+};
+
 
   // Save full auction
   const saveAuction = () => {
@@ -153,6 +166,13 @@ export default function EditAuction() {
       >
         Save Auction
       </button>
+      <button
+  onClick={handleDeleteAuction}
+  className="w-full mt-2 px-4 bg-red-600 hover:bg-red-700 text-white py-2 rounded"
+>
+  Delete Auction
+</button>
+
 
       {/* Modals */}
       {showPlayerModal && (

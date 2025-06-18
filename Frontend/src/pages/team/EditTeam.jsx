@@ -82,6 +82,25 @@ export default function EditTeam() {
     }
   };
 
+// 🔥 Delete handler
+  const handleDelete = async () => {
+    if (!window.confirm("Are you sure you want to permanently delete this team? This cannot be undone.")) {
+      return;
+    }
+    try {
+      setSubmitting(true);
+      await Api.delete(`/delete-team/${id}`); // adjust your endpoint if needed
+      toast.success("Team deleted permanently.");
+      navigate(-1);
+    } catch (err) {
+      console.error("Failed to delete team", err);
+      toast.error(err.response?.data?.error || "Deletion failed");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
@@ -290,6 +309,14 @@ export default function EditTeam() {
                 }`}
               >
                 {submitting ? "Saving..." : "Save Changes"}
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={submitting}
+                className="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+              >
+                Delete Team
               </button>
             </div>
           </form>
