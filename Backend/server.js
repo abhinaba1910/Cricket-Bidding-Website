@@ -22,8 +22,8 @@ const { Server } = require("socket.io");
 
 const io = new Server(server, {
   cors: {
-    origin: ["https://cricket-bidding-website.vercel.app", "http://localhost:5173"],
-    methods: ["GET", "POST", "PATCH"],
+    origin: ["https://cricbid.sytes.net","https://cricket-bidding-website.vercel.app", "http://localhost:5173"],
+    methods: ["GET", "POST", "PATCH","PUT","DELETE"],
     credentials: true,
   },
 });
@@ -71,7 +71,7 @@ mongoose
   .then(() => console.log("MongoDB connected successfully."))
   .catch((err) => console.error("MongoDB connection error:", err));
 
-const allowedOrigins = ["https://cricket-bidding-website.vercel.app", "http://localhost:5173"];
+const allowedOrigins = ["https://cricbid.sytes.net","https://cricket-bidding-website.vercel.app", "http://localhost:5173"];
 
 
 app.use(bodyParser.json());

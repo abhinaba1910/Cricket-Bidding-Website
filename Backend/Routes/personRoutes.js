@@ -185,7 +185,7 @@ router.delete("/delete/:id", AuthMiddleWare, async (req, res) => {
   }
 });
 
-const FRONTEND_URL = "https://cricket-bidding-website.vercel.app"; // ⬅️ Replace with your actual frontend
+const FRONTEND_URL = "https://cricbid.sytes.net"; // ⬅️ Replace with your actual frontend
 
 // Utility to generate random password
 function generateRandomPassword(length = 10) {

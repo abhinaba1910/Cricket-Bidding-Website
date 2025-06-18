@@ -5,7 +5,7 @@ import Api from "../../userManagement/Api";
 
 
 export default function UserBiddingPlayerView() {
-  const { id } = useParams();
+  const { playerId } = useParams();
   const navigate = useNavigate();
   const [player, setPlayer] = useState(null);
   const [error, setError] = useState(null);
@@ -13,7 +13,7 @@ export default function UserBiddingPlayerView() {
   useEffect(() => {
     const fetchPlayer = async () => {
       try {
-        const res = await Api.get(`/get-player/${id}`); // ✅ Call the backend
+        const res = await Api.get(`/get-player/${playerId}`); // ✅ Call the backend
         const p = res.data;
 
         // Optionally restructure data if needed
@@ -31,7 +31,7 @@ export default function UserBiddingPlayerView() {
         };
 
         setPlayer(playerData);
-        console.log(playerData)
+        console.log(p)
       } catch (err) {
         console.error("Error fetching player:", err);
         setError("You are not authorized or player not found.");
@@ -39,7 +39,7 @@ export default function UserBiddingPlayerView() {
     };
 
     fetchPlayer();
-  }, [id]);
+  }, [playerId]);
 
   if (error) {
     return (

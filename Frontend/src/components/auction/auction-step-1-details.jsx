@@ -410,15 +410,7 @@ export default function AuctionStep1Details({
             render={({ field }) => (
               <DatePicker
                 id="startDate"
-                selected={
-                  field.value
-                    ? new Date(
-                        new Date(field.value).toLocaleString("en-IN", {
-                          timeZone: "Asia/Kolkata",
-                        })
-                      )
-                    : null
-                }
+                selected={field.value ? new Date(field.value) : null}
                 onChange={(date) => field.onChange(date)}
                 minDate={new Date()}
                 placeholderText="Pick a date"

@@ -193,6 +193,13 @@ router.post("/manual-sell/:auctionId/:playerId", auth, async (req, res) => {
       $inc: { remaining: -amount },
     });
 
+    auction.biddingHistory.push({
+      player: playerId,
+      team: teamId,
+      bidAmount: amount,
+      time: new Date(),
+    });
+
     if (auction.pauseAfterCurrentPlayer) {
       auction.isPaused = true;
       auction.pauseAfterCurrentPlayer = false;
@@ -231,12 +238,7 @@ router.post("/manual-sell/:auctionId/:playerId", auth, async (req, res) => {
       });
     }
 
-    auction.biddingHistory.push({
-      player: playerId,
-      team: teamId,
-      bidAmount: amount,
-      time: new Date(),
-    });
+    
 
     if (nextPlayer) {
       auction.currentPlayerOnBid = nextPlayer._id;
@@ -1022,7 +1024,7 @@ router.patch("/end-auction/:auctionId", auth, async (req, res) => {
       const team = await Team.findById(teamEntry.team);
       if (team) {
         const remainingAmount = team.remaining || 0;
-        team.purse += remainingAmount;
+        team.purse = remainingAmount;
         // team.remaining = remainingAmount;
         await team.save();
       }

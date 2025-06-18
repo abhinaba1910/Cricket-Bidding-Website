@@ -253,7 +253,7 @@
 //               </div>
 //             );
 //           })}
-          
+
 //         </div>
 //       ) : (
 //         <p className="text-center text-gray-500">No auctions found.</p>
@@ -263,9 +263,6 @@
 
 //   );
 // }
-
-
-
 
 import React, { useEffect, useMemo, useState } from "react";
 import { FiSearch, FiPlus, FiEdit } from "react-icons/fi";
@@ -286,10 +283,19 @@ const statusMap = {
 };
 
 // Convert UTC date + time to IST Date object
-const convertToIST = (dateStr, timeStr) => {
-  const utcDate = new Date(`${dateStr}T${timeStr}Z`);
-  const istOffset = 5.5 * 60 * 60 * 1000; // 5.5 hours in milliseconds
-  return new Date(utcDate.getTime() + istOffset);
+const convertUTCtoIST = (utcString) => {
+  const formatter = new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const parts = formatter.formatToParts(new Date(utcString));
+  const values = Object.fromEntries(parts.map(p => [p.type, p.value]));
+  return new Date(`${values.year}-${values.month}-${values.day}T${values.hour}:${values.minute}:00`);
 };
 
 export default function AuctionsInfo() {
@@ -305,8 +311,9 @@ export default function AuctionsInfo() {
       const data = res.data.auctions;
 
       const updated = data.map((a) => {
-        const startTime = convertToIST(a.date, a.time);
-        const endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // 1 hour later
+        const startTime = convertUTCtoIST(a.startDate);
+        const endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // 1 hour window
+
         return {
           ...a,
           startTime,
@@ -332,9 +339,7 @@ export default function AuctionsInfo() {
       const res = await Api.patch(`/start-auction/${id}`);
       if (res.data.status === "live") {
         setAuctions((prev) =>
-          prev.map((a) =>
-            a.id === id ? { ...a, status: "live" } : a
-          )
+          prev.map((a) => (a.id === id ? { ...a, status: "live" } : a))
         );
         setJoinedAuctions((prev) => ({ ...prev, [id]: true }));
         navigate(`/admin/admin-bidding-dashboard/${id}`);
@@ -346,11 +351,19 @@ export default function AuctionsInfo() {
   };
 
   const formatISTTime = (dateObj) =>
-    dateObj.toLocaleTimeString("en-IN", {
+    dateObj.toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
       hour: "2-digit",
       minute: "2-digit",
       hour12: true,
+    });
+
+  const formatISTDate = (dateObj) =>
+    dateObj.toLocaleDateString("en-IN", {
       timeZone: "Asia/Kolkata",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
     });
 
   const filteredAuctions = useMemo(() => {
@@ -409,9 +422,7 @@ export default function AuctionsInfo() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filteredAuctions.map((a) => {
             const canStart =
-              a.status === "upcoming" &&
-              now >= a.startTime &&
-              now <= a.endTime;
+              a.status === "upcoming" && now >= a.startTime && now <= a.endTime;
 
             return (
               <div
@@ -437,7 +448,8 @@ export default function AuctionsInfo() {
                   </div>
                   <p className="text-sm text-gray-600 mb-2">{a.description}</p>
                   <p className="text-sm text-gray-500">
-                    {a.date} at {formatISTTime(a.startTime)} (IST)
+                    {formatISTDate(a.startTime)} at {formatISTTime(a.startTime)}{" "}
+                    (IST)
                   </p>
 
                   <p className="mt-1 text-sm text-gray-600">

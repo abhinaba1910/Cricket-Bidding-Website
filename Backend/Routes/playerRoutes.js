@@ -142,9 +142,9 @@ router.get("/get-player/available", authMiddleware, async (req, res) => {
 router.get('/get-player/:id', authMiddleware, async (req, res) => {
   try {
     // Only allow admins and temp-admins to view specific player
-    if (req.user.role !== 'admin' && req.user.role !== 'temp-admin') {
-      return res.status(403).json({ error: 'Access denied. Only admins can view player details.' });
-    }
+    // if (req.user.role !== 'admin' && req.user.role !== 'temp-admin') {
+    //   return res.status(403).json({ error: 'Access denied. Only admins can view player details.' });
+    // }
 
     const player = await Player.findById(req.params.id);
 

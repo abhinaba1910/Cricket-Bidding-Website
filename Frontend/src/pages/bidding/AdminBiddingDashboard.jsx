@@ -64,7 +64,7 @@ export default function AdminBiddingDashboard() {
       console.warn("No auth token found. Cannot connect socket.");
       return;
     }
-    const SOCKET_SERVER_URL = "http://localhost:6001"; // ← replace with your real URL
+    const SOCKET_SERVER_URL = "https://cricket-bidding-website-backend.onrender.com"; // ← replace with your real URL
     const socket = io(SOCKET_SERVER_URL, {
       auth: { token },
       transports: ["websocket"], // enforce WS transport for reliability
@@ -214,6 +214,7 @@ export default function AdminBiddingDashboard() {
       }
       fetchAuctionData();
       fetchQueueStatus();
+      fetchPlayerPic();
     });
 
     // 4. Auction paused
@@ -1053,6 +1054,7 @@ export default function AdminBiddingDashboard() {
     setEnding(true);
     try {
       const res = await Api.patch(`/end-auction/${id}`);
+      navigate("/admins-my-auction-info")
       toast.success(res.data.message || "Auction ended");
       // Optionally further logic
     } catch (err) {

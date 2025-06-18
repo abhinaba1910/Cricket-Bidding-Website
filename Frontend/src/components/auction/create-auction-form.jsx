@@ -345,34 +345,32 @@ export default function CreateAuctionForm() {
       const formData = new FormData();
       formData.append("auctionName", data.auctionName);
       formData.append("shortName", data.shortName);
-
-      // Properly construct date + time
-      const date = new Date(data.startDate);
+  
+      // Convert selected IST date+time to UTC ISO string
       const [hours, minutes] = data.startTime.split(":").map(Number);
-      date.setHours(hours);
-      date.setMinutes(minutes);
-      date.setSeconds(0);
-      date.setMilliseconds(0);
-      // formData.append('startDate', date.toISOString());
-      // Send raw date (string) and time (string)
-      formData.append('startDateRaw', data.startDate); // e.g., '2025-06-10'
-      formData.append('startTimeRaw', data.startTime);
-
+      const istDateTime = new Date(data.startDate);
+      istDateTime.setHours(hours);
+      istDateTime.setMinutes(minutes);
+      istDateTime.setSeconds(0);
+      istDateTime.setMilliseconds(0);
+  
+      formData.append("startDate", istDateTime.toISOString()); // ✅ UTC
+  
       formData.append("description", data.description);
       formData.append("selectedTeams", JSON.stringify(data.selectedTeams));
       formData.append("selectedPlayers", JSON.stringify(data.selectedPlayers));
       formData.append("rtmCount", data.rtmCount);
-
+  
       if (data.auctionImage && data.auctionImage.length > 0) {
         formData.append("auctionImage", data.auctionImage[0]);
       }
-
+  
       await Api.post("/create-auction", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
       });
-
+  
       setToast({ type: "success", message: "Auction Created!" });
       setCurrentStep(4);
       setTimeout(() => setToast(null), 3000);
@@ -385,6 +383,7 @@ export default function CreateAuctionForm() {
       setTimeout(() => setToast(null), 3000);
     }
   };
+  
 
   useEffect(() => {
     clearErrors();

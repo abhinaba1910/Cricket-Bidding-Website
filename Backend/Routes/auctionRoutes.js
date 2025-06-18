@@ -262,10 +262,12 @@ router.post(
         description,
         selectedTeams,
         selectedPlayers,
-        startDateRaw,
-        startTimeRaw,
+        startDate,
         rtmCount,
       } = req.body;
+      
+      const parsedStartDate = new Date(startDate); // already in UTC from frontend
+      
 
       const parsedRTMCount = parseInt(rtmCount) || 0;
       const parsedTeams = selectedTeams ? JSON.parse(selectedTeams) : [];
@@ -274,12 +276,11 @@ router.post(
       const userId = req.user.id;
       const role = req.user.role;
 
-      const [hours, minutes] = startTimeRaw.split(":");
-      const startDate = new Date(startDateRaw);
-      startDate.setUTCHours(Number(hours));
-      startDate.setUTCMinutes(Number(minutes));
-      startDate.setUTCSeconds(0);
-      startDate.setUTCMilliseconds(0);
+      // const [hours, minutes] = startTimeRaw.split(":");
+      // startDate.setUTCHours(Number(hours));
+      // startDate.setUTCMinutes(Number(minutes));
+      // startDate.setUTCSeconds(0);
+      // startDate.setUTCMilliseconds(0);
 
       if (role !== "admin" && role !== "temp-admin") {
         return res.status(403).json({ error: "Access denied. Not authorized." });
@@ -338,26 +339,20 @@ router.get("/get-auction", AuthMiddleWare, async (req, res) => {
       .populate("selectedPlayers", "name photo")
       .sort({ createdAt: -1 });
 
-    const normalized = auctions.map(a => {
-      const start = new Date(a.startDate);
-      const date = start.toISOString().split("T")[0];
-      const time = start.toTimeString().split(":").slice(0, 2).join(":");
-
-      return {
+      const normalized = auctions.map(a => ({
         id: a._id,
         name: a.auctionName,
         shortName: a.shortName,
         logo: a.auctionImage,
         description: a.description,
-        date,
-        time,
+        startDate: a.startDate, // Full ISO string in UTC
         status: a.status,
         selectedTeams: a.selectedTeams,
         selectedPlayers: a.selectedPlayers,
         joinCode: a.shortName,
         createdAt: a.createdAt,
-      };
-    });
+      }));
+      
 
     res.json({ auctions: normalized });
   } catch (error) {
