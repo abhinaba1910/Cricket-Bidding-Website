@@ -19,7 +19,7 @@ import PlayersInfo from "./pages/player/PlayersInfo";
 import AdminMyAuctionInfo from "./pages/auctions/AdminMyAuctionInfo";
 import AddTempAdmin from "./pages/adminPages/AddTempAdmin";
 import AdminProfilePage from "./pages/profile/AdminProfilePage";
-// import ViewPlayer from "./pages/player/ViewPlayer";
+
 import "./App.css";
 import SetPassword from "./pages/set-Password/SetPassword";
 import { Toaster } from "react-hot-toast";

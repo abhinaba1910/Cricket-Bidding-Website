@@ -215,7 +215,7 @@ function Navbar({ onOpenSidebar }) {
           )}
 
           <div className="flex-shrink-0 flex items-center">
-            <span className="text-3xl font-bold text-primary-600">BidMaster</span>
+            <span className="text-3xl font-bold text-primary-600">CricBid</span>
           </div>
 
           {isAuthenticated && (
