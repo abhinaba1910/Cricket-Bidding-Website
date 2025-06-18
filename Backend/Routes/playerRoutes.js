@@ -3,11 +3,9 @@ const router = express.Router();
 const multer = require("multer");
 const { storage } = require("../Utils/cloudinary");
 const upload = multer({ storage });
-
 const Player = require("../Models/player");
 const Person = require("../Models/person");
 const authMiddleware = require("../Auth/Authentication");
-
 router.post(
   "/add-player",
   authMiddleware,
@@ -263,5 +261,22 @@ router.put(
     }
   }
 );
+
+
+router.delete('/delete-player/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const deleted = await Player.findByIdAndDelete(id);
+    if (!deleted) {
+      return res.status(404).json({ error: 'Player not found' });
+    }
+
+    res.status(204).end(); // No content
+  } catch (err) {
+    console.error("Error deleting player:", err);
+    res.status(500).json({ error: 'Failed to delete player' });
+  }
+});
 
 module.exports = router;

@@ -34,75 +34,65 @@ const DesktopTeamCard = ({ team }) => {
 
   return (
     <motion.div
-      className="bg-gradient-to-br from-indigo-800/50 to-blue-700/50 rounded-xl p-6 w-full max-w-xl text-center shadow-xl border border-indigo-600/30"
-      initial={{ opacity: 0, y: 20 }}
+      className="bg-gradient-to-br from-indigo-800/40 to-blue-700/40 rounded-lg p-4 w-64 h-40 max-w-xs shadow-md border border-indigo-600/20 flex flex-col justify-between"
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", delay: 0.2 }}
     >
-      {/* Team Logo */}
-      <motion.div
-        className="mx-auto mb-4 rounded-xl bg-gradient-to-br from-indigo-700 to-blue-800 w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center overflow-hidden border-2 border-cyan-400/30"
-        animate={{ scale: [1, 1.05, 1] }}
-        transition={{ duration: 4, repeat: Infinity }}
-      >
-        {team.logoUrl ? (
-          <img
-            src={team.logoUrl}
-            alt="Team Logo"
-            className="w-full h-full object-cover rounded-xl"
-          />
-        ) : (
-          <span className="text-4xl">🛡️</span>
-        )}
-      </motion.div>
+      {/* ─── HEADER ─── */}
+      <div className="flex items-center space-x-3">
+        {/* Logo */}
+        <motion.div
+          className="rounded-lg bg-gradient-to-br from-indigo-700 to-blue-800 w-14 h-14 flex items-center justify-center overflow-hidden border border-cyan-400/30"
+          animate={{ scale: [1, 1.03, 1] }}
+          transition={{ duration: 4, repeat: Infinity }}
+        >
+          {team.logoUrl ? (
+            <img
+              src={team.logoUrl}
+              alt="Team Logo"
+              className="w-full h-full object-cover rounded-lg"
+            />
+          ) : (
+            <FaUserTie className="text-xl text-white opacity-75" />
+          )}
+        </motion.div>
 
-      {/* Team Name */}
-      <h2 className="text-2xl font-bold text-white tracking-wide">
-        {team.teamName || "Unnamed Team"}
-      </h2>
-
-      {/* Manager Info */}
-      <p className="text-sm bg-blue-600/30 inline-block px-2 py-1 rounded-full mt-1">
-        Manager:{" "}
-        <span className="font-semibold text-white">
-          {team.manager?.username}
-        </span>
-      </p>
-
-      {/* Purse & Stats */}
-      <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm text-white">
-        <div>
-          <p className="text-xs opacity-75 flex items-center justify-center gap-1">
-            <GiMoneyStack /> Total Purse
-          </p>
-          <p className="font-semibold">
-            ₹{team.purse?.toLocaleString() || "--"}
+        {/* Name & Manager */}
+        <div className="flex-1 text-left">
+          <h3 className="text-lg font-semibold text-white truncate">
+            {team.teamName || "Unnamed Team"}
+          </h3>
+          <p className="text-xs text-blue-200 mt-0.5">
+            Manager: <span className="font-medium">{team.manager?.username}</span>
           </p>
         </div>
-        <div>
-          <p className="text-xs opacity-75 flex items-center justify-center gap-1">
-            <GiMoneyStack /> Remaining
-          </p>
-          <p className="font-semibold">
-            ₹{team.remaining?.toLocaleString() || "--"}
-          </p>
+      </div>
+
+      {/* ─── STATS ─── */}
+      <div className="flex justify-between text-xs text-white">
+        <div className="flex flex-col items-center">
+          <GiMoneyStack className="text-sm mb-0.5" />
+          <span className="font-medium">₹{team.purse?.toLocaleString() || "--"}</span>
         </div>
-        <div>
-          <p className="text-xs opacity-75 flex items-center justify-center gap-1">
-            <FaUsers /> Players
-          </p>
-          <p className="font-semibold">{team.playersBought?.length || 0}</p>
+        <div className="flex flex-col items-center">
+          <GiMoneyStack className="text-sm mb-0.5" />
+          <span className="font-medium">₹{team.remaining?.toLocaleString() || "--"}</span>
         </div>
-        <div>
-          <p className="text-xs opacity-75 flex items-center justify-center gap-1">
-            <GiCardRandom /> RTMs
-          </p>
-          <p className="font-semibold">{team.rtmCount || 0}</p>
+        <div className="flex flex-col items-center">
+          <FaUsers className="text-sm mb-0.5" />
+          <span className="font-medium">{team.playersBought?.length || 0}</span>
+        </div>
+        <div className="flex flex-col items-center">
+          <GiCardRandom className="text-sm mb-0.5" />
+          <span className="font-medium">{team.rtmCount || 0}</span>
         </div>
       </div>
     </motion.div>
   );
 };
+
+
 
 export default function UserBiddingDashboardDesktop() {
   const navigate = useNavigate();
@@ -602,7 +592,7 @@ export default function UserBiddingDashboardDesktop() {
       {/* ─── RIGHT COLUMN ─────────────────────────────────────────── */}
       <div className="col-span-1 flex flex-col justify-between h-full">
         <motion.div
-          className="bg-gradient-to-br mb-4 from-indigo-900/50 to-blue-800/50 rounded-xl text-center shadow-lg self-stretch border border-indigo-700/30 h-[330px] overflow-auto"
+          className="mb-3"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >

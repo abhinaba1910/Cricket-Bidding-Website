@@ -210,4 +210,13 @@ router.put(
   }
 );
 
+// routes/teams.js (Express example)
+router.delete('/delete-team/:id', async (req, res) => {
+  const { id } = req.params;
+  // Remove the team record (and cascade or manually delete players if needed)
+  await Team.findByIdAndDelete(id);
+  res.status(204).end();
+});
+
+
 module.exports = router;
