@@ -56,6 +56,30 @@ router.post(
         });
       }
 
+      // const player = new Player({
+      //   name: name.trim(),
+      //   country,
+      //   dob,
+      //   role,
+      //   battingStyle,
+      //   bowlingStyle,
+      //   basePrice,
+      //   grade,
+      //   points,
+      //   availability,
+      //   playerId,
+      //   matchesPlayed,
+      //   runs,
+      //   wickets,
+      //   strikeRate,
+      //   previousTeams,
+      //   isCapped: isCapped === "true", // convert checkbox string to boolean
+      //   bio,
+      //   playerPic: req.file?.path || "",
+      //   createdBy: userId,
+      // });
+
+
       const player = new Player({
         name: name.trim(),
         country,
@@ -63,21 +87,22 @@ router.post(
         role,
         battingStyle,
         bowlingStyle,
-        basePrice,
+        basePrice: parseFloat(basePrice) || 0,
         grade,
-        points,
+        points: parseFloat(points) || 0,
         availability,
         playerId,
-        matchesPlayed,
-        runs,
-        wickets,
-        strikeRate,
+        matchesPlayed: parseInt(matchesPlayed) || 0,
+        runs: parseInt(runs) || 0,
+        wickets: parseInt(wickets) || 0,
+        strikeRate: parseFloat(strikeRate) || 0,
         previousTeams,
-        isCapped: isCapped === "true", // convert checkbox string to boolean
+        isCapped: isCapped === "true",
         bio,
         playerPic: req.file?.path || "",
         createdBy: userId,
       });
+      
 
       await player.save();
 
