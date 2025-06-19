@@ -6,7 +6,8 @@ const upload = multer({ storage });
 
 const authMiddleware = require("../Auth/Authentication");
 const Team = require("../Models/team");
-const Player=require("../Models/player")
+const Player=require("../Models/player");
+const Auction =require("../Models/auction");
 
 // Create team route
 // routes/team.js
@@ -211,12 +212,52 @@ router.put(
 );
 
 // routes/teams.js (Express example)
-router.delete('/delete-team/:id', async (req, res) => {
-  const { id } = req.params;
-  // Remove the team record (and cascade or manually delete players if needed)
-  await Team.findByIdAndDelete(id);
-  res.status(204).end();
+router.delete('/delete-team/:id', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const team = await Team.findById(id).populate('players.player');
+    if (!team) {
+      return res.status(404).json({ error: 'Team not found' });
+    }
+
+    // Authorization check
+    if (
+      !['admin', 'temp-admin'].includes(req.user.role) ||
+      team.createdBy.toString() !== req.user.id
+    ) {
+      return res.status(403).json({ error: 'Unauthorized to delete this team' });
+    }
+
+    // Step 1: Mark all players as Available
+    for (const { player } of team.players) {
+      if (player) {
+        await Player.findByIdAndUpdate(player._id, { availability: 'Available' });
+      }
+    }
+
+    // Step 2: Remove the full subdocument from selectedTeams in all auctions
+    const auctions = await Auction.find({ 'selectedTeams.team': team._id });
+
+    for (const auction of auctions) {
+      auction.selectedTeams = auction.selectedTeams.filter(
+        (entry) => entry.team.toString() !== team._id.toString()
+      );
+      await auction.save();
+    }
+
+    // Step 3: Delete the team
+    await Team.findByIdAndDelete(id);
+
+    res.status(200).json({
+      message: 'Team deleted, players released, and all auction references removed.',
+    });
+  } catch (err) {
+    console.error('Error deleting team:', err);
+    res.status(500).json({ error: 'Server error while deleting team' });
+  }
 });
+
 
 
 module.exports = router;

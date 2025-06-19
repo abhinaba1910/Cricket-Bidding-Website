@@ -30,13 +30,13 @@ export default function AdminBiddingTeamsList() {
   // Filter by ID or teamName or shortName
   const filtered = useMemo(() => {
     const term = search.toLowerCase();
-    return teams.filter(
-      (t) =>
-        t._id.includes(search) ||
-        t.teamName.toLowerCase().includes(term) ||
-        t.shortName.toLowerCase().includes(term)
+    return teams.filter((t) =>
+      (t._id && t._id.toLowerCase().includes(term)) ||
+      (t.teamName && t.teamName.toLowerCase().includes(term)) ||
+      (t.shortName && t.shortName.toLowerCase().includes(term))
     );
   }, [teams, search]);
+  
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">

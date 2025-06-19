@@ -182,32 +182,30 @@ export default function UserBiddingDashboardDesktop() {
       const history = data.biddingHistory || [];
       const lastEntry = history[history.length - 1] || null;
       if (lastEntry) {
-        const soldTeamId = lastEntry.team._id || lastEntry.team;
-        if (soldTeamId !== lastSoldTeam) {
+        const soldTeamId = lastEntry.team?._id || lastEntry.team || null;
+        if (soldTeamId && soldTeamId !== lastSoldTeam) {
           setLastSoldTeam(soldTeamId);
-          if (soldTeamId === data.team.teamId) {
+          if (soldTeamId === data.team?.teamId) {
             setEmoteToPlay("BidWon");
           } else {
             setEmoteToPlay("LostBid");
           }
           setTimeout(() => setEmoteToPlay(null), 5000);
-        }
+        }        
       }
 
       // Update “lastSold” and “mostExpensive” display
       const formatPlayerData = (entry) => {
-        if (!entry || !entry.player || !entry.team)
-          return {
-            name: "--/--",
-            price: "--/--",
-            team: "--/--",
-          };
+        if (!entry || !entry.player)
+          return { name: "--/--", price: "--/--", team: "--/--" };
+      
         return {
           name: entry.player.name || "--/--",
           price: entry.bidAmount || "--/--",
-          team: entry.team.shortName || "--/--",
+          team: entry.team?.shortName || "--/--",
         };
       };
+      
       setAuctionData((prev) => ({
         ...prev,
         lastSold: formatPlayerData(data.lastSoldPlayer),
@@ -312,7 +310,8 @@ export default function UserBiddingDashboardDesktop() {
       return;
     }
     // ⚠️ Specify your backend URL here:
-    const socket = io("https://cricket-bidding-website-backend.onrender.com", {
+    // const socket = io("https://cricket-bidding-website-backend.onrender.com", {
+      const socket = io("http://localhost:6001", {
       auth: { token },
       // only websocket transport (optional but more reliable)
       transports: ["websocket"],

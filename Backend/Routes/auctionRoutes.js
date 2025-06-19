@@ -647,18 +647,21 @@ router.get("/get-all-auctions", AuthMiddleWare, async (req, res) => {
 
     const processedAuctions = auctions.map((auction) => {
       const startDate = new Date(auction.startDate);
-      const date = startDate.toISOString().split("T")[0];
-      const time = startDate.toTimeString().split(":").slice(0, 2).join(":");
 
-      let countdownRemaining = 0;
-      if (auction.status === "upcoming" && auction.countdownStartedAt) {
-        const deadlineMs =
-          new Date(auction.countdownStartedAt).getTime() + 60 * 60 * 1000; // 60 mins
-        countdownRemaining = Math.max(
-          0,
-          Math.floor((deadlineMs - now.getTime()) / 1000)
-        );
-      }
+      // Convert to IST (Asia/Kolkata)
+      const istDate = startDate.toLocaleDateString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+      
+      const istTime = startDate.toLocaleTimeString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
 
       return {
         id: auction._id,
@@ -666,14 +669,13 @@ router.get("/get-all-auctions", AuthMiddleWare, async (req, res) => {
         shortName: auction.shortName,
         logo: auction.auctionImage,
         description: auction.description,
-        date,
-        time,
+        date: istDate,
+        time: istTime,
         status: auction.status,
         selectedTeams: auction.selectedTeams,
         selectedPlayers: auction.selectedPlayers,
         joinCode: auction.shortName,
         createdAt: auction.createdAt,
-        countdownRemaining, // for frontend timer if countdown started
       };
     });
 

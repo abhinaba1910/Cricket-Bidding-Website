@@ -1097,8 +1097,8 @@ router.post("/join-auction/:auctionId/confirm", auth, async (req, res) => {
 
     // Check if user already a manager
     const alreadyManager = auction.selectedTeams.find(
-      (entry) => entry.manager && entry.manager.toString() === userId
-    );
+      (entry) => entry && entry.manager && entry.manager.toString() === userId
+    );    
     if (alreadyManager) {
       return res
         .status(409)
@@ -1107,8 +1107,8 @@ router.post("/join-auction/:auctionId/confirm", auth, async (req, res) => {
 
     // Validate team selection
     const teamEntry = auction.selectedTeams.find(
-      (t) => t.team.toString() === teamId
-    );
+      (t) => t?.team?.toString() === teamId
+    );    
     if (!teamEntry) {
       return res.status(400).json({ message: "Invalid team selection." });
     }

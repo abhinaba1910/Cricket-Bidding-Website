@@ -194,12 +194,12 @@ export default function AuctionsInfo() {
                   <p>
                     <strong>Teams:</strong> {a.selectedTeams?.length || 0}
                   </p>
-                  {a.status === "upcoming" && a.countdownRemaining > 0 && (
+                  {/* {a.status === "upcoming" && a.countdownRemaining > 0 && (
                     <p className="text-sm text-orange-600 font-medium">
                       <strong>Starts in:</strong>{" "}
                       {formatCountdown(a.countdownRemaining)}
                     </p>
-                  )}
+                  )} */}
                 </div>
               </div>
               <div className="mt-4 sm:mt-0 sm:ml-4 flex-shrink-0 space-x-2 flex flex-col sm:flex-row sm:space-y-0 space-y-2">

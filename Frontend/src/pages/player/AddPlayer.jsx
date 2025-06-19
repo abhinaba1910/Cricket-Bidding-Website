@@ -6,7 +6,6 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import Api from "../../userManagement/Api";
 
-
 export default function AddPlayer() {
   const {
     register,
@@ -18,22 +17,43 @@ export default function AddPlayer() {
 
   const [preview, setPreview] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [selectedRole, setSelectedRole] = useState("");
   const navigate = useNavigate();
 
   const onSubmit = async (data) => {
     try {
       setSubmitting(true);
       const formData = new FormData();
+  
+      // Append primitive fields
       for (const key in data) {
-        if (key === "photoFile") {
-          formData.append("photoFile", data.photoFile);
-        } else if (typeof data[key] === "boolean") {
-          formData.append(key, data[key].toString());
-        } else if (data[key] != null) {
-          formData.append(key, data[key]);
+        if (
+          key !== "photoFile" &&
+          key !== "performanceStats" &&
+          data[key] != null
+        ) {
+          formData.append(key, typeof data[key] === "boolean" ? data[key].toString() : data[key]);
         }
       }
-
+  
+      // Append photo file
+      if (data.photoFile) {
+        formData.append("photoFile", data.photoFile);
+      }
+  
+      // Manually append performanceStats fields
+      const ps = data.performanceStats || {};
+      const appendNested = (obj, prefix) => {
+        if (!obj) return;
+        for (const key in obj) {
+          formData.append(`performanceStats.${prefix}.${key}`, obj[key]);
+        }
+      };
+  
+      appendNested(ps.batting, "batting");
+      appendNested(ps.bowling, "bowling");
+      appendNested(ps.allRounder, "allRounder");
+  
       const res = await Api.post("/add-player", formData);
       toast.success("Player added successfully!");
       reset();
@@ -47,6 +67,7 @@ export default function AddPlayer() {
       setSubmitting(false);
     }
   };
+  
 
   const handleFileChange = (e, onChange) => {
     const file = e.target.files?.[0];
@@ -184,6 +205,10 @@ export default function AddPlayer() {
                   <label className="block font-medium mb-1">Primary Role</label>
                   <select
                     {...register("role", { required: "Role is required" })}
+                    onChange={(e) => {
+                      setSelectedRole(e.target.value);
+                      // setValue("role", e.target.value);
+                    }}
                     className="w-full border px-3 py-2 rounded"
                   >
                     <option value="">Select role...</option>
@@ -308,8 +333,8 @@ export default function AddPlayer() {
                     className="w-full border px-3 py-2 rounded"
                   >
                     <option value="Available">Available</option>
-                    <option value="Sold">Sold</option>
-                    <option value="Retained">Retained</option>
+                    {/* <option value="Sold">Sold</option>
+                    <option value="Retained">Retained</option> */}
                   </select>
                 </div>
                 <div>
@@ -326,56 +351,268 @@ export default function AddPlayer() {
             </section>
 
             {/* Performance */}
-            <section>
-              <h2 className="text-xl font-semibold mb-4">
-                Performance Stats (optional)
+            <section className="bg-white p-6 rounded-xl shadow-md border mt-6">
+              <h2 className="text-xl font-bold mb-6 text-gray-800 border-b pb-2">
+                🎯 Performance Stats{" "}
+                <span className="text-sm text-gray-500">(optional)</span>
               </h2>
-              <div className="grid sm:grid-cols-2 gap-4">
-                <input
-                  {...register("matchesPlayed", { valueAsNumber: true })}
-                  type="number"
-                  placeholder="Matches Played"
-                  className="w-full border px-3 py-2 rounded"
-                />
-                <input
-                  {...register("runs", { valueAsNumber: true })}
-                  type="number"
-                  placeholder="Runs"
-                  className="w-full border px-3 py-2 rounded"
-                />
-                <input
-                  {...register("wickets", { valueAsNumber: true })}
-                  type="number"
-                  placeholder="Wickets"
-                  className="w-full border px-3 py-2 rounded"
-                />
-                <input
-                  {...register("strikeRate", { valueAsNumber: true })}
-                  type="number"
-                  step="0.01"
-                  placeholder="Strike Rate"
-                  className="w-full border px-3 py-2 rounded"
-                />
-                <input
-                  {...register("previousTeams")}
-                  placeholder="Previous Teams"
-                  className="w-full border px-3 py-2 rounded"
-                />
-                <div className="flex items-center space-x-2 mt-2">
+
+              <div className="grid sm:grid-cols-2 gap-6">
+                {/* Batting Stats */}
+                {["Batsman", "Wicket keeper batsman"].includes(
+                  selectedRole
+                ) && (
+                  <div className="sm:col-span-2">
+                    <h3 className="text-lg font-semibold mb-3 text-teal-700">
+                      Batting Stats
+                    </h3>
+                    <div className="grid sm:grid-cols-3 gap-4">
+                      <input
+                        {...register("performanceStats.batting.matches", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="Matches"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.batting.runs", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="Runs"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.batting.highScore", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="High Score"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.batting.average", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="Average"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.batting.strikeRate", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="Strike Rate"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.batting.centuries", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="100s"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.batting.fifties", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="50s"
+                        className="input-field"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Bowling Stats */}
+                {["Fast bowler", "Spin bowler"].includes(selectedRole) && (
+                  <div className="sm:col-span-2">
+                    <h3 className="text-lg font-semibold mb-3 text-indigo-700">
+                      Bowling Stats
+                    </h3>
+                    <div className="grid sm:grid-cols-3 gap-4">
+                      <input
+                        {...register("performanceStats.bowling.matches", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="Matches"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.bowling.wickets", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="Wickets"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.bowling.bestBowling")}
+                        type="text"
+                        placeholder="BBM (e.g. 5/24)"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.bowling.average", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="Average"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.bowling.economy", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="Economy"
+                        className="input-field"
+                      />
+                      <input
+                        {...register(
+                          "performanceStats.bowling.fiveWicketHauls",
+                          { valueAsNumber: true }
+                        )}
+                        type="number"
+                        placeholder="5W Hauls"
+                        className="input-field"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* All-Rounder Stats */}
+                {["Fast all-rounder", "Spin all-rounder"].includes(
+                  selectedRole
+                ) && (
+                  <div className="sm:col-span-2">
+                    <h3 className="text-lg font-semibold mb-3 text-purple-700">
+                      All-Rounder Stats
+                    </h3>
+                    <div className="grid sm:grid-cols-3 gap-4">
+                      <input
+                        {...register("performanceStats.allRounder.matches", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="Matches"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.allRounder.runs", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="Runs"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.allRounder.highScore", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="High Score"
+                        className="input-field"
+                      />
+                      <input
+                        {...register(
+                          "performanceStats.allRounder.battingAverage",
+                          { valueAsNumber: true }
+                        )}
+                        type="number"
+                        placeholder="Batting Avg"
+                        className="input-field"
+                      />
+                      <input
+                        {...register(
+                          "performanceStats.allRounder.battingStrikeRate",
+                          { valueAsNumber: true }
+                        )}
+                        type="number"
+                        placeholder="Batting S/R"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.allRounder.centuries", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="100s"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.allRounder.fifties", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="50s"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.allRounder.wickets", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="Wickets"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.allRounder.bestBowling")}
+                        type="text"
+                        placeholder="BBM"
+                        className="input-field"
+                      />
+                      <input
+                        {...register(
+                          "performanceStats.allRounder.bowlingAverage",
+                          { valueAsNumber: true }
+                        )}
+                        type="number"
+                        placeholder="Bowling Avg"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.allRounder.economy", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="Econ"
+                        className="input-field"
+                      />
+                      <input
+                        {...register(
+                          "performanceStats.allRounder.fiveWicketHauls",
+                          { valueAsNumber: true }
+                        )}
+                        type="number"
+                        placeholder="5W Hauls"
+                        className="input-field"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Common Section */}
+                <div className="flex items-center space-x-2 mt-2 sm:col-span-2">
                   <input
                     type="checkbox"
                     {...register("isCapped")}
-                    className="h-4 w-4"
+                    className="h-4 w-4 text-teal-600 border-gray-300 rounded"
                   />
-                  <label className="font-medium">
+                  <label className="text-sm font-medium text-gray-700">
                     International Experience
                   </label>
                 </div>
+
                 <textarea
                   {...register("bio")}
                   rows={3}
                   placeholder="Player Bio"
-                  className="w-full border px-3 py-2 rounded sm:col-span-2"
+                  className="w-full border px-3 py-2 rounded sm:col-span-2 focus:ring-teal-500 focus:border-teal-500"
                 />
               </div>
             </section>
@@ -395,3 +632,4 @@ export default function AddPlayer() {
     </div>
   );
 }
+

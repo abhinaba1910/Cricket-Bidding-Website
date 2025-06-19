@@ -20,6 +20,7 @@ export default function EditPlayer() {
 
   const [preview, setPreview] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [selectedRole, setSelectedRole] = useState("");
 
   // 1️⃣ Load existing player
   useEffect(() => {
@@ -27,11 +28,13 @@ export default function EditPlayer() {
       try {
         const res = await Api.get(`/get-player/${id}`); // 🔗 TODO: adjust endpoint
         const p = res.data;
-        // fill form
+        console.log(p)
+
+
         reset({
           name: p.name,
           country: p.country,
-          dob: p.dob?.split("T")[0], // format for <input type=date>
+          dob: p.dob?.split("T")[0],
           role: p.role,
           battingStyle: p.battingStyle,
           bowlingStyle: p.bowlingStyle,
@@ -47,8 +50,47 @@ export default function EditPlayer() {
           previousTeams: p.previousTeams,
           isCapped: p.isCapped,
           bio: p.bio,
+        
+          // ✅ Add these to initialize form fields correctly
+          performanceStats: {
+            batting: {
+              matches: p.performanceStats?.batting?.matches ?? "",
+              runs: p.performanceStats?.batting?.runs ?? "",
+              highScore: p.performanceStats?.batting?.highScore ?? "",
+              average: p.performanceStats?.batting?.average ?? "",
+              strikeRate: p.performanceStats?.batting?.strikeRate ?? "",
+              centuries: p.performanceStats?.batting?.centuries ?? "",
+              fifties: p.performanceStats?.batting?.fifties ?? "",
+            },
+            bowling: {
+              matches: p.performanceStats?.bowling?.matches ?? "",
+              wickets: p.performanceStats?.bowling?.wickets ?? "",
+              bestBowling: p.performanceStats?.bowling?.bestBowling ?? "",
+              average: p.performanceStats?.bowling?.average ?? "",
+              economy: p.performanceStats?.bowling?.economy ?? "",
+              fiveWicketHauls: p.performanceStats?.bowling?.fiveWicketHauls ?? "",
+            },
+            allRounder: {
+              matches: p.performanceStats?.allRounder?.matches ?? "",
+              runs: p.performanceStats?.allRounder?.runs ?? "",
+              highScore: p.performanceStats?.allRounder?.highScore ?? "",
+              battingAverage: p.performanceStats?.allRounder?.battingAverage ?? "",
+              battingStrikeRate:
+                p.performanceStats?.allRounder?.battingStrikeRate ?? "",
+              centuries: p.performanceStats?.allRounder?.centuries ?? "",
+              fifties: p.performanceStats?.allRounder?.fifties ?? "",
+              wickets: p.performanceStats?.allRounder?.wickets ?? "",
+              bestBowling: p.performanceStats?.allRounder?.bestBowling ?? "",
+              bowlingAverage: p.performanceStats?.allRounder?.bowlingAverage ?? "",
+              economy: p.performanceStats?.allRounder?.economy ?? "",
+              fiveWicketHauls:
+                p.performanceStats?.allRounder?.fiveWicketHauls ?? "",
+            },
+          },
         });
-        setPreview(p.playerPic); // show existing photo
+        
+        setPreview(p.playerPic); 
+        setSelectedRole(p.role);
       } catch (err) {
         console.error("Failed to load player", err);
         toast.error("Could not load player data");
@@ -62,17 +104,25 @@ export default function EditPlayer() {
     try {
       setSubmitting(true);
       const formData = new FormData();
-      Object.entries(data).forEach(([key, val]) => {
-        if (key === "photoFile" && val instanceof File) {
-          formData.append("photoFile", val);
-        } else if (typeof val === "boolean") {
-          formData.append(key, val.toString());
-        } else if (val != null) {
-          formData.append(key, val);
+  
+      const flatten = (obj, prefix = "") => {
+        for (const [key, val] of Object.entries(obj)) {
+          const path = prefix ? `${prefix}.${key}` : key;
+          if (
+            typeof val === "object" &&
+            val !== null &&
+            !(val instanceof File)
+          ) {
+            flatten(val, path);
+          } else {
+            formData.append(path, val);
+          }
         }
-      });
-
-      await Api.put(`/update-player/${id}`, formData); // 🔗 TODO: adjust endpoint
+      };
+  
+      flatten(data);
+  
+      await Api.put(`/update-player/${id}`, formData);
       toast.success("Player updated successfully!");
       setTimeout(() => navigate(-1), 1000);
     } catch (err) {
@@ -82,10 +132,15 @@ export default function EditPlayer() {
       setSubmitting(false);
     }
   };
+  
 
   // 🔥 Delete handler
   const handleDelete = async () => {
-    if (!window.confirm("Are you sure you want to permanently delete this player?")) {
+    if (
+      !window.confirm(
+        "Are you sure you want to permanently delete this player?"
+      )
+    ) {
       return;
     }
     try {
@@ -234,13 +289,16 @@ export default function EditPlayer() {
                   <label className="block font-medium mb-1">Primary Role</label>
                   <select
                     {...register("role", { required: "Role is required" })}
+                    onChange={(e) => setSelectedRole(e.target.value)}
                     className="w-full border px-3 py-2 rounded"
                   >
                     <option value="">Select role...</option>
                     <option value="Batsman">Batsman</option>
                     <option value="Fast all-rounder">Fast-All-Rounder</option>
                     <option value="Spin all-rounder">Spin-All-Rounder</option>
-                    <option value="Wicket keeper batsman">Wicket-Keeper-Batsman</option>
+                    <option value="Wicket keeper batsman">
+                      Wicket-Keeper-Batsman
+                    </option>
                     <option value="Spin bowler">Spin Bowler</option>
                     <option value="Fast bowler">Fast Bowler</option>
                   </select>
@@ -350,39 +408,268 @@ export default function EditPlayer() {
             </section>
 
             {/* Performance */}
-            <section>
-              <h2 className="text-xl font-semibold mb-4">Performance Stats</h2>
-              <div className="grid sm:grid-cols-2 gap-4">
-                <input
-                  {...register("matchesPlayed", { valueAsNumber: true })}
-                  type="number"
-                  placeholder="Matches Played"
-                  className="w-full border px-3 py-2 rounded"
-                />
-                <input
-                  {...register("runs", { valueAsNumber: true })}
-                  type="number"
-                  placeholder="Runs"
-                  className="w-full border px-3 py-2 rounded"
-                />
-                <input
-                  {...register("wickets", { valueAsNumber: true })}
-                  type="number"
-                  placeholder="Wickets"
-                  className="w-full border px-3 py-2 rounded"
-                />
-                <input
-                  {...register("strikeRate", { valueAsNumber: true })}
-                  type="number"
-                  step="0.01"
-                  placeholder="Strike Rate"
-                  className="w-full border px-3 py-2 rounded"
-                />
+            <section className="bg-white p-6 rounded-xl shadow-md border mt-6">
+              <h2 className="text-xl font-bold mb-6 text-gray-800 border-b pb-2">
+                🎯 Performance Stats{" "}
+                <span className="text-sm text-gray-500">(optional)</span>
+              </h2>
+
+              <div className="grid sm:grid-cols-2 gap-6">
+                {/* Batting Stats */}
+                {["Batsman", "Wicket keeper batsman"].includes(
+                  selectedRole
+                ) && (
+                  <div className="sm:col-span-2">
+                    <h3 className="text-lg font-semibold mb-3 text-teal-700">
+                      Batting Stats
+                    </h3>
+                    <div className="grid sm:grid-cols-3 gap-4">
+                      <input
+                        {...register("performanceStats.batting.matches", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="Matches"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.batting.runs", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="Runs"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.batting.highScore", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="High Score"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.batting.average", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="Average"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.batting.strikeRate", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="Strike Rate"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.batting.centuries", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="100s"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.batting.fifties", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="50s"
+                        className="input-field"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Bowling Stats */}
+                {["Fast bowler", "Spin bowler"].includes(selectedRole) && (
+                  <div className="sm:col-span-2">
+                    <h3 className="text-lg font-semibold mb-3 text-indigo-700">
+                      Bowling Stats
+                    </h3>
+                    <div className="grid sm:grid-cols-3 gap-4">
+                      <input
+                        {...register("performanceStats.bowling.matches", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="Matches"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.bowling.wickets", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="Wickets"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.bowling.bestBowling")}
+                        type="text"
+                        placeholder="BBM (e.g. 5/24)"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.bowling.average", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="Average"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.bowling.economy", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="Economy"
+                        className="input-field"
+                      />
+                      <input
+                        {...register(
+                          "performanceStats.bowling.fiveWicketHauls",
+                          { valueAsNumber: true }
+                        )}
+                        type="number"
+                        placeholder="5W Hauls"
+                        className="input-field"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* All-Rounder Stats */}
+                {["Fast all-rounder", "Spin all-rounder"].includes(
+                  selectedRole
+                ) && (
+                  <div className="sm:col-span-2">
+                    <h3 className="text-lg font-semibold mb-3 text-purple-700">
+                      All-Rounder Stats
+                    </h3>
+                    <div className="grid sm:grid-cols-3 gap-4">
+                      <input
+                        {...register("performanceStats.allRounder.matches", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="Matches"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.allRounder.runs", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="Runs"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.allRounder.highScore", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="High Score"
+                        className="input-field"
+                      />
+                      <input
+                        {...register(
+                          "performanceStats.allRounder.battingAverage",
+                          { valueAsNumber: true }
+                        )}
+                        type="number"
+                        placeholder="Batting Avg"
+                        className="input-field"
+                      />
+                      <input
+                        {...register(
+                          "performanceStats.allRounder.battingStrikeRate",
+                          { valueAsNumber: true }
+                        )}
+                        type="number"
+                        placeholder="Batting S/R"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.allRounder.centuries", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="100s"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.allRounder.fifties", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="50s"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.allRounder.wickets", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="Wickets"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.allRounder.bestBowling")}
+                        type="text"
+                        placeholder="BBM"
+                        className="input-field"
+                      />
+                      <input
+                        {...register(
+                          "performanceStats.allRounder.bowlingAverage",
+                          { valueAsNumber: true }
+                        )}
+                        type="number"
+                        placeholder="Bowling Avg"
+                        className="input-field"
+                      />
+                      <input
+                        {...register("performanceStats.allRounder.economy", {
+                          valueAsNumber: true,
+                        })}
+                        type="number"
+                        placeholder="Econ"
+                        className="input-field"
+                      />
+                      <input
+                        {...register(
+                          "performanceStats.allRounder.fiveWicketHauls",
+                          { valueAsNumber: true }
+                        )}
+                        type="number"
+                        placeholder="5W Hauls"
+                        className="input-field"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Common Section */}
+                <div className="flex items-center space-x-2 mt-2 sm:col-span-2">
+                  <input
+                    type="checkbox"
+                    {...register("isCapped")}
+                    className="h-4 w-4 text-teal-600 border-gray-300 rounded"
+                  />
+                  <label className="text-sm font-medium text-gray-700">
+                    International Experience
+                  </label>
+                </div>
+
                 <textarea
                   {...register("bio")}
                   rows={3}
                   placeholder="Player Bio"
-                  className="w-full border px-3 py-2 rounded sm:col-span-2"
+                  className="w-full border px-3 py-2 rounded sm:col-span-2 focus:ring-teal-500 focus:border-teal-500"
                 />
               </div>
             </section>
