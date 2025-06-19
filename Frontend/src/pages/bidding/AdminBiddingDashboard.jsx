@@ -132,6 +132,7 @@ export default function AdminBiddingDashboard() {
       if (newMode) setSelectionMode(newMode);
       if (newFilter) setAutomaticFilter(newFilter);
       fetchQueueStatus();
+      fetchPlayerPic();
     });
 
     // 2. Bid placed
@@ -283,6 +284,7 @@ export default function AdminBiddingDashboard() {
         total: totalQueueLength,
       });
       fetchQueueStatus();
+      fetchPlayerPic();
     });
 
     // 9. Team joined
@@ -336,6 +338,7 @@ export default function AdminBiddingDashboard() {
     if (!token) return;
     fetchAuctionData();
     fetchQueueStatus();
+    fetchPlayerPic();
   }, [id]);
 
   // -------------------------------
@@ -619,6 +622,7 @@ export default function AdminBiddingDashboard() {
       }
 
       await fetchQueueStatus();
+      await fetchPlayerPic();
     } catch (err) {
       console.error("Error while fetching auction:", err);
     }
@@ -784,6 +788,7 @@ export default function AdminBiddingDashboard() {
 
       await fetchAuctionData();
       await fetchQueueStatus();
+      await fetchPlayerPic();
     } catch (error) {
       console.error("Sell error:", error);
       toast.error("Error selling player.");
@@ -967,6 +972,7 @@ export default function AdminBiddingDashboard() {
       toast.success("Player marked as Unsold and moved to next.");
       await fetchAuctionData();
       await fetchQueueStatus();
+      await fetchPlayerPic();
     } catch (error) {
       console.error("Error marking unsold:", error);
       toast.error("Failed to mark player as Unsold.");
