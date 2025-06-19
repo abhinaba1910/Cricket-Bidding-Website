@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-
+import VideoSrc from "../assets/video.mp4"
 export default function SplashScreen({ onComplete }) {
   const [show, setShow] = useState(true);
 
@@ -24,7 +24,7 @@ export default function SplashScreen({ onComplete }) {
         playsInline
         className="absolute w-full h-full object-cover"
       >
-        <source src="/src/assets/video.mp4" type="video/mp4" />
+          <source src={VideoSrc} type="video/mp4" />
         Your browser does not support the video tag.
       </video>
 
@@ -32,11 +32,7 @@ export default function SplashScreen({ onComplete }) {
       <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
         <div className="text-center">
           <div className="animate-bounce">
-            {/* <img
-              src="/ipl-logo.png"
-              alt="IPL Auction"
-              className="mx-auto h-32 w-32"
-            /> */}
+
           </div>
           <h1 className="text-4xl text-white font-bold mt-6 animate-pulse">
             Welcome to CricBid Auction!
