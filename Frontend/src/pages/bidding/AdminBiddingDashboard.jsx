@@ -132,7 +132,6 @@ export default function AdminBiddingDashboard() {
       if (newMode) setSelectionMode(newMode);
       if (newFilter) setAutomaticFilter(newFilter);
       fetchQueueStatus();
-      fetchPlayerPic();
     });
 
     // 2. Bid placed
@@ -223,7 +222,6 @@ export default function AdminBiddingDashboard() {
       console.log("Received auction:paused", payload);
       toast.info("Auction paused");
       setIsPaused(true);
-      fetchPlayerPic();
     });
     // 5. Auction resumed
     socket.on("auction:resumed", (payload) => {
@@ -285,7 +283,6 @@ export default function AdminBiddingDashboard() {
         total: totalQueueLength,
       });
       fetchQueueStatus();
-      fetchPlayerPic();
     });
 
     // 9. Team joined
@@ -339,7 +336,6 @@ export default function AdminBiddingDashboard() {
     if (!token) return;
     fetchAuctionData();
     fetchQueueStatus();
-    fetchPlayerPic();
   }, [id]);
 
   // -------------------------------
@@ -361,7 +357,6 @@ export default function AdminBiddingDashboard() {
       console.error("Error starting bidding:", error);
       alert("Internal server error");
     }
-    fetchPlayerPic();
   };
 
   const fetchQueueStatus = async () => {
@@ -624,7 +619,6 @@ export default function AdminBiddingDashboard() {
       }
 
       await fetchQueueStatus();
-      await fetchPlayerPic();
     } catch (err) {
       console.error("Error while fetching auction:", err);
     }
@@ -973,7 +967,6 @@ export default function AdminBiddingDashboard() {
       toast.success("Player marked as Unsold and moved to next.");
       await fetchAuctionData();
       await fetchQueueStatus();
-      await fetchPlayerPic();
     } catch (error) {
       console.error("Error marking unsold:", error);
       toast.error("Failed to mark player as Unsold.");
@@ -1089,6 +1082,41 @@ export default function AdminBiddingDashboard() {
     }
   };
 
+  const formatIndianNumber = (num) => {
+  if (!num || isNaN(num)) return "";
+  const value = parseInt(num, 10);
+  if (value >= 10000000) return `${(value / 10000000).toFixed(2)} Cr`;
+  if (value >= 100000) return `${(value / 100000).toFixed(2)} L`;
+  if (value >= 1000) return `${(value / 1000).toFixed(2)} K`;
+  return value.toString();
+};
+
+const bidSteps = [
+  10000,     // 10k
+  50000,     // 50k
+  100000,    // 1L
+  1000000,   // 10L
+  2500000,   // 25L
+  5000000,   // 50L
+  10000000,  // 1Cr
+  20000000,  // 2Cr
+  40000000,  // 4Cr
+  60000000,  // 6Cr
+  80000000,  // 8Cr
+  100000000  // 10Cr
+];
+
+const getNextBid = (current) => {
+  const curr = parseInt(current || 0);
+  for (let step of bidSteps) {
+    if (step > curr) return step;
+  }
+  return curr; // Maxed out
+};
+
+
+
+
   return (
     <div className={containerClasses + " pt-2 md:pt-4"}>
       {/* Full-screen toggle */}
@@ -1203,14 +1231,14 @@ export default function AdminBiddingDashboard() {
             >
               Edit Bid
             </motion.button>
-            <motion.button
+            {/* <motion.button
               onClick={resetBidToBasePrice}
               className="px-4 py-2 bg-gradient-to-r from-red-600 to-orange-500 rounded-xl hover:from-red-700 hover:to-orange-600 text-xs sm:text-sm shadow-md"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
               Reset Bid
-            </motion.button>
+            </motion.button> */}
             <motion.button
               onClick={handleStartBidding}
               disabled={biddingStarted && !isPaused}
@@ -1330,7 +1358,7 @@ export default function AdminBiddingDashboard() {
 
               {/* Main Toggle Switch */}
               <div className="relative h-10 w-full bg-indigo-800/30 rounded-full overflow-hidden">
-                <motion.div
+                {/* <motion.div
                   className={`absolute top-0 h-full w-1/2 rounded-full z-0 ${
                     selectionMode === "automatic"
                       ? "bg-gradient-to-r from-emerald-500 to-cyan-400"
@@ -1352,13 +1380,13 @@ export default function AdminBiddingDashboard() {
                   }`}
                 >
                   Auto
-                </button>
+                </button> */}
 
                 <button
                   onClick={() => handleModeToggle("manual")}
                   disabled={biddingStarted}
-                  className={`relative h-full w-1/2 z-10 text-sm font-medium ${
-                    selectionMode === "manual" ? "text-white" : "text-gray-300"
+                  className={`relative h-full w-full z-10 text-sm font-semibold tracking-wide transition-all duration-300 ease-in-out  ${
+                    selectionMode === "manual" ? "bg-gray-400 cursor-not-allowed text-white hover:bg-stone-500"  : "bg-gradient-to-r from-orange-500 to-orange-400 text-white hover:from-orange-600 hover:to-amber-500 shadow-lg"
                   }`}
                 >
                   Manual
@@ -1366,7 +1394,7 @@ export default function AdminBiddingDashboard() {
               </div>
 
               {/* Role Selector for Automatic Mode */}
-              {selectionMode === "automatic" && (
+              {/* {selectionMode === "automatic" && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
@@ -1392,7 +1420,7 @@ export default function AdminBiddingDashboard() {
                     <option value="Fast bowler">Fast Bowler</option>
                   </select>
                 </motion.div>
-              )}
+              )} */}
 
               {/* Queue Status Display for Manual Mode */}
               {selectionMode === "manual" && manualPlayerQueue.length > 0 && (
@@ -1497,7 +1525,7 @@ export default function AdminBiddingDashboard() {
           </h3>
           {!biddingStarted && (
             <div className="relative h-10 w-full bg-indigo-800/30 rounded-full overflow-hidden">
-              <motion.div
+              {/* <motion.div
                 className={`absolute top-0 h-full w-1/2 rounded-full z-0 ${
                   selectionMode === "automatic"
                     ? "bg-gradient-to-r from-emerald-500 to-cyan-400"
@@ -1515,11 +1543,11 @@ export default function AdminBiddingDashboard() {
                 }`}
               >
                 Auto
-              </button>
+              </button> */}
               <button
                 onClick={() => handleModeToggle("manual")}
-                className={`relative h-full w-1/2 z-10 text-sm font-medium ${
-                  selectionMode === "manual" ? "text-white" : "text-gray-300"
+                className={`relative h-full w-full z-10 text-sm font-semibold tracking-wide transition-all duration-300 ease-in-out  ${
+                  selectionMode === "manual" ? "bg-gray-500 cursor-not-allowed text-white hover:bg-stone-600" : "bg-gradient-to-r from-orange-500 to-amber-400 text-white hover:from-orange-600 hover:to-amber-500 shadow-lg"
                 }`}
               >
                 Manual
@@ -1532,7 +1560,7 @@ export default function AdminBiddingDashboard() {
                 Change Selection Mode:
               </p>
               <div className="flex gap-2">
-                <button
+                {/* <button
                   onClick={() => handleModeToggle("automatic")}
                   disabled={!canChangeMode}
                   className={`flex-1 px-2 py-1 rounded text-xs transition-colors ${
@@ -1544,7 +1572,7 @@ export default function AdminBiddingDashboard() {
                   }`}
                 >
                   Auto
-                </button>
+                </button> */}
                 <button
                   onClick={() => handleModeToggle("manual")}
                   disabled={!canChangeMode}
@@ -1561,7 +1589,7 @@ export default function AdminBiddingDashboard() {
               </div>
             </div>
           )}
-          {selectionMode === "automatic" && (
+          {/* {selectionMode === "automatic" && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
@@ -1587,7 +1615,7 @@ export default function AdminBiddingDashboard() {
                 <option value="Fast bowler">Fast Bowler</option>
               </select>
             </motion.div>
-          )}
+          )} */}
           {selectionMode === "manual" && manualPlayerQueue.length > 0 && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
@@ -1666,7 +1694,7 @@ export default function AdminBiddingDashboard() {
                 Manual
               </motion.button>
 
-              <motion.button
+              {/* <motion.button
                 onClick={() => setPopupSelection("automatic")}
                 className={`px-4 py-2 rounded-xl transition ${
                   popupSelection === "automatic"
@@ -1676,11 +1704,11 @@ export default function AdminBiddingDashboard() {
                 whileHover={{ scale: 1.05 }}
               >
                 Automatic
-              </motion.button>
+              </motion.button> */}
             </div>
 
             {/* Role selector if automatic */}
-            {popupSelection === "automatic" && (
+            {/* {popupSelection === "automatic" && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
@@ -1706,7 +1734,7 @@ export default function AdminBiddingDashboard() {
                   <option value="Fast bowler">Fast Bowler</option>
                 </select>
               </motion.div>
-            )}
+            )} */}
             {popupSelection === "manual" && incoming.length === 0 && (
               <div className="text-center p-3 bg-amber-900/30 rounded-lg">
                 <p className="text-xs text-amber-300 mb-2">
@@ -1752,12 +1780,30 @@ export default function AdminBiddingDashboard() {
             transition={{ type: "spring" }}
           >
             <h2 className="text-lg font-bold text-center">Edit Bid</h2>
-            <input
-              type="text"
-              value={bidAmount}
-              onChange={(e) => setBidAmount(e.target.value)}
-              className="w-full rounded-xl bg-gray-700 border border-gray-600 px-4 py-3 text-center text-xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+<div className="flex items-center gap-2">
+  <input
+    type="text"
+    value={bidAmount}
+    onChange={(e) => setBidAmount(e.target.value)}
+    className="flex-1 rounded-xl bg-gray-700 border border-gray-600 px-4 py-3 text-center text-xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
+  />
+  <motion.button
+    onClick={() => setBidAmount(getNextBid(bidAmount))}
+    className="rounded-full bg-blue-600 hover:bg-blue-700 px-4 py-3 text-xl font-bold shadow-md transition duration-200"
+    whileHover={{ scale: 1.1 }}
+    whileTap={{ scale: 0.95 }}
+  >
+    +
+  </motion.button>
+</div>
+
+{bidAmount && !isNaN(bidAmount) && (
+  <p className="text-sm text-center text-green-400 font-medium">
+    ₹ {formatIndianNumber(bidAmount)}
+  </p>
+)}
+
+
             <div className="flex gap-3">
               <motion.button
                 onClick={onApplyBid}
