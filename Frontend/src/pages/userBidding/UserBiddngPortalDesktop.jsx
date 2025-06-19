@@ -310,8 +310,9 @@ export default function UserBiddingDashboardDesktop() {
       return;
     }
     // ⚠️ Specify your backend URL here:
-    // const socket = io("https://cricket-bidding-website-backend.onrender.com", {
-      const socket = io("http://localhost:6001", {
+    // const socket = io("http://localhost:6001", {
+    const socket = io("https://cricket-bidding-website-backend.onrender.com", {
+      
       auth: { token },
       // only websocket transport (optional but more reliable)
       transports: ["websocket"],
