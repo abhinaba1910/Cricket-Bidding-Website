@@ -39,7 +39,7 @@ export default function SplashScreen({ onComplete }) {
             /> */}
           </div>
           <h1 className="text-4xl text-white font-bold mt-6 animate-pulse">
-            Welcome to IPL Auction!
+            Welcome to CricBid Auction!
           </h1>
           <p className="text-white mt-2 text-lg italic">
             "Build your dream team"
