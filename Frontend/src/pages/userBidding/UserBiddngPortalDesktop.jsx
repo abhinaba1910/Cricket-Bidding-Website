@@ -9,7 +9,7 @@ import { FaUserTie, FaUsers } from "react-icons/fa";
 import { GiMoneyStack, GiCardRandom } from "react-icons/gi";
 import Api from "../../userManagement/Api";
 import { io } from "socket.io-client";
-
+import { ArrowLeft } from "lucide-react"; 
 // ─── Shared “CriteriaTable” for Desktop ────────────────────────────
 // Bid paddle animation variants (unchanged)
 const paddleVariants = {
@@ -544,6 +544,13 @@ return () => {
         animate={{ y: 0 }}
         transition={{ type: "spring", stiffness: 200 }}
       >
+        <button
+        onClick={() => navigate("/admin-auction-info")}
+        className="absolute top-4 left-4 z-50 flex items-center space-x-2 text-white bg-indigo-700 hover:bg-indigo-800 px-3 py-1.5 rounded-lg shadow-md transition"
+      >
+        <ArrowLeft size={18} />
+        <span className="text-sm font-medium">Back</span>
+      </button>
         <h1 className="text-xl sm:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500">
           CricBid Auction
         </h1>
