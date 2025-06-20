@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useNavigate, useParams } from "react-router-dom";
 import BidButton from "../../components/ui/BidButton";
 import CharacterCard from "../characters/CharacterCard";
-
+import { formatIndianNumber } from "../../types/formatIndianNumber";
 import toast from "react-hot-toast";
 import { FaUserTie, FaUsers } from "react-icons/fa";
 import { GiMoneyStack, GiCardRandom } from "react-icons/gi";
@@ -73,11 +73,11 @@ const DesktopTeamCard = ({ team }) => {
       <div className="flex justify-between text-xs text-white">
         <div className="flex flex-col items-center">
           <GiMoneyStack className="text-sm mb-0.5" />
-          <span className="font-medium">₹{team.purse?.toLocaleString() || "--"}</span>
+          <span className="font-medium">{team.purse != null ? `₹${formatIndianNumber(team.purse)}` : "--"}</span>
         </div>
         <div className="flex flex-col items-center">
           <GiMoneyStack className="text-sm mb-0.5" />
-          <span className="font-medium">₹{team.remaining?.toLocaleString() || "--"}</span>
+          <span className="font-medium">{team.remaining != null ? `₹${formatIndianNumber(team.remaining)}` : "--"}</span>
         </div>
         <div className="flex flex-col items-center">
           <FaUsers className="text-sm mb-0.5" />
@@ -242,28 +242,86 @@ useEffect(() => {
   };
 
   // Open player detail modal
+  // const openPlayerModal = () => {
+  //   const p = auctionData.currentPlayer;
+  //   if (p) {
+  //     const formattedPlayer = {
+  //       name: p.name,
+  //       role: p.role,
+  //       battingStyle: p.battingStyle,
+  //       bowlingStyle: p.bowlingStyle,
+  //       basePrice: p.basePrice,
+  //       playerPic: p.playerPic,
+  //       nationality: p.country,
+  //       age: p.dob
+  //         ? new Date().getFullYear() - new Date(p.dob).getFullYear()
+  //         : "--",
+  //       matchesPlayed: p.matchesPlayed,
+  //       runs: p.runs,
+  //       wickets: p.wickets,
+  //     };
+  //     setSelectedPlayer(formattedPlayer);
+  //     setShowModal(true);
+  //   }
+  // };
   const openPlayerModal = () => {
-    const p = auctionData.currentPlayer;
-    if (p) {
-      const formattedPlayer = {
-        name: p.name,
-        role: p.role,
-        battingStyle: p.battingStyle,
-        bowlingStyle: p.bowlingStyle,
-        basePrice: p.basePrice,
-        playerPic: p.playerPic,
-        nationality: p.country,
-        age: p.dob
-          ? new Date().getFullYear() - new Date(p.dob).getFullYear()
-          : "--",
-        matchesPlayed: p.matchesPlayed,
-        runs: p.runs,
-        wickets: p.wickets,
-      };
-      setSelectedPlayer(formattedPlayer);
-      setShowModal(true);
-    }
-  };
+  const p = auctionData.currentPlayer;
+  if (p) {
+    const stats = p.performanceStats || {};
+    const batting = stats.batting || {};
+    const bowling = stats.bowling || {};
+    const allRounder = stats.allRounder || {};
+
+    const formattedPlayer = {
+      name: p.name,
+      role: p.role,
+      battingStyle: p.battingStyle,
+      bowlingStyle: p.bowlingStyle,
+      basePrice: p.basePrice,
+      playerPic: p.playerPic,
+      nationality: p.country,
+      age: p.dob
+        ? new Date().getFullYear() - new Date(p.dob).getFullYear()
+        : "--",
+      performanceStats: {
+        batting: {
+          matches: batting.matches ?? "--",
+          runs: batting.runs ?? "--",
+          highScore: batting.highScore ?? "--",
+          average: batting.average ?? "--",
+          strikeRate: batting.strikeRate ?? "--",
+          centuries: batting.centuries ?? "--",
+          fifties: batting.fifties ?? "--",
+        },
+        bowling: {
+          matches: bowling.matches ?? "--",
+          wickets: bowling.wickets ?? "--",
+          bestBowling: bowling.bestBowling ?? "--",
+          average: bowling.average ?? "--",
+          economy: bowling.economy ?? "--",
+          fiveWicketHauls: bowling.fiveWicketHauls ?? "--",
+        },
+        allRounder: {
+          matches: allRounder.matches ?? "--",
+          runs: allRounder.runs ?? "--",
+          highScore: allRounder.highScore ?? "--",
+          battingAverage: allRounder.battingAverage ?? "--",
+          battingStrikeRate: allRounder.battingStrikeRate ?? "--",
+          centuries: allRounder.centuries ?? "--",
+          fifties: allRounder.fifties ?? "--",
+          wickets: allRounder.wickets ?? "--",
+          bestBowling: allRounder.bestBowling ?? "--",
+          bowlingAverage: allRounder.bowlingAverage ?? "--",
+          economy: allRounder.economy ?? "--",
+          fiveWicketHauls: allRounder.fiveWicketHauls ?? "--",
+        },
+      },
+    };
+    setSelectedPlayer(formattedPlayer);
+    setShowModal(true);
+  }
+};
+
   const closePlayerModal = () => {
     setShowModal(false);
     setSelectedPlayer(null);
@@ -378,7 +436,7 @@ useEffect(() => {
       // Refresh data
       fetchAuctionData();
       if (payload.amount != null) {
-        toast.success(`Sold for ₹${payload.amount.toLocaleString()}`);
+        toast.success(`Sold for ₹${formatIndianNumber(payload.amount)}`);
       } else {
         toast.success("Player sold");
       }
@@ -386,8 +444,8 @@ useEffect(() => {
 
     // Listen for auction updates
      // —— listen on the *specific* event channels your server emits — no need to duplicate
-    socket.on("bid:updated",       payload => { console.log("bid:updated", payload); fetchAuctionData(); toast.success(`New bid ₹${payload.newBidAmount.toLocaleString()}`); });
-    socket.on("bid:placed",       payload => { console.log("bid:placed", payload); fetchAuctionData(); toast.success(`New bid ₹${payload.newBid.amount.toLocaleString()}`); });
+    socket.on("bid:updated",       payload => { console.log("bid:updated", payload); fetchAuctionData(); toast.success(`New bid ₹${formatIndianNumber(payload.newBid.amount)}`); });
+    socket.on("bid:placed",       payload => { console.log("bid:placed", payload); fetchAuctionData(); toast.success(`New bid ₹${formatIndianNumber(payload.newBid.amount)}`); });
     // socket.on("player:sold",      payload => { console.log("player:sold", payload); fetchAuctionData(); toast.success(`Sold for ₹${payload.amount.toLocaleString()}`); });
     socket.on("player:rtm",       payload => { console.log("player:rtm", payload); fetchAuctionData(); toast.success("RTM used"); });
     socket.on("auction:paused",   ()      => { console.log("auction:paused"); toast.info("Auction paused"); });
@@ -524,7 +582,11 @@ return () => {
               {info?.name ?? "--/--"}
             </p>
             <p className="text-xs opacity-80">
-              {info?.price ?? "--/--"} — {info?.team ?? "--/--"}
+              {/* {info?.price ?? "--/--"} — {info?.team ?? "--/--"} */}
+              {info?.price != null
+          ? `₹${formatIndianNumber(info.price)}`
+          : "--/--"}{" "}
+        — {info?.team ?? "--/--"}
             </p>
           </motion.div>
         ))}
@@ -573,8 +635,9 @@ return () => {
             </div>
           </div>
           <p className="mt-3 text-base font-semibold bg-blue-900/50 py-1 rounded-lg border border-blue-700">
-            Base Price: ₹
-            {auctionData.currentPlayer?.basePrice?.toLocaleString() ?? "--/--"}
+            Base Price: {auctionData.currentPlayer?.basePrice != null 
+    ? `₹${formatIndianNumber(auctionData.currentPlayer.basePrice)}` 
+    : "--/--"}
           </p>
         </motion.div>
       </div>
@@ -602,7 +665,10 @@ return () => {
             Purse Balance
           </h3>
           <p className="text-xl font-mono text-green-400 text-center animate-pulse">
-            ₹{auctionData.team?.purse.toLocaleString() ?? "--/--"}
+            {auctionData.team?.purse != null 
+    ? `₹${formatIndianNumber(auctionData.team.purse)}` 
+    : "--/--"}
+    
           </p>
         </motion.div>
 
@@ -614,7 +680,9 @@ return () => {
         >
           <h3 className="text-xs font-medium mb-1">Bid Now</h3>
           <BidButton onClick={handleBid} disabled={isBidding} />
-          <p className="mt-1 text-xs opacity-75">Price: ₹{nextBidAmount}</p>
+          <p className="mt-1 text-xs opacity-75">Price: {nextBidAmount != null 
+    ? `₹${formatIndianNumber(nextBidAmount)}` 
+    : "--/--"}</p>
         </motion.div>
 
         {/* Current Highest Bid */}
@@ -629,7 +697,10 @@ return () => {
             </span>
           </div>
           <motion.div className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 py-3 font-bold text-xl text-black shadow-lg mb-3">
-            ₹{auctionData.currentBid?.amount?.toLocaleString() ?? "--/--"}
+            {auctionData.currentBid?.amount != null 
+    ? `₹${formatIndianNumber(auctionData.currentBid.amount)}` 
+    : "--/--"}
+
           </motion.div>
           <div className="flex items-center justify-center mb-3">
             <div className="bg-gray-700 rounded-full w-8 h-8 flex items-center justify-center mr-2 border border-gray-500">
@@ -683,7 +754,7 @@ return () => {
         </motion.div>
       </div>
 
-      {showModal && selectedPlayer && (
+      {/* {showModal && selectedPlayer && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-md"
           onClick={closePlayerModal}
@@ -692,7 +763,7 @@ return () => {
             className="relative w-[90%] max-w-xl rounded-3xl bg-gradient-to-tr from-[#1e1e2f] via-[#2a2a3b] to-[#1e1e2f] p-6 shadow-[0_0_30px_rgba(0,0,0,0.8)] border border-gray-700 text-white"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Close button */}
+
             <button
               className="absolute top-4 right-5 text-gray-400 hover:text-red-500 text-3xl font-bold transition-all duration-200"
               onClick={closePlayerModal}
@@ -700,7 +771,7 @@ return () => {
               &times;
             </button>
 
-            {/* Player Image */}
+
             <div className="text-center">
               <img
                 src={selectedPlayer.playerPic}
@@ -715,10 +786,9 @@ return () => {
               </p>
             </div>
 
-            {/* Decorative Divider */}
+
             <div className="mt-5 border-t border-gray-600 opacity-40" />
 
-            {/* Player Info */}
             <div className="mt-6 grid grid-cols-2 gap-x-6 gap-y-4 text-sm font-light">
               <div>
                 <span className="block text-gray-400 text-xs mb-1">
@@ -785,7 +855,265 @@ return () => {
             </div>
           </div>
         </div>
-      )}
+      )} */}
+{showModal && selectedPlayer && (
+  <div
+    className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-md px-4 py-6"
+    onClick={closePlayerModal}
+  >
+    <div
+      className="
+        relative 
+        w-full 
+        max-w-md sm:max-w-lg md:max-w-xl 
+        max-h-full 
+        sm:max-h-[90vh] 
+        bg-gradient-to-tr from-[#1e1e2f] via-[#2a2a3b] to-[#1e1e2f] 
+        rounded-2xl 
+        shadow-[0_0_30px_rgba(0,0,0,0.8)] 
+        border border-gray-700 
+        text-white 
+        overflow-hidden
+        flex flex-col
+      "
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* Close button */}
+      <button
+        className="absolute top-3 right-3 text-gray-400 hover:text-red-500 text-2xl sm:text-3xl font-bold transition-all duration-200 z-10"
+        onClick={closePlayerModal}
+      >
+        &times;
+      </button>
+
+      {/* Scrollable content area */}
+      <div className="pt-6 pb-4 px-4 sm:px-6 overflow-y-auto">
+        {/* Player Image and basic info */}
+        <div className="text-center mb-4">
+          <div className="mx-auto w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 lg:w-36 lg:h-36 rounded-full border-4 border-emerald-400 overflow-hidden shadow-lg mb-3">
+            {selectedPlayer.playerPic ? (
+              <img
+                src={selectedPlayer.playerPic}
+                alt={selectedPlayer.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-600 flex items-center justify-center">
+                <span className="text-3xl">👤</span>
+              </div>
+            )}
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-wide text-emerald-300">
+            {selectedPlayer.name}
+          </h2>
+          <p className="text-sm sm:text-base italic text-gray-400 uppercase tracking-wider mt-1">
+            {selectedPlayer.role}
+          </p>
+        </div>
+
+        {/* Divider */}
+        <div className="border-t border-gray-600 opacity-40 mb-4" />
+
+        {/* Basic Player Info grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm sm:text-base font-light">
+          <div>
+            <span className="block text-gray-400 text-xs sm:text-sm mb-1">Batting Style</span>
+            <span className="text-white font-medium">
+              {selectedPlayer.battingStyle || "--"}
+            </span>
+          </div>
+          <div>
+            <span className="block text-gray-400 text-xs sm:text-sm mb-1">Bowling Style</span>
+            <span className="text-white font-medium">
+              {selectedPlayer.bowlingStyle || "--"}
+            </span>
+          </div>
+          <div>
+            <span className="block text-gray-400 text-xs sm:text-sm mb-1">Base Price</span>
+            <span className="text-emerald-400 font-semibold">
+                {selectedPlayer.basePrice != null 
+    ? `₹${formatIndianNumber(selectedPlayer.basePrice)}` 
+    : "--"}
+            </span>
+          </div>
+          <div>
+            <span className="block text-gray-400 text-xs sm:text-sm mb-1">Nationality</span>
+            <span className="text-white font-medium">
+              {selectedPlayer.nationality || "--"}
+            </span>
+          </div>
+          <div>
+            <span className="block text-gray-400 text-xs sm:text-sm mb-1">Age</span>
+            <span className="text-white font-medium">
+              {selectedPlayer.age ?? "--"}
+            </span>
+          </div>
+          {/* Add other top-level fields if needed */}
+        </div>
+
+        {/* === Performance Stats: conditional sections === */}
+        <div className="mt-6">
+          <h3 className="text-lg sm:text-xl font-semibold text-emerald-300 mb-3">
+            Performance Stats
+          </h3>
+
+          {(() => {
+            const role = selectedPlayer.role || "";
+            const isBatsman = ["Batsman", "Wicket keeper batsman"].includes(role);
+            const isBowler = ["Fast bowler", "Spin bowler"].includes(role);
+            const isAllRounder = ["Fast all-rounder", "Spin all-rounder"].includes(role);
+
+            const stats = selectedPlayer.performanceStats || {};
+            const battingStats = stats.batting || {};
+            const bowlingStats = stats.bowling || {};
+            const allRoundStats = stats.allRounder || {};
+
+            // Shared grid class: 1 column on mobile, 2 on sm+
+            const gridClass = "grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm sm:text-base";
+
+            return (
+              <>
+                {isBatsman && (
+                  <div className="mb-6">
+                    <h4 className="text-md sm:text-lg font-medium text-gray-200 mb-2">Batting</h4>
+                    <div className={gridClass}>
+                      <div>
+                        <span className="block text-gray-400 text-xs mb-1">Matches</span>
+                        <span className="text-white font-medium">{battingStats.matches ?? "--"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-gray-400 text-xs mb-1">Runs</span>
+                        <span className="text-white font-medium">  {battingStats.runs != null 
+    ? formatIndianNumber(battingStats.runs) 
+    : "--"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-gray-400 text-xs mb-1">High Score</span>
+                        <span className="text-white font-medium">{battingStats.highScore ?? "--"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-gray-400 text-xs mb-1">Average</span>
+                        <span className="text-white font-medium">{battingStats.average ?? "--"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-gray-400 text-xs mb-1">Strike Rate</span>
+                        <span className="text-white font-medium">{battingStats.strikeRate ?? "--"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-gray-400 text-xs mb-1">Centuries</span>
+                        <span className="text-white font-medium">{battingStats.centuries ?? "--"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-gray-400 text-xs mb-1">Fifties</span>
+                        <span className="text-white font-medium">{battingStats.fifties ?? "--"}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {isBowler && (
+                  <div className="mb-6">
+                    <h4 className="text-md sm:text-lg font-medium text-gray-200 mb-2">Bowling</h4>
+                    <div className={gridClass}>
+                      <div>
+                        <span className="block text-gray-400 text-xs mb-1">Matches</span>
+                        <span className="text-white font-medium">{bowlingStats.matches ?? "--"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-gray-400 text-xs mb-1">Wickets</span>
+                        <span className="text-white font-medium">{bowlingStats.wickets ?? "--"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-gray-400 text-xs mb-1">Best Bowling</span>
+                        <span className="text-white font-medium">{bowlingStats.bestBowling ?? "--"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-gray-400 text-xs mb-1">Average</span>
+                        <span className="text-white font-medium">{bowlingStats.average ?? "--"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-gray-400 text-xs mb-1">Economy</span>
+                        <span className="text-white font-medium">{bowlingStats.economy ?? "--"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-gray-400 text-xs mb-1">5-Wicket Hauls</span>
+                        <span className="text-white font-medium">{bowlingStats.fiveWicketHauls ?? "--"}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {isAllRounder && (
+                  <div className="mb-6">
+                    <h4 className="text-md sm:text-lg font-medium text-gray-200 mb-2">All-Rounder Stats</h4>
+                    <div className={gridClass}>
+                      <div>
+                        <span className="block text-gray-400 text-xs mb-1">Matches</span>
+                        <span className="text-white font-medium">{allRoundStats.matches ?? "--"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-gray-400 text-xs mb-1">Runs</span>
+                        <span className="text-white font-medium">{allRoundStats.runs ?? "--"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-gray-400 text-xs mb-1">High Score</span>
+                        <span className="text-white font-medium">{allRoundStats.highScore ?? "--"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-gray-400 text-xs mb-1">Batting Avg</span>
+                        <span className="text-white font-medium">{allRoundStats.battingAverage ?? "--"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-gray-400 text-xs mb-1">Batting S/R</span>
+                        <span className="text-white font-medium">{allRoundStats.battingStrikeRate ?? "--"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-gray-400 text-xs mb-1">Centuries</span>
+                        <span className="text-white font-medium">{allRoundStats.centuries ?? "--"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-gray-400 text-xs mb-1">Fifties</span>
+                        <span className="text-white font-medium">{allRoundStats.fifties ?? "--"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-gray-400 text-xs mb-1">Wickets</span>
+                        <span className="text-white font-medium">{allRoundStats.wickets ?? "--"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-gray-400 text-xs mb-1">Best Bowling</span>
+                        <span className="text-white font-medium">{allRoundStats.bestBowling ?? "--"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-gray-400 text-xs mb-1">Bowling Avg</span>
+                        <span className="text-white font-medium">{allRoundStats.bowlingAverage ?? "--"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-gray-400 text-xs mb-1">Economy</span>
+                        <span className="text-white font-medium">{allRoundStats.economy ?? "--"}</span>
+                      </div>
+                      <div>
+                        <span className="block text-gray-400 text-xs mb-1">5-Wicket Hauls</span>
+                        <span className="text-white font-medium">{allRoundStats.fiveWicketHauls ?? "--"}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {!isBatsman && !isBowler && !isAllRounder && (
+                  <p className="text-gray-400 text-sm sm:text-base">
+                    No performance stats available for this role.
+                  </p>
+                )}
+              </>
+            );
+          })()}
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+
     </div>
   );
 }
