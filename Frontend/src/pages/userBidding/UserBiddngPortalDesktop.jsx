@@ -34,7 +34,7 @@ const DesktopTeamCard = ({ team }) => {
 
   return (
     <motion.div
-      className="bg-gradient-to-br from-indigo-800/40 to-blue-700/40 rounded-lg p-4 w-64 h-40 max-w-xs shadow-md border border-indigo-600/20 flex flex-col justify-between"
+      className="bg-gradient-to-br from-indigo-800/40 to-blue-700/40 rounded-lg p-4 w-72 h-40 max-w-xs shadow-md border border-indigo-600/20 flex flex-col justify-between"
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", delay: 0.2 }}
@@ -539,28 +539,14 @@ return () => {
     >
       {/* ─── HEADER BAR ───────────────────────────────────────────── */}
       <motion.div
-        className="col-span-4 flex justify-between items-center px-4 py-3 bg-gray-800/60 backdrop-blur-sm sticky top-0 z-10"
+        className="col-span-4 flex justify-center items-center px-4 py-3 bg-gray-800/60 backdrop-blur-sm sticky top-0 z-10"
         initial={{ y: -50 }}
         animate={{ y: 0 }}
         transition={{ type: "spring", stiffness: 200 }}
       >
         <h1 className="text-xl sm:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500">
-          IPL Auction • User Panel
+          CricBid Auction
         </h1>
-        <button
-          onClick={toggleFullScreen}
-          className="px-3 py-1 bg-black bg-opacity-50 rounded-full hover:bg-opacity-75 text-xs sm:text-sm transition-all duration-200 flex items-center gap-2"
-        >
-          {fullScreen ? (
-            <>
-              <span>Exit Full Screen</span> <span className="text-lg">↗️</span>
-            </>
-          ) : (
-            <>
-              <span>Full Screen</span> <span className="text-lg">↘️</span>
-            </>
-          )}
-        </button>
       </motion.div>
 
       {/* ─── LEFT COLUMN ─────────────────────────────────────────── */}
