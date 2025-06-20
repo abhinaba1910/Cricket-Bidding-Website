@@ -96,13 +96,18 @@ const DesktopTeamCard = ({ team }) => {
 
 export default function UserBiddingDashboardDesktop() {
   const navigate = useNavigate();
+    const { id } = useParams(); // auctionId
   const [fullScreen, setFullScreen] = useState(false);
   const [isBidding, setIsBidding] = useState(false);
-  const { id } = useParams(); // auctionId
-  const [emoteToPlay, setEmoteToPlay] = useState(null);
+
+  const [emoteToPlay, setEmoteToPlay] = useState();
   const [lastSoldTeam, setLastSoldTeam] = useState(null);
   const [rtmCount, setRtmCount] = useState(0);
   const toggleFullScreen = () => setFullScreen((fs) => !fs);
+  const [userTeamId, setUserTeamId] = useState(null);
+    const userTeamIdRef = useRef(null);
+  const emoteTimeoutRef = useRef(null);
+
 
   // ─── Sample Auction Data for initialization ────────────────────
   const sampleAuction = {
@@ -156,6 +161,11 @@ export default function UserBiddingDashboardDesktop() {
 
   // Socket ref
   const socketRef = useRef(null);
+useEffect(() => {
+    userTeamIdRef.current = userTeamId;
+  }, [userTeamId]);
+
+
 
   // Fetch function to get bidding-portal data
   const fetchAuctionData = async () => {
@@ -166,6 +176,15 @@ export default function UserBiddingDashboardDesktop() {
 
       // Update state
       setAuctionData(data);
+      
+      // Set userTeamId from response
+      if (data.team && (data.team.teamId || data.team._id)) {
+        // Adjust depending on actual field name: teamId or _id
+        const tid = data.team.teamId ?? data.team._id;
+        setUserTeamId(tid);
+      }
+
+
 
       // Avatar processing
       if (data.team?.avatar) {
@@ -174,25 +193,28 @@ export default function UserBiddingDashboardDesktop() {
         const publicPath = idx >= 0 ? raw.slice(idx) : raw;
         setAvatarUrl(publicPath);
       }
+      else {
+        setAvatarUrl(null);
+      }
 
       // RTM count
       setRtmCount(data.team?.rtmCount || 0);
 
       // Emote logic for last sold:
-      const history = data.biddingHistory || [];
-      const lastEntry = history[history.length - 1] || null;
-      if (lastEntry) {
-        const soldTeamId = lastEntry.team?._id || lastEntry.team || null;
-        if (soldTeamId && soldTeamId !== lastSoldTeam) {
-          setLastSoldTeam(soldTeamId);
-          if (soldTeamId === data.team?.teamId) {
-            setEmoteToPlay("BidWon");
-          } else {
-            setEmoteToPlay("LostBid");
-          }
-          setTimeout(() => setEmoteToPlay(null), 5000);
-        }        
-      }
+      // const history = data.biddingHistory || [];
+      // const lastEntry = history[history.length - 1] || null;
+      // if (lastEntry) {
+      //   const soldTeamId = lastEntry.team?._id || lastEntry.team || null;
+      //   if (soldTeamId && soldTeamId !== lastSoldTeam) {
+      //     setLastSoldTeam(soldTeamId);
+      //     if (soldTeamId === data.team?.teamId) {
+      //       setEmoteToPlay("BidWon");
+      //     } else {
+      //       setEmoteToPlay("LostBid");
+      //     }
+      //     setTimeout(() => setEmoteToPlay(null), 5000);
+      //   }        
+      // }
 
       // Update “lastSold” and “mostExpensive” display
       const formatPlayerData = (entry) => {
@@ -267,12 +289,15 @@ export default function UserBiddingDashboardDesktop() {
       bidAmount: visibleBid,
     };
     try {
+
       setIsBidding(true);
-      const res = await Api.post(`/place-bid/${id}`, payload);
+      await Api.post(`/place-bid/${id}`, payload);
       toast.success("Bid Placed Successfully");
       // After placing bid, we rely on socket event to refresh data,
       // but we can also fetch immediately:
       fetchAuctionData();
+      setEmoteToPlay("HandRaise");
+    setTimeout(() => setEmoteToPlay(null), 2000);
     } catch (error) {
       console.error("Failed to place bid:", error);
       toast.error(error.response?.data?.error || "Failed to place bid");
@@ -329,11 +354,40 @@ export default function UserBiddingDashboardDesktop() {
       console.log("Socket disconnected:", reason);
     });
 
+
+    socket.on("player:sold", (payload) => {
+      console.log("Received player:sold", payload);
+      // Compare winnerTeamId or soldTo against user's team ID
+      const winnerId = payload.soldTo 
+      const teamId = userTeamIdRef.current;
+      if (teamId && winnerId) {
+        if (winnerId === teamId) {
+          setEmoteToPlay("BidWon");
+        } else {
+          setEmoteToPlay("LostBid");
+        }
+        if (emoteTimeoutRef.current) {
+          clearTimeout(emoteTimeoutRef.current);
+        }
+        emoteTimeoutRef.current = setTimeout(() => {
+          setEmoteToPlay(null);
+          emoteTimeoutRef.current = null;
+        }, 3000);
+      }
+      // Refresh data
+      fetchAuctionData();
+      if (payload.amount != null) {
+        toast.success(`Sold for ₹${payload.amount.toLocaleString()}`);
+      } else {
+        toast.success("Player sold");
+      }
+    });
+
     // Listen for auction updates
      // —— listen on the *specific* event channels your server emits — no need to duplicate
     socket.on("bid:updated",       payload => { console.log("bid:updated", payload); fetchAuctionData(); toast.success(`New bid ₹${payload.newBidAmount.toLocaleString()}`); });
     socket.on("bid:placed",       payload => { console.log("bid:placed", payload); fetchAuctionData(); toast.success(`New bid ₹${payload.newBid.amount.toLocaleString()}`); });
-    socket.on("player:sold",      payload => { console.log("player:sold", payload); fetchAuctionData(); toast.success(`Sold for ₹${payload.amount.toLocaleString()}`); });
+    // socket.on("player:sold",      payload => { console.log("player:sold", payload); fetchAuctionData(); toast.success(`Sold for ₹${payload.amount.toLocaleString()}`); });
     socket.on("player:rtm",       payload => { console.log("player:rtm", payload); fetchAuctionData(); toast.success("RTM used"); });
     socket.on("auction:paused",   ()      => { console.log("auction:paused"); toast.info("Auction paused"); });
     socket.on("auction:resumed",  ()      => { console.log("auction:resumed"); toast.info("Auction resumed"); });
@@ -341,53 +395,69 @@ export default function UserBiddingDashboardDesktop() {
     socket.on("bidding:started",  payload => { console.log("bidding:started", payload); fetchAuctionData(); });
 
     // In case backend emits other specific events:
-    socket.on("bid:updated", (payload) => {
-      console.log("Received bid:updated:", payload);
-      fetchAuctionData();
-      if (payload.newBidAmount) {
-        toast.success(`New bid: ₹${payload.amount.toLocaleString()}`);
-      }
-    });
-    socket.on("bid:placed", (payload) => {
-      console.log("Received bid:placed:", payload);
-      fetchAuctionData();
-      if (payload.amount) {
-        toast.success(`New bid: ₹${payload.amount.toLocaleString()}`);
-      }
-    });
-    socket.on("player:sold", (payload) => {
-      console.log("Received player:sold:", payload);
-      fetchAuctionData();
-      if (payload.amount) {
-        toast.success(`Player sold: ₹${payload.amount.toLocaleString()}`);
-      }
-    });
-    socket.on("player:rtm", (payload) => {
-      console.log("Received player:rtm:", payload);
-      fetchAuctionData();
-      toast.success("RTM event occurred");
-    });
-    socket.on("auction:paused", () => {
-      console.log("Received auction:paused");
-      toast.info("Auction paused");
-    });
-    socket.on("auction:resumed", () => {
-      console.log("Received auction:resumed");
-      toast.info("Auction resumed");
-    });
-    socket.on("auction:ended", () => {
-      console.log("Received auction:ended");
-      toast.info("Auction ended");
-      navigate("/admin-auction-info");
-    });
+//     socket.on("bid:updated", (payload) => {
+//       console.log("Received bid:updated:", payload);
+//       fetchAuctionData();
+//       if (payload.newBidAmount) {
+//         toast.success(`New bid: ₹${payload.amount.toLocaleString()}`);
+//       }
+//     });
+//     socket.on("bid:placed", (payload) => {
+//       console.log("Received bid:placed:", payload);
+//       fetchAuctionData();
+//       if (payload.amount) {
+//         toast.success(`New bid: ₹${payload.amount.toLocaleString()}`);
+//       }
+//     });
+// socket.on("player:sold", (payload) => {
+//   console.log("Received player:sold", payload);
+//   if (userTeamId) {
+//     if (payload.soldTo === userTeamId) {
+//       setEmoteToPlay("BidWon");
+//     } else {
+//       setEmoteToPlay("LostBid");
+//     }
+//     if (emoteTimeoutRef.current) {
+//       clearTimeout(emoteTimeoutRef.current);
+//     }
+//     emoteTimeoutRef.current = setTimeout(() => {
+//       setEmoteToPlay(null);
+//       emoteTimeoutRef.current = null;
+//     }, 3000);
+//   }
+//   fetchAuctionData();
+//   toast.success(`Sold for ₹${payload.amount.toLocaleString()}`);
+// });
 
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.emit("leave-auction", id);
-        socketRef.current.disconnect();
-      }
-    };
-  }, [id]);
+//     socket.on("player:rtm", (payload) => {
+//       console.log("Received player:rtm:", payload);
+//       fetchAuctionData();
+//       toast.success("RTM event occurred");
+//     });
+//     socket.on("auction:paused", () => {
+//       console.log("Received auction:paused");
+//       toast.info("Auction paused");
+//     });
+//     socket.on("auction:resumed", () => {
+//       console.log("Received auction:resumed");
+//       toast.info("Auction resumed");
+//     });
+//     socket.on("auction:ended", () => {
+//       console.log("Received auction:ended");
+//       toast.info("Auction ended");
+//       navigate("/admin-auction-info");
+//     });
+
+return () => {
+  if (socketRef.current) {
+    socketRef.current.emit("leave-auction", id);
+    socketRef.current.disconnect();
+  }
+  if (emoteTimeoutRef.current) {
+    clearTimeout(emoteTimeoutRef.current);
+  }
+};
+  }, [id,navigate]);
 
   // Initial fetch once
   useEffect(() => {
