@@ -35,7 +35,7 @@ const placeholderAvatars = [
   },
   {
     id: "avatar4",
-    thumbnail: "/avatars/avatar2-thumb.png",
+    thumbnail: "/models/avatarImages/bidder4.png",
     src: "/models/char4.glb",
     alt: "Bidder4",
   },
