@@ -71,7 +71,7 @@ triggerEmote,
     '/models/emotes/RTM.glb',
     '/models/emotes/StandToSit.glb',
   ],
-  labels = ['Bid Won','Hand Raise','Lost Bid','Ready to Move','Stand to Sit'],
+  labels = ['BidWon','HandRaise','LostBid','ReadytoMove','StandtoSit'],
   
 })
 

@@ -358,6 +358,7 @@ useEffect(() => {
     socket.on("player:sold", (payload) => {
       console.log("Received player:sold", payload);
       // Compare winnerTeamId or soldTo against user's team ID
+      console.log("[USER] got player:sold:", payload);
       const winnerId = payload.soldTo 
       const teamId = userTeamIdRef.current;
       if (teamId && winnerId) {
