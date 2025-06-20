@@ -31,7 +31,7 @@ export default function EditTeam() {
       try {
         const res = await Api.get(`/get-team/${id}`);
         const t = res.data;
-        console.log(t)
+        console.log(t);
         reset({ teamName: t.teamName, shortName: t.shortName, purse: t.purse });
         setPreview(t.logoUrl);
         setTeamPlayers(t.players || []); // Assuming populated players
@@ -82,9 +82,13 @@ export default function EditTeam() {
     }
   };
 
-// 🔥 Delete handler
+  // 🔥 Delete handler
   const handleDelete = async () => {
-    if (!window.confirm("Are you sure you want to permanently delete this team? This cannot be undone.")) {
+    if (
+      !window.confirm(
+        "Are you sure you want to permanently delete this team? This cannot be undone."
+      )
+    ) {
       return;
     }
     try {
@@ -99,7 +103,6 @@ export default function EditTeam() {
       setSubmitting(false);
     }
   };
-
 
   if (loading) {
     return (
@@ -214,87 +217,95 @@ export default function EditTeam() {
             </div>
             <div>
               <h2 className="text-lg font-semibold mb-2">Players</h2>
-              {teamPlayers.map(({ player, price }) => (
-                <div
-                  key={player._id}
-                  className="border p-3 rounded mb-2 flex items-center justify-between"
-                >
-                  <div className="flex flex-col">
-                    <span className="font-medium">{player.name}</span>
-                    <span className="text-sm text-gray-500">
-                      Current: ₹{price}
-                    </span>
-                  </div>
+              {teamPlayers
+                .filter(({ player }) => player !== null)
+                .map(({ player, price }) => (
+                  <div
+                    key={player._id}
+                    className="border p-3 rounded mb-2 flex items-center justify-between"
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">{player.name}</span>
+                      <span className="text-sm text-gray-500">
+                        Current: ₹{price}
+                      </span>
+                    </div>
 
-                  <div className="flex items-center gap-4">
-                    {/* Retain */}
-                    {player.availability!=="Retained" &&<label className="flex items-center gap-1">
+                    <div className="flex items-center gap-4">
+                      {/* Retain */}
+                      {player.availability !== "Retained" && (
+                        <label className="flex items-center gap-1">
+                          <input
+                            type="checkbox"
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setRetainedPlayers((prev) => [
+                                  ...prev,
+                                  { playerId: player._id, price },
+                                ]);
+                                setReleasedPlayers((prev) =>
+                                  prev.filter((id) => id !== player._id)
+                                );
+                              } else {
+                                setRetainedPlayers((prev) =>
+                                  prev.filter((p) => p.playerId !== player._id)
+                                );
+                              }
+                            }}
+                            checked={retainedPlayers.some(
+                              (p) => p.playerId === player._id
+                            )}
+                          />
+                          Retain
+                        </label>
+                      )}
+
+                      {/* Retain Price */}
                       <input
-                        type="checkbox"
+                        type="number"
+                        className="w-24 border px-2 py-1 rounded"
+                        value={
+                          retainedPlayers.find((p) => p.playerId === player._id)
+                            ?.price || ""
+                        }
                         onChange={(e) => {
-                          if (e.target.checked) {
-                            setRetainedPlayers((prev) => [
-                              ...prev,
-                              { playerId: player._id, price },
-                            ]);
-                            setReleasedPlayers((prev) =>
-                              prev.filter((id) => id !== player._id)
-                            );
-                          } else {
-                            setRetainedPlayers((prev) =>
-                              prev.filter((p) => p.playerId !== player._id)
-                            );
-                          }
+                          const val = parseInt(e.target.value) || 0;
+                          setRetainedPlayers((prev) =>
+                            prev.map((p) =>
+                              p.playerId === player._id
+                                ? { ...p, price: val }
+                                : p
+                            )
+                          );
                         }}
-                        checked={retainedPlayers.some(
-                          (p) => p.playerId === player._id
-                        )}
-                      />
-                      Retain
-                    </label>}
-
-                    {/* Retain Price */}
-                    <input
-                      type="number"
-                      className="w-24 border px-2 py-1 rounded"
-                      value={
-                        retainedPlayers.find((p) => p.playerId === player._id)
-                          ?.price || ""
-                      }
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value) || 0;
-                        setRetainedPlayers((prev) =>
-                          prev.map((p) =>
-                            p.playerId === player._id ? { ...p, price: val } : p
+                        disabled={
+                          !retainedPlayers.some(
+                            (p) => p.playerId === player._id
                           )
-                        );
-                      }}
-                      disabled={
-                        !retainedPlayers.some((p) => p.playerId === player._id)
-                      }
-                    />
+                        }
+                      />
 
-                    {/* Release */}
-                    {releasedPlayers.includes(player._id) ? (
-                      <span className="text-gray-500 italic">Released</span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedReleasePlayer({
-                            id: player._id,
-                            name: player.name,
-                          });
-                          setShowReleaseModal(true);
-                        }}
-                        className="text-red-500 hover:underline text-sm"
-                      >
-                        Release
-                      </button>
-                    )}
+                      {/* Release */}
+                      {releasedPlayers.includes(player._id) ? (
+                        <span className="text-gray-500 italic">Released</span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedReleasePlayer({
+                              id: player._id,
+                              name: player.name,
+                            });
+                            setShowReleaseModal(true);
+                          }}
+                          className="text-red-500 hover:underline text-sm"
+                        >
+                          Release
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
 
             {/* Save */}

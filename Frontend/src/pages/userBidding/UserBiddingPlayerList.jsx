@@ -28,29 +28,24 @@ const allRanks = ["A+", "A", "B", "C"];
 
 export default function UserBiddingPlayerList() {
   const navigate = useNavigate();
-  const { id } = useParams(); // Auction ID from URL
+  const { id } = useParams();
 
-  // filter state
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [battingFilter, setBattingFilter] = useState("");
   const [bowlingFilter, setBowlingFilter] = useState("");
   const [rankFilter, setRankFilter] = useState("");
 
-  // data
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     if (!id) return;
-
-    // Fetch auction data to get selectedPlayers
     api
       .get(`/bidding-portal/${id}`)
       .then((res) => {
         setPlayers(res.data.selectedPlayers || []);
-        console.log("Players", res.data.selectedPlayers);
         setLoading(false);
       })
       .catch((err) => {
@@ -60,22 +55,22 @@ export default function UserBiddingPlayerList() {
       });
   }, [id]);
 
-  // split sold vs unsold
-  const unsold = useMemo(
+  const available = useMemo(
     () => players.filter((p) => p.availability === "Available"),
     [players]
   );
-
   const sold = useMemo(
     () => players.filter((p) => p.availability === "Sold"),
     [players]
   );
+  const unsold = useMemo(
+    () => players.filter((p) => p.availability === "Unsold"),
+    [players]
+  );
 
-  // which tab
-  const [tab, setTab] = useState("unsold");
-  const list = tab === "unsold" ? unsold : sold;
+  const [tab, setTab] = useState("available");
+  const list = tab === "sold" ? sold : tab === "unsold" ? unsold : available;
 
-  // apply search & filters
   const filtered = useMemo(() => {
     const term = search.toLowerCase();
     return list.filter((p) => {
@@ -106,10 +101,7 @@ export default function UserBiddingPlayerList() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-600 mb-4">{error}</p>
-          <button
-            // onClick={() => navigate(`/admin/admin-bidding-dashboard/${id}`)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
+          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
             Go Back
           </button>
         </div>
@@ -120,7 +112,6 @@ export default function UserBiddingPlayerList() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Back + Tab */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <button
             onClick={() => navigate(`/user-bidding-portal/${id}`)}
@@ -130,20 +121,21 @@ export default function UserBiddingPlayerList() {
           </button>
 
           <div className="flex space-x-4">
-            {["unsold", "sold"].map((key) => (
+            {[
+              { key: "available", label: `Available (${available.length})` },
+              { key: "unsold", label: `Unsold (${unsold.length})` },
+              { key: "sold", label: `Sold (${sold.length})` },
+            ].map((tabOption) => (
               <button
-                key={key}
-                onClick={() => setTab(key)}
-                className={
-                  "px-4 py-2 rounded-full text-sm font-medium " +
-                  (tab === key
+                key={tabOption.key}
+                onClick={() => setTab(tabOption.key)}
+                className={`px-4 py-2 rounded-full text-sm font-medium ${
+                  tab === tabOption.key
                     ? "bg-blue-600 text-white"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300")
-                }
+                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                }`}
               >
-                {key === "unsold"
-                  ? `Available (${unsold.length})`
-                  : `Sold (${sold.length})`}
+                {tabOption.label}
               </button>
             ))}
           </div>
@@ -152,7 +144,6 @@ export default function UserBiddingPlayerList() {
         {/* Filters */}
         <div className="overflow-x-auto">
           <div className="inline-flex items-center gap-2 py-2 min-w-max">
-            {/* Search */}
             <div className="relative min-w-[240px]">
               <FiSearch className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-400" />
               <input
@@ -163,7 +154,6 @@ export default function UserBiddingPlayerList() {
                 className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring"
               />
             </div>
-            {/* Role */}
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
@@ -176,7 +166,6 @@ export default function UserBiddingPlayerList() {
                 </option>
               ))}
             </select>
-            {/* Batting */}
             <select
               value={battingFilter}
               onChange={(e) => setBattingFilter(e.target.value)}
@@ -189,7 +178,6 @@ export default function UserBiddingPlayerList() {
                 </option>
               ))}
             </select>
-            {/* Bowling */}
             <select
               value={bowlingFilter}
               onChange={(e) => setBowlingFilter(e.target.value)}
@@ -202,7 +190,6 @@ export default function UserBiddingPlayerList() {
                 </option>
               ))}
             </select>
-            {/* Rank */}
             <select
               value={rankFilter}
               onChange={(e) => setRankFilter(e.target.value)}

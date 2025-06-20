@@ -43,39 +43,34 @@ export default function ManualPlayerSelection() {
       .then((res) => {
         const { savailablePlayers, manualPlayerQueue } = res.data;
         setPlayers(savailablePlayers || []);
-
+  
         // Extract already queued player IDs
         const queuedPlayerIds = new Set(
           (manualPlayerQueue || []).map((entry) => entry.player._id)
         );
         setQueuedIds(queuedPlayerIds);
-
-        if (!addToExistingQueue) {
-          setSelectedPlayers([]); // Start with no player selected
-        }        
+        setSelectedPlayers([]); // Always start fresh
       })
       .catch((err) => console.error("Failed to fetch auction data", err));
-  }, [id, addToExistingQueue]);
-
-
-
+  }, [id]);
+  
   const togglePlayerSelection = (player) => {
     if (queuedIds.has(player._id)) return; // Ignore already queued
-
+  
     setSelectedPlayers((prev) => {
       const isSelected = prev.some((p) => p._id === player._id);
       if (isSelected) {
         return prev.filter((p) => p._id !== player._id);
       } else {
-        if (!addToExistingQueue && prev.length >= 4) {
-          alert("You can select maximum 4 players at a time");
+        if (prev.length >= 10) {
+          alert("You can select maximum 10 players at a time");
           return prev;
         }
         return [...prev, player];
       }
     });
   };
-
+  
   const filtered = useMemo(() => {
     const term = search.toLowerCase();
     return players.filter((p) => {
@@ -89,73 +84,44 @@ export default function ManualPlayerSelection() {
       return okSearch && okRole && okBat && okBowl && okRank;
     });
   }, [players, search, roleFilter, battingFilter, bowlingFilter, rankFilter]);
-
+  
   const handleBack = () => navigate(`/admin/admin-bidding-dashboard/${id}`);
-
-  // Updated handleStartBidding function in ManualPlayerSelection component
-
+  
   const handleStartBidding = async () => {
     if (selectedPlayers.length === 0) {
       alert("Please select at least one player");
       return;
     }
-
+  
     try {
-      if (addToExistingQueue) {
-        // Add to existing queue
-        const newQueuePlayers = selectedPlayers.map((player, index) => ({
-          player: player._id,
-          position: currentQueue.length + index + 1,
-          playerData: player,
-        }));
-
-        console.log("Adding players to existing queue:");
-        console.log("Current queue length:", currentQueue.length);
-        console.log("New players being added:", newQueuePlayers);
-
-        // Send the proper data structure to backend
-        const response = await Api.post(`/set-manual-queue/${id}`, {
-          newPlayers: newQueuePlayers,
-          existingQueue: currentQueue,
-        });
-
-        console.log("Backend response:", response.data);
-
-        // Check if response indicates success
-        if (response.data.message) {
-          alert(
-            `${selectedPlayers.length} players added to queue successfully!`
-          );
-
-          // Navigate back to dashboard with success state
-          navigate(`/admin/admin-bidding-dashboard/${id}`, {
-            state: {
-              queueUpdated: true,
-              newQueueLength: response.data.totalQueueLength,
-              message: response.data.message,
-            },
-          });
-        } else {
-          throw new Error("Unexpected response from server");
-        }
-      } else {
-        // Create new queue and start bidding
+      // Create fresh queue with selected players
+      const playerQueue = selectedPlayers.map((player, index) => ({
+        player: player._id,
+        position: index + 1,
+        playerData: player,
+      }));
+  
+      const response = await Api.post(`/set-manual-queue/${id}`, {
+        playerQueue: playerQueue,
+      });
+  
+      if (response.data.message) {
+        alert(`${selectedPlayers.length} players added to queue successfully!`);
+        
+        // Navigate back to dashboard
         navigate(`/admin/admin-bidding-dashboard/${id}`, {
           state: {
-            selectedPlayers: selectedPlayers.map((p, i) => ({
-              ...p,
-              id: p._id,
-              selectionOrder: i + 1,
-            })),
-            id,
+            queueCreated: true,
+            queueLength: selectedPlayers.length,
+            message: response.data.message,
           },
         });
       }
     } catch (error) {
-      console.error("Error handling player selection:", error);
+      console.error("Error creating player queue:", error);
       alert(
         error.response?.data?.error ||
-          "Failed to process player selection. Please try again."
+          "Failed to create player queue. Please try again."
       );
     }
   };

@@ -13,10 +13,11 @@ export default function ViewTeam() {
 
   useEffect(() => {
     let interval;
-  
+
     async function loadTeam() {
       try {
         const res = await Api.get(`/get-team/${id}`);
+        console.log(res.data);
         setTeam(res.data);
       } catch (err) {
         console.error("Failed to load team:", err);
@@ -27,16 +28,15 @@ export default function ViewTeam() {
         setLoading(false);
       }
     }
-  
+
     loadTeam(); // Initial fetch
-  
+
     interval = setInterval(() => {
       loadTeam();
     }, 5000); // Fetch every 5 seconds
-  
+
     return () => clearInterval(interval); // Cleanup on unmount
   }, [id]);
-  
 
   if (loading) {
     return (
@@ -133,20 +133,19 @@ export default function ViewTeam() {
                     </tr>
                   </thead>
                   <tbody>
-                    {team.players.map((entry, index) => (
-                      <tr
-                        key={entry.player._id || index}
-                        className="hover:bg-gray-50"
-                      >
-                        <td className="px-4 py-2 border-b">{index + 1}</td>
-                        <td className="px-4 py-2 border-b">
-                          {entry.player?.name || "Unnamed Player"}
-                        </td>
-                        <td className="px-4 py-2 border-b">
-                          ₹{Number(entry.price).toLocaleString()}
-                        </td>
-                      </tr>
-                    ))}
+                    {team.players
+                      .filter((entry) => entry.player !== null)
+                      .map((entry, index) => (
+                        <tr key={entry.player._id} className="hover:bg-gray-50">
+                          <td className="px-4 py-2 border-b">{index + 1}</td>
+                          <td className="px-4 py-2 border-b">
+                            {entry.player.name}
+                          </td>
+                          <td className="px-4 py-2 border-b">
+                            ₹{Number(entry.price).toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </div>
@@ -161,7 +160,7 @@ export default function ViewTeam() {
           </button>
         </div>
       </div>
-      <MobileStickyNav/>
+      <MobileStickyNav />
     </div>
   );
 }

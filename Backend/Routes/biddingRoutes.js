@@ -387,73 +387,32 @@ router.post("/update-selection-mode/:auctionId", auth, async (req, res) => {
   }
 });
 
+
+
 router.post("/set-manual-queue/:auctionId", auth, async (req, res) => {
   try {
-    const { playerQueue, newPlayers, existingQueue } = req.body;
+    const { playerQueue } = req.body;
     const auction = await Auction.findById(req.params.auctionId);
 
     if (!auction) {
       return res.status(404).json({ error: "Auction not found" });
     }
 
-    let finalQueue = [];
-    let updateData = {};
-
-    // Utility: Ensure no duplicate player entries — override older ones with latest position
-    const mergeAndDeduplicateQueue = (baseQueue, addedPlayers) => {
-      const playerMap = new Map();
-
-      // First add existing queue
-      for (const item of baseQueue) {
-        playerMap.set(String(item.player), { ...item });
-      }
-
-      // Then add new players — overwrite if already exists
-      for (const item of addedPlayers) {
-        playerMap.set(String(item.player), { ...item }); // Update to new position
-      }
-
-      // Convert map back to array
-      return Array.from(playerMap.values()).sort(
-        (a, b) => a.position - b.position
-      );
-    };
-
-    // CASE 1: Adding more players to existing queue
-    if (newPlayers && existingQueue) {
-      console.log("Adding to existing queue");
-
-      // Merge and deduplicate by player ID
-      finalQueue = mergeAndDeduplicateQueue(existingQueue, newPlayers);
-
-      updateData = {
-        manualPlayerQueue: finalQueue,
-      };
-
-      // CASE 2: Replacing entire queue
-    } else if (playerQueue) {
-      console.log("Creating new queue");
-
-      // Ensure no duplicates within the new queue itself
-      finalQueue = mergeAndDeduplicateQueue([], playerQueue);
-
-      updateData = {
-        manualPlayerQueue: finalQueue,
-      };
-
-      if (!auction.biddingStarted) {
-        updateData.currentQueuePosition = 0;
-      } else if (
-        auction.selectionMode === "automatic" &&
-        finalQueue.length > 0
-      ) {
-        updateData.currentQueuePosition = -1;
-      }
-    } else {
-      return res.status(400).json({ error: "Invalid request data" });
+    if (!playerQueue || !Array.isArray(playerQueue)) {
+      return res.status(400).json({ error: "Invalid player queue data" });
     }
 
-    // Save the updated auction
+    // Always create fresh queue - no merging or updating
+    const updateData = {
+      manualPlayerQueue: playerQueue,
+      currentQueuePosition: -1, // Will start from 0 when first player begins
+    };
+
+    // Only set currentQueuePosition to 0 if bidding hasn't started yet
+    if (!auction.biddingStarted) {
+      updateData.currentQueuePosition = 0;
+    }
+
     const updatedAuction = await Auction.findByIdAndUpdate(
       req.params.auctionId,
       updateData,
@@ -461,40 +420,17 @@ router.post("/set-manual-queue/:auctionId", auth, async (req, res) => {
     ).populate("manualPlayerQueue.player");
 
     // Emit queue update
-    {
-      const io = req.app.get("io");
-      io.to(req.params.auctionId).emit("queue:updated", {
-        manualPlayerQueue: updatedAuction.manualPlayerQueue,
-        currentQueuePosition: updatedAuction.currentQueuePosition,
-      });
-    }
-
-    // Trigger next player if needed
-    let nextPlayerInfo = null;
-    if (
-      auction.biddingStarted &&
-      auction.selectionMode === "manual" &&
-      !auction.currentPlayerOnBid
-    ) {
-      const currentPos = updatedAuction.currentQueuePosition;
-      if (finalQueue.length > currentPos + 1) {
-        const nextPlayerData = finalQueue[currentPos + 1];
-        const nextPlayer = await Player.findById(nextPlayerData.player);
-        nextPlayerInfo = {
-          nextPlayer: nextPlayer,
-          shouldStartNext: true,
-        };
-      }
-    }
+    const io = req.app.get("io");
+    io.to(req.params.auctionId).emit("queue:updated", {
+      manualPlayerQueue: updatedAuction.manualPlayerQueue,
+      currentQueuePosition: updatedAuction.currentQueuePosition,
+    });
 
     res.json({
-      message: newPlayers
-        ? "Players added to queue successfully"
-        : "Manual queue updated successfully",
+      message: "Manual queue created successfully",
       auction: updatedAuction,
-      totalQueueLength: finalQueue.length,
+      totalQueueLength: playerQueue.length,
       currentPosition: updatedAuction.currentQueuePosition,
-      ...nextPlayerInfo,
     });
   } catch (err) {
     console.error("Set manual queue error:", err);
@@ -502,9 +438,125 @@ router.post("/set-manual-queue/:auctionId", auth, async (req, res) => {
   }
 });
 
+
+// router.post("/set-manual-queue/:auctionId", auth, async (req, res) => {
+//   try {
+//     const { playerQueue, newPlayers, existingQueue } = req.body;
+//     const auction = await Auction.findById(req.params.auctionId);
+
+//     if (!auction) {
+//       return res.status(404).json({ error: "Auction not found" });
+//     }
+
+//     let finalQueue = [];
+//     let updateData = {};
+
+//     // Utility: Ensure no duplicate player entries — override older ones with latest position
+//     const mergeAndDeduplicateQueue = (baseQueue, addedPlayers) => {
+//       const playerMap = new Map();
+
+//       // First add existing queue
+//       for (const item of baseQueue) {
+//         playerMap.set(String(item.player), { ...item });
+//       }
+
+//       // Then add new players — overwrite if already exists
+//       for (const item of addedPlayers) {
+//         playerMap.set(String(item.player), { ...item }); // Update to new position
+//       }
+
+//       // Convert map back to array
+//       return Array.from(playerMap.values()).sort(
+//         (a, b) => a.position - b.position
+//       );
+//     };
+
+//     // CASE 1: Adding more players to existing queue
+//     if (newPlayers && existingQueue) {
+//       console.log("Adding to existing queue");
+
+//       // Merge and deduplicate by player ID
+//       finalQueue = mergeAndDeduplicateQueue(existingQueue, newPlayers);
+
+//       updateData = {
+//         manualPlayerQueue: finalQueue,
+//       };
+
+//       // CASE 2: Replacing entire queue
+//     } else if (playerQueue) {
+//       console.log("Creating new queue");
+
+//       // Ensure no duplicates within the new queue itself
+//       finalQueue = mergeAndDeduplicateQueue([], playerQueue);
+
+//       updateData = {
+//         manualPlayerQueue: finalQueue,
+//       };
+
+//       if (!auction.biddingStarted) {
+//         updateData.currentQueuePosition = 0;
+//       } else if (
+//         auction.selectionMode === "automatic" &&
+//         finalQueue.length > 0
+//       ) {
+//         updateData.currentQueuePosition = -1;
+//       }
+//     } else {
+//       return res.status(400).json({ error: "Invalid request data" });
+//     }
+
+//     // Save the updated auction
+//     const updatedAuction = await Auction.findByIdAndUpdate(
+//       req.params.auctionId,
+//       updateData,
+//       { new: true }
+//     ).populate("manualPlayerQueue.player");
+
+//     // Emit queue update
+//     {
+//       const io = req.app.get("io");
+//       io.to(req.params.auctionId).emit("queue:updated", {
+//         manualPlayerQueue: updatedAuction.manualPlayerQueue,
+//         currentQueuePosition: updatedAuction.currentQueuePosition,
+//       });
+//     }
+
+//     // Trigger next player if needed
+//     let nextPlayerInfo = null;
+//     if (
+//       auction.biddingStarted &&
+//       auction.selectionMode === "manual" &&
+//       !auction.currentPlayerOnBid
+//     ) {
+//       const currentPos = updatedAuction.currentQueuePosition;
+//       if (finalQueue.length > currentPos + 1) {
+//         const nextPlayerData = finalQueue[currentPos + 1];
+//         const nextPlayer = await Player.findById(nextPlayerData.player);
+//         nextPlayerInfo = {
+//           nextPlayer: nextPlayer,
+//           shouldStartNext: true,
+//         };
+//       }
+//     }
+
+//     res.json({
+//       message: newPlayers
+//         ? "Players added to queue successfully"
+//         : "Manual queue updated successfully",
+//       auction: updatedAuction,
+//       totalQueueLength: finalQueue.length,
+//       currentPosition: updatedAuction.currentQueuePosition,
+//       ...nextPlayerInfo,
+//     });
+//   } catch (err) {
+//     console.error("Set manual queue error:", err);
+//     res.status(500).json({ error: err.message });
+//   }
+// });
+
 router.get("/queue-status/:auctionId", auth, async (req, res) => {
   try {
-    let auction = await Auction.findById(req.params.auctionId)
+    const auction = await Auction.findById(req.params.auctionId)
       .populate("manualPlayerQueue.player")
       .populate("currentPlayerOnBid");
 
@@ -512,86 +564,62 @@ router.get("/queue-status/:auctionId", auth, async (req, res) => {
       return res.status(404).json({ error: "Auction not found" });
     }
 
-    // 🧹 Remove any deleted players
-    let validQueue = auction.manualPlayerQueue.filter((q) => q.player !== null);
-
-    if (validQueue.length > 0) {
-      const lastPlayerId = validQueue[validQueue.length - 1].player._id;
-      const lastPlayer = await Player.findById(lastPlayerId);
-
-      const lastSold = auction.biddingHistory.find(
-        (entry) => String(entry.player) === String(lastPlayerId)
-      );
-
-      // ✅ Clear queue if player was sold or explicitly marked unsold
-      if (
-        (lastPlayer?.availability === "Sold" && lastSold) ||
-        lastPlayer?.availability === "Unsold"
-      ) {
+    // Check if queue should be cleared (last player was processed)
+    if (auction.manualPlayerQueue.length > 0 && auction.selectionMode === "manual") {
+      const lastPlayerIndex = auction.manualPlayerQueue.length - 1;
+      const lastPlayer = auction.manualPlayerQueue[lastPlayerIndex];
+      
+      // If we've processed all players in the queue
+      if (auction.currentQueuePosition >= lastPlayerIndex && !auction.currentPlayerOnBid) {
+        // Clear the queue and pause auction
         await Auction.findByIdAndUpdate(auction._id, {
           manualPlayerQueue: [],
           currentQueuePosition: 0,
           isPaused: true,
         });
-        validQueue = [];
 
-        console.log(
-          "✅ Manual queue cleared: last player was either sold or marked unsold."
-        );
+        const io = req.app.get("io");
+        io.to(req.params.auctionId).emit("auction:paused", {
+          message: "Queue completed - auction paused",
+          nextPlayer: null,
+          hasNextPlayer: false,
+          remainingCount: 0,
+          selectionMode: auction.selectionMode,
+          auctionPaused: true,
+        });
+
+        return res.json({
+          currentQueuePosition: 0,
+          totalQueueLength: 0,
+          remainingPlayers: 0,
+          isLastPlayer: true,
+          canChangeMode: true,
+          selectionMode: auction.selectionMode,
+          biddingStarted: auction.biddingStarted,
+          hasCurrentPlayer: false,
+          currentPlayer: null,
+          manualPlayerQueue: [],
+        });
       }
     }
 
-    // Update auction if any deleted player was removed
-    if (validQueue.length !== auction.manualPlayerQueue.length) {
-      await Auction.findByIdAndUpdate(auction._id, {
-        manualPlayerQueue: validQueue,
-      });
-    }
-
-    // Calculate remaining players (manual mode)
-    let remainingPlayers = 0;
-    let isLastPlayer = false;
-
-    if (auction.selectionMode === "manual") {
-      remainingPlayers = Math.max(
-        0,
-        validQueue.length - auction.currentQueuePosition - 1
-      );
-      isLastPlayer = remainingPlayers === 0 && auction.biddingStarted;
-    } else {
-      // Automatic mode
-      const filterQuery =
-        auction.automaticFilter === "All"
-          ? { availability: "Available" }
-          : {
-              availability: "Available",
-              role:
-                auction.automaticFilter === "Wicket keeper batsman"
-                  ? "Wicket keeper batsman"
-                  : auction.automaticFilter,
-            };
-
-      const availablePlayers = await Player.countDocuments({
-        ...filterQuery,
-        _id: { $in: auction.selectedPlayers, $ne: auction.currentPlayerOnBid },
-      });
-
-      remainingPlayers = availablePlayers;
-      isLastPlayer = remainingPlayers === 0 && auction.biddingStarted;
-    }
+    // Calculate remaining players in queue
+    const remainingPlayers = Math.max(
+      0,
+      auction.manualPlayerQueue.length - auction.currentQueuePosition - 1
+    );
 
     res.json({
       currentQueuePosition: auction.currentQueuePosition,
-      totalQueueLength: validQueue.length,
+      totalQueueLength: auction.manualPlayerQueue.length,
       remainingPlayers,
-      isLastPlayer,
+      isLastPlayer: remainingPlayers === 0 && auction.biddingStarted,
       canChangeMode: true,
       selectionMode: auction.selectionMode,
       biddingStarted: auction.biddingStarted,
-      automaticFilter: auction.automaticFilter,
       hasCurrentPlayer: !!auction.currentPlayerOnBid,
       currentPlayer: auction.currentPlayerOnBid,
-      manualPlayerQueue: validQueue,
+      manualPlayerQueue: auction.manualPlayerQueue,
     });
   } catch (err) {
     console.error("Queue status error:", err);
@@ -599,7 +627,7 @@ router.get("/queue-status/:auctionId", auth, async (req, res) => {
   }
 });
 
-// Enhanced next-player route
+// Simple next player - just get next in queue
 router.get("/next-player/:auctionId", auth, async (req, res) => {
   try {
     const auction = await Auction.findById(req.params.auctionId)
@@ -609,26 +637,25 @@ router.get("/next-player/:auctionId", auth, async (req, res) => {
     if (!auction) {
       return res.status(404).json({ error: "Auction not found" });
     }
+
+    // Handle pause after current player
     if (auction.pauseAfterCurrentPlayer === true) {
       auction.isPaused = true;
       auction.pauseAfterCurrentPlayer = false;
-      auction.currentPlayerOnBid = null; // make sure current bid ends
+      auction.currentPlayerOnBid = null;
       await auction.save();
 
-      // Emit pause event
-      {
-        const io = req.app.get("io");
-        io.to(req.params.auctionId).emit("auction:paused", {
-          message: "Auction paused after current player",
-          nextPlayer: null,
-          hasNextPlayer: false,
-          remainingCount: 0,
-          selectionMode: auction.selectionMode,
-          auctionPaused: true,
-        });
-      }
+      const io = req.app.get("io");
+      io.to(req.params.auctionId).emit("auction:paused", {
+        message: "Auction paused after current player",
+        nextPlayer: null,
+        hasNextPlayer: false,
+        remainingCount: 0,
+        selectionMode: auction.selectionMode,
+        auctionPaused: true,
+      });
 
-      return res.status(200).json({
+      return res.json({
         message: "Auction paused after current player",
         nextPlayer: null,
         hasNextPlayer: false,
@@ -639,22 +666,42 @@ router.get("/next-player/:auctionId", auth, async (req, res) => {
     }
 
     let nextPlayer = null;
-    let nextPosition = null;
     let remainingCount = 0;
 
     if (auction.selectionMode === "manual") {
       const nextPos = auction.currentQueuePosition + 1;
-      const sortedQueue = auction.manualPlayerQueue.sort(
-        (a, b) => a.position - b.position
-      );
+      
+      if (auction.manualPlayerQueue.length > nextPos) {
+        nextPlayer = auction.manualPlayerQueue[nextPos].player;
+        remainingCount = auction.manualPlayerQueue.length - nextPos;
+      } else {
+        // No more players in queue - clear it and pause
+        await Auction.findByIdAndUpdate(req.params.auctionId, {
+          manualPlayerQueue: [],
+          currentQueuePosition: 0,
+          isPaused: true,
+        });
 
-      if (sortedQueue.length > nextPos) {
-        nextPlayer = sortedQueue[nextPos].player;
-        nextPosition = nextPos;
-        remainingCount = sortedQueue.length - nextPos;
+        const io = req.app.get("io");
+        io.to(req.params.auctionId).emit("auction:paused", {
+          message: "Queue completed - auction paused",
+          nextPlayer: null,
+          hasNextPlayer: false,
+          remainingCount: 0,
+          selectionMode: auction.selectionMode,
+          auctionPaused: true,
+        });
+
+        return res.json({
+          nextPlayer: null,
+          hasNextPlayer: false,
+          remainingCount: 0,
+          selectionMode: auction.selectionMode,
+          message: "Queue completed - auction paused",
+        });
       }
     } else {
-      // Automatic mode
+      // Automatic mode logic remains the same
       const filterQuery =
         auction.automaticFilter === "All"
           ? { availability: "Available" }
@@ -682,7 +729,6 @@ router.get("/next-player/:auctionId", auth, async (req, res) => {
 
     res.json({
       nextPlayer: nextPlayer,
-      nextPosition: nextPosition,
       hasNextPlayer: !!nextPlayer,
       remainingCount: remainingCount,
       selectionMode: auction.selectionMode,
@@ -983,7 +1029,7 @@ router.patch("/unsold/:auctionId", auth, async (req, res) => {
         currentQueuePosition: auction.currentQueuePosition,
         totalQueueLength: auction.manualPlayerQueue?.length || 0,
         remainingPlayers,
-        isPaused: auction.isPaused,
+        // isPaused: auction.isPaused,
       });
     }
 
@@ -994,7 +1040,7 @@ router.patch("/unsold/:auctionId", auth, async (req, res) => {
       currentQueuePosition: auction.currentQueuePosition,
       totalQueueLength: auction.manualPlayerQueue?.length || 0,
       remainingPlayers,
-      isPaused: auction.isPaused,
+      // isPaused: auction.isPaused,
     });
   } catch (err) {
     console.error("Unsold Error:", err);

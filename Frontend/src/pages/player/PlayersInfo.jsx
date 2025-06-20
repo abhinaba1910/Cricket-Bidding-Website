@@ -253,7 +253,7 @@ export default function PlayersInfo() {
                     <FiEye size={16} />
                   </a>
                   <a
-                    href={`/players/${p._id}/edit`}
+                    href={`/admin/player/${p._id}/edit`}
                     className="flex items-center p-2 bg-blue-100 rounded-full hover:bg-blue-200 transition"
                   >
                     <FiEdit size={16} />
