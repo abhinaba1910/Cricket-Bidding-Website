@@ -5,7 +5,7 @@ const auth = require("../Auth/Authentication");
 const Auction = require("../Models/auction");
 const Team = require("../Models/team");
 const Player = require("../Models/player");
-const Person =require("../Models/person");
+const Person = require("../Models/person");
 // 2. Start bidding timer (frontend will handle the timer logic)
 router.post("/start-timer/:playerId", auth, async (req, res) => {
   try {
@@ -239,8 +239,6 @@ router.post("/manual-sell/:auctionId/:playerId", auth, async (req, res) => {
       });
     }
 
-    
-
     if (nextPlayer) {
       auction.currentPlayerOnBid = nextPlayer._id;
       auction.currentBid = { team: null, amount: 0 };
@@ -388,8 +386,6 @@ router.post("/update-selection-mode/:auctionId", auth, async (req, res) => {
   }
 });
 
-
-
 router.post("/set-manual-queue/:auctionId", auth, async (req, res) => {
   try {
     const { playerQueue } = req.body;
@@ -438,7 +434,6 @@ router.post("/set-manual-queue/:auctionId", auth, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
 
 // router.post("/set-manual-queue/:auctionId", auth, async (req, res) => {
 //   try {
@@ -566,12 +561,18 @@ router.get("/queue-status/:auctionId", auth, async (req, res) => {
     }
 
     // Check if queue should be cleared (last player was processed)
-    if (auction.manualPlayerQueue.length > 0 && auction.selectionMode === "manual") {
+    if (
+      auction.manualPlayerQueue.length > 0 &&
+      auction.selectionMode === "manual"
+    ) {
       const lastPlayerIndex = auction.manualPlayerQueue.length - 1;
       const lastPlayer = auction.manualPlayerQueue[lastPlayerIndex];
-      
+
       // If we've processed all players in the queue
-      if (auction.currentQueuePosition >= lastPlayerIndex && !auction.currentPlayerOnBid) {
+      if (
+        auction.currentQueuePosition >= lastPlayerIndex &&
+        !auction.currentPlayerOnBid
+      ) {
         // Clear the queue and pause auction
         await Auction.findByIdAndUpdate(auction._id, {
           manualPlayerQueue: [],
@@ -671,7 +672,7 @@ router.get("/next-player/:auctionId", auth, async (req, res) => {
 
     if (auction.selectionMode === "manual") {
       const nextPos = auction.currentQueuePosition + 1;
-      
+
       if (auction.manualPlayerQueue.length > nextPos) {
         nextPlayer = auction.manualPlayerQueue[nextPos].player;
         remainingCount = auction.manualPlayerQueue.length - nextPos;
@@ -1145,7 +1146,7 @@ router.post("/join-auction/:auctionId/confirm", auth, async (req, res) => {
     // Check if user already a manager
     const alreadyManager = auction.selectedTeams.find(
       (entry) => entry && entry.manager && entry.manager.toString() === userId
-    );    
+    );
     if (alreadyManager) {
       return res
         .status(409)
@@ -1155,7 +1156,7 @@ router.post("/join-auction/:auctionId/confirm", auth, async (req, res) => {
     // Validate team selection
     const teamEntry = auction.selectedTeams.find(
       (t) => t?.team?.toString() === teamId
-    );    
+    );
     if (!teamEntry) {
       return res.status(400).json({ message: "Invalid team selection." });
     }
@@ -1426,8 +1427,8 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
       io.to(auctionId).emit("bid:placed", {
         currentPlayerOnBid: auction.currentPlayerOnBid,
         newBid: {
-          team: team.shortName,        
-          teamLogo: team.logoUrl,      
+          team: team.shortName,
+          teamLogo: team.logoUrl,
           amount: bidAmount,
         },
       });
@@ -1542,8 +1543,6 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
 //   }
 // });
 
-
-
 // Updated RTM route - now creates a request instead of immediate execution
 router.post("/use-rtm/:auctionId", auth, async (req, res) => {
   try {
@@ -1586,13 +1585,16 @@ router.post("/use-rtm/:auctionId", auth, async (req, res) => {
 
     if (!selectedTeam) {
       console.log("❌ Team not found or unauthorized");
-      console.log("- Available teams for user:", auction.selectedTeams.filter(entry => 
-        entry.manager?._id.toString() === userId
-      ).map(entry => ({
-        teamId: entry.team._id.toString(),
-        teamName: entry.team.name,
-        managerId: entry.manager?._id.toString()
-      })));
+      console.log(
+        "- Available teams for user:",
+        auction.selectedTeams
+          .filter((entry) => entry.manager?._id.toString() === userId)
+          .map((entry) => ({
+            teamId: entry.team._id.toString(),
+            teamName: entry.team.name,
+            managerId: entry.manager?._id.toString(),
+          }))
+      );
       return res
         .status(403)
         .json({ message: "Unauthorized or team not found" });
@@ -1612,7 +1614,6 @@ router.post("/use-rtm/:auctionId", auth, async (req, res) => {
     //   console.log("- Pending request:", auction.pendingRTMRequest);
     //   return res.status(400).json({ message: "RTM request already pending" });
     // }
-    
 
     // Find the last sold player from bidding history
     const lastBid =
@@ -1653,7 +1654,9 @@ router.post("/use-rtm/:auctionId", auth, async (req, res) => {
       playerName: previousPlayer.name,
       bidAmount: bidAmount,
       fromTeam: previousTeam._id,
-      requestedAt: new Date()
+      fromTeamName: previousTeam.shortName, // Previous team name
+      teamName: selectedTeam.team.shortName, // Requesting team name (FIXED)
+      requestedAt: new Date(),
     };
 
     await auction.save();
@@ -1665,18 +1668,19 @@ router.post("/use-rtm/:auctionId", auth, async (req, res) => {
     io.to(auctionId).emit("rtm:request", {
       message: "RTM request pending approval",
       teamId: teamId,
-      teamName: selectedTeam.team.name,
+      teamName: selectedTeam.team.shortName, // Requesting team name
       playerId: previousPlayer._id,
       playerName: previousPlayer.name,
       bidAmount: bidAmount,
-      fromTeam: previousTeam._id
+      fromTeam: previousTeam._id,
+      fromTeamName: previousTeam.shortName, // Previous team name
     });
 
     console.log("✅ RTM request emitted via socket");
 
-    res.status(200).json({ 
-      message: "RTM request sent for approval", 
-      status: "pending" 
+    res.status(200).json({
+      message: "RTM request sent for approval",
+      status: "pending",
     });
   } catch (error) {
     console.error("RTM error:", error);
@@ -1701,7 +1705,9 @@ router.post("/rtm-decision/:auctionId", auth, async (req, res) => {
 
     // Check if user is admin/creator of auction
     if (auction.createdBy.toString() !== userId) {
-      return res.status(403).json({ message: "Only auction admin can make this decision" });
+      return res
+        .status(403)
+        .json({ message: "Only auction admin can make this decision" });
     }
 
     if (!auction.pendingRTMRequest) {
@@ -1711,7 +1717,7 @@ router.post("/rtm-decision/:auctionId", auth, async (req, res) => {
     const rtmRequest = auction.pendingRTMRequest;
     const io = req.app.get("io");
 
-    if (decision === 'approve') {
+    if (decision === "approve") {
       // Execute the RTM transfer
       const { teamId, playerId, bidAmount, fromTeam } = rtmRequest;
 
@@ -1775,7 +1781,7 @@ router.post("/rtm-decision/:auctionId", auth, async (req, res) => {
         message: "RTM request rejected",
         playerId: rtmRequest.playerId,
         playerName: rtmRequest.playerName,
-        teamId: rtmRequest.teamId
+        teamId: rtmRequest.teamId,
       });
 
       res.status(200).json({ message: "RTM request rejected" });

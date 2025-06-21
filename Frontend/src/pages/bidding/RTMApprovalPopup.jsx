@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, User, DollarSign, Users, Clock } from 'lucide-react';
+import { X, User, DollarSign, Users, Clock, ArrowRight } from 'lucide-react';
 
 const RTMApprovalPopup = ({ 
   rtmRequest, 
@@ -46,12 +46,29 @@ const RTMApprovalPopup = ({
             </div>
           </div>
 
-          {/* Team Info */}
+          {/* Team Transfer Info */}
+          <div className="p-3 bg-purple-50 rounded-lg">
+            <div className="flex items-center space-x-2 mb-2">
+              <Users className="text-purple-600" size={20} />
+              <p className="font-medium text-gray-800">Team Transfer</p>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600 bg-red-100 px-2 py-1 rounded">
+                {rtmRequest.fromTeamName || 'Previous Team'}
+              </span>
+              <ArrowRight className="text-gray-400" size={16} />
+              <span className="text-gray-600 bg-green-100 px-2 py-1 rounded">
+                {rtmRequest.teamName || 'Requesting Team'}
+              </span>
+            </div>
+          </div>
+
+          {/* Requesting Team Info */}
           <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg">
             <Users className="text-green-600" size={20} />
             <div>
               <p className="font-medium text-gray-800">Requesting Team</p>
-              <p className="text-sm text-gray-600">{rtmRequest.teamName}</p>
+              <p className="text-sm text-gray-600">{rtmRequest.teamName || 'Team name not available'}</p>
             </div>
           </div>
 
@@ -70,7 +87,10 @@ const RTMApprovalPopup = ({
             <div>
               <p className="font-medium text-gray-800">Requested At</p>
               <p className="text-sm text-gray-600">
-                {new Date().toLocaleTimeString()}
+                {rtmRequest.requestedAt ? 
+                  new Date(rtmRequest.requestedAt).toLocaleTimeString() : 
+                  new Date().toLocaleTimeString()
+                }
               </p>
             </div>
           </div>

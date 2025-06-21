@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import Api from "../../userManagement/Api";
-import RTMApprovalPopup from './RTMApprovalPopup';
+import RTMApprovalPopup from "./RTMApprovalPopup";
 
 const SAMPLE_AUCTION = {
   lastSold: { name: "--/--", price: "--/--", team: "--/--" },
@@ -56,9 +56,8 @@ export default function AdminBiddingDashboard() {
   const [queueDisplay, setQueueDisplay] = useState({ current: 0, total: 0 });
   const lastBidTeamRef = useRef(null); // holds previous team name
   const [showRTMPopup, setShowRTMPopup] = useState(false);
-const [pendingRTMRequest, setPendingRTMRequest] = useState(null);
-const [isProcessingRTM, setIsProcessingRTM] = useState(false);
-
+  const [pendingRTMRequest, setPendingRTMRequest] = useState(null);
+  const [isProcessingRTM, setIsProcessingRTM] = useState(false);
 
   // -------------------------------
   // SOCKET.IO: connect, join room, listeners
@@ -230,7 +229,7 @@ const [isProcessingRTM, setIsProcessingRTM] = useState(false);
       toast.success("Auction paused");
       setIsPaused(true);
       setBiddingStarted(false);
-      setPlayerPic(null)
+      setPlayerPic(null);
     });
     // 5. Auction resumed
     socket.on("auction:resumed", (payload) => {
@@ -314,30 +313,33 @@ const [isProcessingRTM, setIsProcessingRTM] = useState(false);
       toast.success("RTM used: player transferred");
       fetchAuctionData();
     });
-  
+
     // NEW: Listen for RTM requests (for admin approval)
     socket.on("rtm:request", (payload) => {
       console.log("Received RTM request", payload);
       setPendingRTMRequest(payload);
+      setRTMRequest({ ...data });
       setShowRTMPopup(true);
-      toast.info(`RTM request from ${payload.teamName} for ${payload.playerName}`);
+      toast.info(
+        `RTM request from ${payload.teamName} for ${payload.playerName}`
+      );
     });
-  
-    // NEW: Listen for RTM approval confirmations
+
+    // RTM approved - clear the request
     socket.on("rtm:approved", (payload) => {
       console.log("RTM approved", payload);
       setShowRTMPopup(false);
-      setPendingRTMRequest(null);
+      setPendingRTMRequest(null); // ✅ Clear here
       setIsProcessingRTM(false);
       toast.success(`RTM approved: ${payload.playerName} transferred`);
       fetchAuctionData();
     });
-  
-    // NEW: Listen for RTM rejection confirmations
+
+    // RTM rejected - clear the request
     socket.on("rtm:rejected", (payload) => {
       console.log("RTM rejected", payload);
       setShowRTMPopup(false);
-      setPendingRTMRequest(null);
+      setPendingRTMRequest(null); // ✅ Clear here
       setIsProcessingRTM(false);
       toast.info(`RTM rejected for ${payload.playerName}`);
     });
@@ -370,9 +372,9 @@ const [isProcessingRTM, setIsProcessingRTM] = useState(false);
         socketRef.current.disconnect();
       }
       socket.off("player:rtm");
-    socket.off("rtm:request");
-    socket.off("rtm:approved");
-    socket.off("rtm:rejected");
+      socket.off("rtm:request");
+      socket.off("rtm:approved");
+      socket.off("rtm:rejected");
     };
   }, [id]);
 
@@ -409,8 +411,8 @@ const [isProcessingRTM, setIsProcessingRTM] = useState(false);
   const handleRTMApprove = async () => {
     setIsProcessingRTM(true);
     try {
-      await Api.post(`/rtm-decision/${auctionId}`, {
-        decision: 'approve'
+      await Api.post(`/rtm-decision/${id}`, {
+        decision: "approve",
       });
       // Success will be handled by socket listener
     } catch (error) {
@@ -423,8 +425,8 @@ const [isProcessingRTM, setIsProcessingRTM] = useState(false);
   const handleRTMReject = async () => {
     setIsProcessingRTM(true);
     try {
-      await Api.post(`/rtm-decision/${auctionId}`, {
-        decision: 'reject'
+      await Api.post(`/rtm-decision/${id}`, {
+        decision: "reject",
       });
       // Success will be handled by socket listener
     } catch (error) {
@@ -433,11 +435,12 @@ const [isProcessingRTM, setIsProcessingRTM] = useState(false);
       setIsProcessingRTM(false);
     }
   };
-  
+
   const handleCloseRTMPopup = () => {
     if (!isProcessingRTM) {
       setShowRTMPopup(false);
-      setPendingRTMRequest(null);
+      // DON'T clear pendingRTMRequest here - keep it so we can reopen the popup
+      // setPendingRTMRequest(null); // Comment out or remove this line
     }
   };
 
@@ -1102,7 +1105,7 @@ const [isProcessingRTM, setIsProcessingRTM] = useState(false);
         toast.error(`Error: ${err.response.data.message}`);
       }
     }
-    setPlayerPic(null)
+    setPlayerPic(null);
   };
 
   // Poll pause status occasionally (optional fallback)
@@ -1337,6 +1340,39 @@ const [isProcessingRTM, setIsProcessingRTM] = useState(false);
                 : "Start Bidding"}
             </motion.button>
           </div>
+          {/* Add this for debugging */}
+          {/* Test RTM Button - Add this for testing purposes */}
+          {/* <motion.button
+            onClick={() => {
+              // Simulate an RTM request for testing
+              const testRTMRequest = {
+                playerName: "Test Player",
+                teamName: "Test Team",
+                bidAmount: 50000,
+                requestId: "test-123",
+              };
+              setPendingRTMRequest(testRTMRequest);
+              setShowRTMPopup(true);
+              toast.info("Test RTM request created");
+            }}
+            className="px-4 py-2 bg-gradient-to-r from-yellow-600 to-orange-500 rounded-xl hover:from-yellow-700 hover:to-orange-600 text-sm shadow-lg"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            🧪 Test RTM Request
+          </motion.button> */}
+
+          {/* Your actual RTM reopen button */}
+          {pendingRTMRequest && !showRTMPopup && (
+            <motion.button
+              onClick={() => setShowRTMPopup(true)}
+              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-500 rounded-xl hover:from-purple-700 hover:to-pink-600 text-sm shadow-lg animate-pulse"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              ⚠️ Review RTM Request
+            </motion.button>
+          )}
 
           {/* Avatar & Current Bid */}
           <motion.div
@@ -1869,15 +1905,14 @@ const [isProcessingRTM, setIsProcessingRTM] = useState(false);
         </motion.div>
       )}
       {showRTMPopup && (
-      <RTMApprovalPopup
-        rtmRequest={pendingRTMRequest}
-        onApprove={handleRTMApprove}
-        onReject={handleRTMReject}
-        onClose={handleCloseRTMPopup}
-        isProcessing={isProcessingRTM}
-      />
-    )}
-
+        <RTMApprovalPopup
+          rtmRequest={pendingRTMRequest}
+          onApprove={handleRTMApprove}
+          onReject={handleRTMReject}
+          onClose={handleCloseRTMPopup}
+          isProcessing={isProcessingRTM}
+        />
+      )}
 
       {/* Edit Bid Modal */}
       {showEdit && (

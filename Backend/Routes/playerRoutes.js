@@ -208,15 +208,58 @@ router.get("/get-player/available", authMiddleware, async (req, res) => {
 router.get('/get-player/:id', authMiddleware, async (req, res) => {
   try {
     // Only allow admins and temp-admins to view specific player
-    // if (req.user.role !== 'admin' && req.user.role !== 'temp-admin') {
-    //   return res.status(403).json({ error: 'Access denied. Only admins can view player details.' });
-    // }
+    if (req.user.role !== 'admin' && req.user.role !== 'temp-admin') {
+      return res.status(403).json({ error: 'Access denied. Only admins can view player details.' });
+    }
 
-    const player = await Player.findById(req.params.id);
+    const player = await Player.findById(req.params.id).lean(); // <-- Use .lean()
 
     if (!player) {
       return res.status(404).json({ error: 'Player not found.' });
     }
+
+    // Ensure all nested performanceStats fields are always present
+    const defaultStats = {
+      batting: {
+        matches: 0,
+        runs: 0,
+        highScore: 0,
+        average: 0,
+        strikeRate: 0,
+        centuries: 0,
+        fifties: 0,
+      },
+      bowling: {
+        matches: 0,
+        wickets: 0,
+        bestBowling: "0/0",
+        average: 0,
+        economy: 0,
+        fiveWicketHauls: 0,
+      },
+      allRounder: {
+        matches: 0,
+        runs: 0,
+        highScore: 0,
+        battingAverage: 0,
+        battingStrikeRate: 0,
+        centuries: 0,
+        fifties: 0,
+        wickets: 0,
+        bestBowling: "0/0",
+        bowlingAverage: 0,
+        economy: 0,
+        fiveWicketHauls: 0,
+      },
+    };
+
+    player.performanceStats = {
+      ...defaultStats,
+      ...player.performanceStats,
+      batting: { ...defaultStats.batting, ...(player.performanceStats?.batting || {}) },
+      bowling: { ...defaultStats.bowling, ...(player.performanceStats?.bowling || {}) },
+      allRounder: { ...defaultStats.allRounder, ...(player.performanceStats?.allRounder || {}) },
+    };
 
     res.status(200).json(player);
   } catch (err) {
@@ -224,6 +267,7 @@ router.get('/get-player/:id', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Server error while fetching player.' });
   }
 });
+
 
 
 router.put(

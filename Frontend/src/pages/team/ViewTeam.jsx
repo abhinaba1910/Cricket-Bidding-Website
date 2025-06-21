@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { FiChevronLeft } from "react-icons/fi";
+import { FiChevronLeft, FiEdit2, FiDollarSign, FiCalendar, FiInfo, FiUsers } from "react-icons/fi";
+import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import MobileStickyNav from "../../components/layout/MobileStickyNav";
 import Api from "../../userManagement/Api";
@@ -17,31 +18,27 @@ export default function ViewTeam() {
     async function loadTeam() {
       try {
         const res = await Api.get(`/get-team/${id}`);
-        console.log(res.data);
         setTeam(res.data);
       } catch (err) {
         console.error("Failed to load team:", err);
-        const errorMsg =
-          err.response?.data?.error || "Could not load team data";
+        const errorMsg = err.response?.data?.error || "Could not load team data";
         toast.error(errorMsg);
       } finally {
         setLoading(false);
       }
     }
 
-    loadTeam(); // Initial fetch
+    loadTeam();
+    interval = setInterval(loadTeam, 5000);
 
-    interval = setInterval(() => {
-      loadTeam();
-    }, 5000); // Fetch every 5 seconds
-
-    return () => clearInterval(interval); // Cleanup on unmount
+    return () => clearInterval(interval);
   }, [id]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50">
-        <p className="text-gray-500">Loading team…</p>
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+        <p className="text-gray-500">Loading team data...</p>
       </div>
     );
   }
@@ -51,115 +48,212 @@ export default function ViewTeam() {
       <div className="p-8 bg-gray-50 min-h-screen">
         <button
           onClick={() => navigate(-1)}
-          className="inline-flex items-center text-blue-500 hover:text-blue-700 mb-4"
+          className="inline-flex items-center text-blue-500 hover:text-blue-700 mb-4 transition"
         >
           <FiChevronLeft className="mr-1" /> Back
         </button>
-        <p className="text-center text-gray-600">Team not found.</p>
+        <div className="text-center bg-white p-8 rounded-xl shadow-sm">
+          <FiInfo className="mx-auto text-4xl text-gray-300 mb-4" />
+          <p className="text-gray-600">Team not found</p>
+        </div>
       </div>
     );
   }
 
+  const formatAmount = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0
+    }).format(amount).replace('₹', '₹');
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
-      <button
-        onClick={() => navigate(-1)}
-        className="inline-flex items-center text-blue-500 hover:text-blue-700 mb-6"
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8 pb-24">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-6"
       >
-        <FiChevronLeft className="mr-1" /> Back
-      </button>
+        <button
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center text-blue-600 hover:text-blue-800 transition mb-4"
+        >
+          <FiChevronLeft className="mr-1" /> Back to Teams
+        </button>
+        
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Team Details</h1>
+            <p className="text-gray-500">View and manage team information</p>
+          </div>
+          <button
+            onClick={() => navigate(`/admin/teams/${team._id}/edit`)}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-md"
+          >
+            <FiEdit2 className="mr-2" />
+            Edit Team
+          </button>
+        </div>
+      </motion.div>
 
-      <div className="bg-white shadow rounded-lg overflow-hidden md:flex">
-        {/* Logo */}
-        <div
-          className="md:w-1/3 bg-cover bg-center"
-          style={{
-            backgroundImage: `url(${team.logoUrl || "/default-logo.png"})`,
-            minHeight: "200px",
-          }}
-        />
-
-        {/* Details */}
-        <div className="p-6 md:w-2/3 space-y-4">
-          <h2 className="text-2xl font-bold text-gray-900">{team.teamName}</h2>
-          {/* <p className="text-sm text-gray-600">ID: {team._id}</p> */}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <h4 className="text-sm font-semibold text-gray-700">
-                Short Name
-              </h4>
-              <p className="mt-1 text-gray-800">{team.shortName}</p>
+      {/* Main Content */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+        className="bg-white rounded-2xl shadow-md overflow-hidden"
+      >
+        {/* Team Header */}
+        <div className="relative">
+          <div 
+            className="h-48 bg-gradient-to-r from-blue-500 to-blue-600"
+            style={{
+              backgroundImage: team.logoUrl ? `url(${team.logoUrl})` : 'none',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundBlendMode: 'overlay'
+            }}
+          >
+            <div className="absolute bottom-4 left-4 flex items-end">
+              <div className="bg-white p-2 rounded-full shadow-lg">
+                <img
+                  src={team.logoUrl || "/default-logo.png"}
+                  alt={team.teamName}
+                  className="w-16 h-16 rounded-full object-contain"
+                />
+              </div>
+              <h2 className="ml-4 text-2xl font-bold text-white drop-shadow-md">
+                {team.teamName}
+                <span className="block text-sm font-normal opacity-90">{team.shortName}</span>
+              </h2>
             </div>
-            <div>
-              <h4 className="text-sm font-semibold text-gray-700">
-                Purse Amount
-              </h4>
-              <p className="mt-1 text-gray-800">
-                ₹{Number(team.purse).toLocaleString()}
-              </p>
+          </div>
+        </div>
+
+        {/* Team Details */}
+        <div className="p-6 md:p-8">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+              <div className="flex items-center">
+                <div className="p-2 bg-blue-100 rounded-full mr-3 text-blue-600">
+                  <FiDollarSign size={18} />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Total Purse</p>
+                  <p className="text-xl font-semibold">{formatAmount(team.purse)}</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-green-50 p-4 rounded-lg border border-green-100">
+              <div className="flex items-center">
+                <div className="p-2 bg-green-100 rounded-full mr-3 text-green-600">
+                  <FiDollarSign size={18} />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Remaining</p>
+                  <p className="text-xl font-semibold text-green-600">{formatAmount(team.remaining)}</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-purple-50 p-4 rounded-lg border border-purple-100">
+              <div className="flex items-center">
+                <div className="p-2 bg-purple-100 rounded-full mr-3 text-purple-600">
+                  <FiUsers size={18} />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Players Bought</p>
+                  <p className="text-xl font-semibold">{team.players?.length || 0}</p>
+                </div>
+              </div>
             </div>
           </div>
 
+          {/* Description */}
           {team.description && (
-            <div>
-              <h4 className="text-sm font-semibold text-gray-700">
-                Description
-              </h4>
-              <p className="mt-1 text-gray-800 whitespace-pre-line">
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                <span className="w-2 h-6 bg-blue-500 rounded-full mr-3"></span>
+                About The Team
+              </h3>
+              <p className="text-gray-600 whitespace-pre-line bg-gray-50 p-4 rounded-lg">
                 {team.description}
               </p>
             </div>
           )}
 
+          {/* Founded Year */}
           {team.founded && (
-            <div>
-              <h4 className="text-sm font-semibold text-gray-700">Founded</h4>
-              <p className="mt-1 text-gray-800">{team.founded}</p>
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                <FiCalendar className="text-blue-500 mr-2" />
+                Team History
+              </h3>
+              <div className="flex items-center bg-gray-50 p-4 rounded-lg">
+                <div className="bg-white p-3 rounded-lg shadow-sm mr-4">
+                  <p className="text-2xl font-bold text-blue-600">{team.founded}</p>
+                </div>
+                <p className="text-gray-600">Year Founded</p>
+              </div>
             </div>
           )}
+
+          {/* Players Table */}
           {team.players && team.players.length > 0 && (
-            <div className="mt-8">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                Bought Players
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                <FiUsers className="text-blue-500 mr-2" />
+                Squad Players
               </h3>
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-left text-sm border border-gray-200 rounded-lg">
-                  <thead className="bg-gray-100 text-gray-700">
+              
+              <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-2 border-b">#</th>
-                      <th className="px-4 py-2 border-b">Player Name</th>
-                      <th className="px-4 py-2 border-b">Amount</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        #
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Player
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Price
+                      </th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="bg-white divide-y divide-gray-200">
                     {team.players
                       .filter((entry) => entry.player !== null)
                       .map((entry, index) => (
-                        <tr key={entry.player._id} className="hover:bg-gray-50">
-                          <td className="px-4 py-2 border-b">{index + 1}</td>
-                          <td className="px-4 py-2 border-b">
+                        <motion.tr 
+                          key={entry.player._id}
+                          className="hover:bg-gray-50"
+                          whileHover={{ scale: 1.01 }}
+                        >
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {index + 1}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">
                             {entry.player.name}
                           </td>
-                          <td className="px-4 py-2 border-b">
-                            ₹{Number(entry.price).toLocaleString()}
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                            {formatAmount(entry.price)}
                           </td>
-                        </tr>
+                        </motion.tr>
                       ))}
                   </tbody>
                 </table>
               </div>
             </div>
           )}
-
-          <button
-            onClick={() => navigate(`/admin/teams/${team._id}/edit`)}
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
-          >
-            Edit Team
-          </button>
         </div>
-      </div>
+      </motion.div>
+
+      {/* Footer Spacer */}
+      <div className="h-16"></div>
+      
       <MobileStickyNav />
     </div>
   );
