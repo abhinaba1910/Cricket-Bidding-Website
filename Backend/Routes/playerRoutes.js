@@ -5,6 +5,7 @@ const { storage } = require("../Utils/cloudinary");
 const upload = multer({ storage });
 const Player = require("../Models/player");
 const Person = require("../Models/person");
+const Team = require("../Models/team");
 const authMiddleware = require("../Auth/Authentication");
 const parseNum = (val) => (val !== undefined ? parseFloat(val) || 0 : 0);
 const parseStr = (val, fallback = "") => (val ? val.toString() : fallback);
@@ -342,4 +343,73 @@ router.delete('/delete-player/:id', async (req, res) => {
   }
 });
 
+router.post("/transfer-player/:playerId", authMiddleware, async (req, res) => {
+  try {
+    const { playerId } = req.params;
+    const { teamId, price } = req.body;
+
+    if (req.user.role !== "admin" && req.user.role !== "temp-admin") {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+
+    const player = await Player.findById(playerId);
+    if (!player) return res.status(404).json({ error: "Player not found" });
+    
+    if (player.availability === "Sold") {
+      return res.status(400).json({ error: "Player is already sold to another team" });
+    }
+
+    if (String(player.createdBy) !== String(req.user.id)) {
+      return res.status(403).json({ error: "You can only transfer players you created." });
+    }
+
+    const team = await Team.findOne({
+      _id: teamId,
+      createdBy: req.user.id,
+    });
+
+    if (!team) return res.status(404).json({ error: "Team not found or unauthorized." });
+
+    const transferPrice = price ?? player.basePrice ?? 0;
+
+    // Initialize remaining amount if not set (for backward compatibility)
+    if (team.remaining === undefined || team.remaining === null) {
+      team.remaining = team.purse;
+    }
+
+    // Check if team has sufficient funds
+    if (team.remaining < transferPrice) {
+      return res.status(400).json({ 
+        error: `Insufficient funds. Team has ₹${team.remaining} remaining, but transfer price is ₹${transferPrice}` 
+      });
+    }
+
+    // Deduct transfer price from team's remaining amount
+    team.remaining -= transferPrice;
+
+    // Add player to team
+    team.players.push({
+      player: player._id,
+      price: transferPrice,
+    });
+
+    await team.save();
+
+    // Mark player as Sold
+    player.availability = "Sold";
+    await player.save();
+
+    res.status(200).json({
+      message: "Player transferred successfully",
+      playerId: player._id,
+      teamId: team._id,
+      transferPrice,
+      teamRemainingAmount: team.remaining,
+    });
+
+  } catch (err) {
+    console.error("Direct transfer error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 module.exports = router;

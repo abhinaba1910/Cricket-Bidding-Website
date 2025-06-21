@@ -5,6 +5,7 @@ const auth = require("../Auth/Authentication");
 const Auction = require("../Models/auction");
 const Team = require("../Models/team");
 const Player = require("../Models/player");
+const Person =require("../Models/person");
 // 2. Start bidding timer (frontend will handle the timer logic)
 router.post("/start-timer/:playerId", auth, async (req, res) => {
   try {
@@ -1442,10 +1443,252 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
 });
 
 // Use RTM: after updating, emit RTM event
+// router.post("/use-rtm/:auctionId", auth, async (req, res) => {
+//   try {
+//     const { auctionId } = req.params;
+//     const { teamId } = req.body;
+//     const userId = req.user.id;
+
+//     const auction = await Auction.findById(auctionId)
+//       .populate("biddingHistory.player")
+//       .populate("biddingHistory.team")
+//       .populate("selectedTeams.team")
+//       .populate("selectedTeams.manager");
+
+//     if (!auction) return res.status(404).json({ message: "Auction not found" });
+//     if (auction.status === "completed") {
+//       return res.status(404).json({ message: "Auction completed" });
+//     }
+
+//     // Find the selected team & manager
+//     const selectedTeam = auction.selectedTeams.find(
+//       (entry) =>
+//         entry.team._id.toString() === teamId &&
+//         entry.manager?._id.toString() === userId
+//     );
+
+//     if (!selectedTeam)
+//       return res
+//         .status(403)
+//         .json({ message: "Unauthorized or team not found" });
+
+//     if (selectedTeam.rtmCount <= 0)
+//       return res.status(400).json({ message: "No RTMs left" });
+
+//     // Find the last sold player from bidding history
+//     const lastBid =
+//       auction.biddingHistory.length > 0
+//         ? auction.biddingHistory[auction.biddingHistory.length - 1]
+//         : null;
+
+//     if (!lastBid)
+//       return res.status(404).json({ message: "Player not found in history" });
+
+//     const { bidAmount, team: previousTeam, player: previousPlayer } = lastBid;
+
+//     // Prevent RTM if original team is same
+//     if (previousTeam._id.toString() === teamId)
+//       return res.status(400).json({ message: "Player already in your team" });
+
+//     if (previousPlayer.isRTM)
+//       return res.status(400).json({ message: "Player has been RTM once" });
+
+//     // Attach player to new team and deduct purse
+//     await Team.findByIdAndUpdate(teamId, {
+//       $push: { players: { player: previousPlayer, price: bidAmount } },
+//       $inc: { remaining: -bidAmount },
+//     });
+//     await Player.findByIdAndUpdate(previousPlayer._id, {
+//       isRTM: true,
+//     });
+
+//     // Remove player from old team
+//     await Team.findByIdAndUpdate(previousTeam._id, {
+//       $pull: { players: { player: previousPlayer } },
+//       $inc: { remaining: bidAmount },
+//     });
+
+//     // Update bidding history to reflect new team
+//     auction.biddingHistory = auction.biddingHistory.map((entry) => {
+//       if (entry.player._id.toString() === previousPlayer._id.toString()) {
+//         return {
+//           ...entry._doc,
+//           team: teamId, // replace team ID
+//         };
+//       }
+//       return entry;
+//     });
+
+//     // Decrease RTM count
+//     selectedTeam.rtmCount -= 1;
+
+//     await auction.save();
+
+//     // Emit RTM event
+//     {
+//       const io = req.app.get("io");
+//       io.to(auctionId).emit("player:rtm", {
+//         message: "RTM used successfully",
+//         player: previousPlayer._id,
+//         fromTeam: previousTeam._id,
+//         toTeam: teamId,
+//       });
+//     }
+
+//     res.status(200).json({ message: "RTM successful", newTeam: teamId });
+//   } catch (error) {
+//     console.error("RTM error:", error);
+//     res.status(500).json({ message: "Internal server error" });
+//   }
+// });
+
+
+
+// Updated RTM route - now creates a request instead of immediate execution
 router.post("/use-rtm/:auctionId", auth, async (req, res) => {
   try {
     const { auctionId } = req.params;
     const { teamId } = req.body;
+    const userId = req.user.id;
+
+    console.log("RTM Request Debug:");
+    console.log("- Auction ID:", auctionId);
+    console.log("- Team ID:", teamId);
+    console.log("- User ID:", userId);
+
+    const auction = await Auction.findById(auctionId)
+      .populate("biddingHistory.player")
+      .populate("biddingHistory.team")
+      .populate("selectedTeams.team")
+      .populate("selectedTeams.manager");
+
+    if (!auction) {
+      console.log("❌ Auction not found");
+      return res.status(404).json({ message: "Auction not found" });
+    }
+
+    if (auction.status === "completed") {
+      console.log("❌ Auction completed");
+      return res.status(404).json({ message: "Auction completed" });
+    }
+
+    console.log("✅ Auction found:", auction.auctionName);
+    console.log("- Auction status:", auction.status);
+    console.log("- Bidding history length:", auction.biddingHistory.length);
+    console.log("- Selected teams:", auction.selectedTeams.length);
+
+    // Find the selected team & manager
+    const selectedTeam = auction.selectedTeams.find(
+      (entry) =>
+        entry.team._id.toString() === teamId &&
+        entry.manager?._id.toString() === userId
+    );
+
+    if (!selectedTeam) {
+      console.log("❌ Team not found or unauthorized");
+      console.log("- Available teams for user:", auction.selectedTeams.filter(entry => 
+        entry.manager?._id.toString() === userId
+      ).map(entry => ({
+        teamId: entry.team._id.toString(),
+        teamName: entry.team.name,
+        managerId: entry.manager?._id.toString()
+      })));
+      return res
+        .status(403)
+        .json({ message: "Unauthorized or team not found" });
+    }
+
+    console.log("✅ Team found:", selectedTeam.team.shortName);
+    console.log("- RTM count:", selectedTeam.rtmCount);
+
+    if (selectedTeam.rtmCount <= 0) {
+      console.log("❌ No RTMs left");
+      return res.status(400).json({ message: "No RTMs left" });
+    }
+
+    // Check for pending RTM request
+    // if (auction.pendingRTMRequest && Object.keys(auction.pendingRTMRequest).length > 0) {
+    //   console.log("❌ RTM request already pending");
+    //   console.log("- Pending request:", auction.pendingRTMRequest);
+    //   return res.status(400).json({ message: "RTM request already pending" });
+    // }
+    
+
+    // Find the last sold player from bidding history
+    const lastBid =
+      auction.biddingHistory.length > 0
+        ? auction.biddingHistory[auction.biddingHistory.length - 1]
+        : null;
+
+    if (!lastBid) {
+      console.log("❌ No bidding history found");
+      return res.status(404).json({ message: "Player not found in history" });
+    }
+
+    console.log("✅ Last bid found:");
+    console.log("- Player:", lastBid.player.name);
+    console.log("- Team:", lastBid.team.shortName);
+    console.log("- Bid amount:", lastBid.bidAmount);
+    console.log("- Player isRTM:", lastBid.player.isRTM);
+
+    const { bidAmount, team: previousTeam, player: previousPlayer } = lastBid;
+
+    // Prevent RTM if original team is same
+    if (previousTeam._id.toString() === teamId) {
+      console.log("❌ Player already in requesting team");
+      return res.status(400).json({ message: "Player already in your team" });
+    }
+
+    if (previousPlayer.isRTM) {
+      console.log("❌ Player has already been RTM'd");
+      return res.status(400).json({ message: "Player has been RTM once" });
+    }
+
+    console.log("✅ All validations passed, creating RTM request");
+
+    // Create pending RTM request instead of executing immediately
+    auction.pendingRTMRequest = {
+      teamId: teamId,
+      playerId: previousPlayer._id,
+      playerName: previousPlayer.name,
+      bidAmount: bidAmount,
+      fromTeam: previousTeam._id,
+      requestedAt: new Date()
+    };
+
+    await auction.save();
+
+    console.log("✅ RTM request saved to database");
+
+    // Emit RTM request to admin for approval
+    const io = req.app.get("io");
+    io.to(auctionId).emit("rtm:request", {
+      message: "RTM request pending approval",
+      teamId: teamId,
+      teamName: selectedTeam.team.name,
+      playerId: previousPlayer._id,
+      playerName: previousPlayer.name,
+      bidAmount: bidAmount,
+      fromTeam: previousTeam._id
+    });
+
+    console.log("✅ RTM request emitted via socket");
+
+    res.status(200).json({ 
+      message: "RTM request sent for approval", 
+      status: "pending" 
+    });
+  } catch (error) {
+    console.error("RTM error:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// New route for admin to approve/reject RTM
+router.post("/rtm-decision/:auctionId", auth, async (req, res) => {
+  try {
+    const { auctionId } = req.params;
+    const { decision } = req.body; // 'approve' or 'reject'
     const userId = req.user.id;
 
     const auction = await Auction.findById(auctionId)
@@ -1455,88 +1698,90 @@ router.post("/use-rtm/:auctionId", auth, async (req, res) => {
       .populate("selectedTeams.manager");
 
     if (!auction) return res.status(404).json({ message: "Auction not found" });
-    if (auction.status === "completed") {
-      return res.status(404).json({ message: "Auction completed" });
+
+    // Check if user is admin/creator of auction
+    if (auction.createdBy.toString() !== userId) {
+      return res.status(403).json({ message: "Only auction admin can make this decision" });
     }
 
-    // Find the selected team & manager
-    const selectedTeam = auction.selectedTeams.find(
-      (entry) =>
-        entry.team._id.toString() === teamId &&
-        entry.manager?._id.toString() === userId
-    );
+    if (!auction.pendingRTMRequest) {
+      return res.status(400).json({ message: "No pending RTM request" });
+    }
 
-    if (!selectedTeam)
-      return res
-        .status(403)
-        .json({ message: "Unauthorized or team not found" });
+    const rtmRequest = auction.pendingRTMRequest;
+    const io = req.app.get("io");
 
-    if (selectedTeam.rtmCount <= 0)
-      return res.status(400).json({ message: "No RTMs left" });
+    if (decision === 'approve') {
+      // Execute the RTM transfer
+      const { teamId, playerId, bidAmount, fromTeam } = rtmRequest;
 
-    // Find the last sold player from bidding history
-    const lastBid =
-      auction.biddingHistory.length > 0
-        ? auction.biddingHistory[auction.biddingHistory.length - 1]
-        : null;
+      // Add player to new team and deduct purse
+      await Team.findByIdAndUpdate(teamId, {
+        $push: { players: { player: playerId, price: bidAmount } },
+        $inc: { remaining: -bidAmount },
+      });
 
-    if (!lastBid)
-      return res.status(404).json({ message: "Player not found in history" });
+      // Mark player as RTM
+      await Player.findByIdAndUpdate(playerId, {
+        isRTM: true,
+      });
 
-    const { bidAmount, team: previousTeam, player: previousPlayer } = lastBid;
+      // Remove player from old team
+      await Team.findByIdAndUpdate(fromTeam, {
+        $pull: { players: { player: playerId } },
+        $inc: { remaining: bidAmount },
+      });
 
-    // Prevent RTM if original team is same
-    if (previousTeam._id.toString() === teamId)
-      return res.status(400).json({ message: "Player already in your team" });
+      // Update bidding history to reflect new team
+      auction.biddingHistory = auction.biddingHistory.map((entry) => {
+        if (entry.player._id.toString() === playerId.toString()) {
+          return {
+            ...entry._doc,
+            team: teamId,
+          };
+        }
+        return entry;
+      });
 
-    if (previousPlayer.isRTM)
-      return res.status(400).json({ message: "Player has been RTM once" });
-
-    // Attach player to new team and deduct purse
-    await Team.findByIdAndUpdate(teamId, {
-      $push: { players: { player: previousPlayer, price: bidAmount } },
-      $inc: { remaining: -bidAmount },
-    });
-    await Player.findByIdAndUpdate(previousPlayer._id, {
-      isRTM: true,
-    });
-
-    // Remove player from old team
-    await Team.findByIdAndUpdate(previousTeam._id, {
-      $pull: { players: { player: previousPlayer } },
-      $inc: { remaining: bidAmount },
-    });
-
-    // Update bidding history to reflect new team
-    auction.biddingHistory = auction.biddingHistory.map((entry) => {
-      if (entry.player._id.toString() === previousPlayer._id.toString()) {
-        return {
-          ...entry._doc,
-          team: teamId, // replace team ID
-        };
+      // Decrease RTM count
+      const selectedTeam = auction.selectedTeams.find(
+        (entry) => entry.team._id.toString() === teamId
+      );
+      if (selectedTeam) {
+        selectedTeam.rtmCount -= 1;
       }
-      return entry;
-    });
 
-    // Decrease RTM count
-    selectedTeam.rtmCount -= 1;
+      // Clear pending request
+      auction.pendingRTMRequest = undefined;
+      await auction.save();
 
-    await auction.save();
-
-    // Emit RTM event
-    {
-      const io = req.app.get("io");
-      io.to(auctionId).emit("player:rtm", {
-        message: "RTM used successfully",
-        player: previousPlayer._id,
-        fromTeam: previousTeam._id,
+      // Emit success
+      io.to(auctionId).emit("rtm:approved", {
+        message: "RTM approved and executed",
+        playerId: playerId,
+        playerName: rtmRequest.playerName,
+        fromTeam: fromTeam,
         toTeam: teamId,
       });
-    }
 
-    res.status(200).json({ message: "RTM successful", newTeam: teamId });
+      res.status(200).json({ message: "RTM approved and executed" });
+    } else {
+      // Reject the RTM
+      auction.pendingRTMRequest = undefined;
+      await auction.save();
+
+      // Emit rejection
+      io.to(auctionId).emit("rtm:rejected", {
+        message: "RTM request rejected",
+        playerId: rtmRequest.playerId,
+        playerName: rtmRequest.playerName,
+        teamId: rtmRequest.teamId
+      });
+
+      res.status(200).json({ message: "RTM request rejected" });
+    }
   } catch (error) {
-    console.error("RTM error:", error);
+    console.error("RTM decision error:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 });

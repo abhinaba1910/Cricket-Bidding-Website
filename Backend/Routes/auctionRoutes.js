@@ -11,244 +11,6 @@ const Team = require("../Models/team");
 const Player = require("../Models/player");
 const Person = require("../Models/person");
 
-// router.post(
-//   "/create-auction",
-//   AuthMiddleWare,
-//   upload.single("auctionImage"),
-//   async (req, res) => {
-//     try {
-//       const {
-//         auctionName,
-//         shortName,
-//         description,
-//         selectedTeams,
-//         selectedPlayers,
-//         startDateRaw,
-//         startTimeRaw,
-//         rtmCount,
-//       } = req.body;
-
-//       const parsedRTMCount = parseInt(rtmCount) || 0;
-//       const parsedTeams = selectedTeams ? JSON.parse(selectedTeams) : [];
-//       const parsedPlayers = selectedPlayers ? JSON.parse(selectedPlayers) : [];
-
-//       // Ensure all teams and players belong to the current user
-//       const userId = req.user.id;
-//       const role = req.user.role;
-//       const [hours, minutes] = startTimeRaw.split(':');
-//       const startDate = new Date(startDateRaw); // '2025-06-10' → 2025-06-10T00:00:00.000Z
-      
-//       // Set time directly (assumes server is running in UTC)
-//       startDate.setHours(Number(hours));
-//       startDate.setMinutes(Number(minutes));
-//       startDate.setSeconds(0);
-//       startDate.setMilliseconds(0);
-
-//       if (role !== "admin" && role !== "temp-admin") {
-//         return res
-//           .status(403)
-//           .json({ error: "Access denied. Not authorized." });
-//       }
-
-//       const validTeams = await Team.find({
-//         _id: { $in: parsedTeams },
-//         createdBy: userId,
-//       });
-//       const validPlayers = await Player.find({
-//         _id: { $in: parsedPlayers },
-//         createdBy: userId,
-//       });
-
-//       if (
-//         validTeams.length !== parsedTeams.length ||
-//         validPlayers.length !== parsedPlayers.length
-//       ) {
-//         return res
-//           .status(403)
-//           .json({ error: "Unauthorized selection of teams or players" });
-//       }
-
-//       const newAuction = new Auction({
-//         createdBy: userId,
-//         auctionName,
-//         shortName,
-//         auctionImage: req.file?.path || "",
-//         startDate: startDate,
-//         description,
-//         // selectedTeams: parsedTeams.map(teamId => ({ team: teamId })),
-//         selectedTeams: parsedTeams.map(teamId => ({
-//           team: teamId,
-//           rtmCount: parsedRTMCount,
-//         })),        
-//         selectedPlayers: parsedPlayers,
-//       });
-      
-
-//       console.log(newAuction);
-//       await newAuction.save();
-//       // res
-//       //   .status(201)
-//       //   .json({ message: "Auction created successfully", auction: newAuction });
-//       // ── PUSH new-auction event ───────────────────────────
-//       const io = req.app.get("io");
-//       // broadcast to everyone (or you could use a "auctions" room)
-//       io.emit("auction:update", {
-//         type: "auction-created",
-//         payload: newAuction
-//       });
-
-//       return res
-//         .status(201)
-//         .json({ message: "Auction created successfully", auction: newAuction });
-//     } catch (err) {
-//       console.error(err);
-//       res.status(500).json({ error: "Server error while creating auction" });
-//     }
-//   }
-// );
-
-// router.get("/get-auction", AuthMiddleWare, async (req, res) => {
-//   try {
-//     const userId = req.user.id;
-//     const user = await Person.findById(userId);
-
-//     if (!user || !["admin", "temp-admin"].includes(user.role)) {
-//       return res
-//         .status(403)
-//         .json({ error: "Access denied. Only admins or temp-admins allowed." });
-//     }
-
-//     const auctions = await Auction.find({ createdBy: userId })
-//       .populate("selectedTeams", "name logo")
-//       .populate("selectedPlayers", "name photo")
-//       .sort({ createdAt: -1 });
-
-//     const now = new Date();
-
-//     for (const auction of auctions) {
-//       const startTime = new Date(auction.startDate);
-//       const deadline = new Date(startTime.getTime() + 60 * 60 * 1000); // 60 min window
-
-//       if (auction.status === "upcoming") {
-//         if (now >= startTime && now <= deadline) {
-//           // Countdown running
-//           auction.countdownStartedAt = startTime;
-//           await auction.save();
-//         } else if (now > deadline) {
-//           // Time expired without starting → complete auction
-//           auction.status = "completed";
-//           auction.countdownStartedAt = null;
-//           await auction.save();
-//         }
-//       }
-//     }
-
-//     // Prepare response with countdownRemaining (in seconds)
-//     const normalizedAuctions = auctions.map((a) => {
-//       const start = new Date(a.startDate);
-//       const date = start.toISOString().split("T")[0];
-//       const time = start.toTimeString().split(":").slice(0, 2).join(":");
-
-//       let countdownRemaining = 0;
-//       if (a.status === "upcoming" && a.countdownStartedAt) {
-//         const nowMs = Date.now();
-//         const deadlineMs =
-//           new Date(a.countdownStartedAt).getTime() + 60 * 60 * 1000;
-//         countdownRemaining = Math.max(
-//           0,
-//           Math.floor((deadlineMs - nowMs) / 1000)
-//         ); // seconds left
-//       }
-
-//       return {
-//         id: a._id,
-//         name: a.auctionName,
-//         shortName: a.shortName,
-//         logo: a.auctionImage,
-//         description: a.description,
-//         date,
-//         time,
-//         status: a.status,
-//         selectedTeams: a.selectedTeams,
-//         selectedPlayers: a.selectedPlayers,
-//         joinCode: a.shortName,
-//         createdAt: a.createdAt,
-//         countdownRemaining, // new field for frontend timer
-//       };
-//     });
-
-//     res.json({ auctions: normalizedAuctions });
-//   } catch (error) {
-//     console.error("Error fetching auctions:", error);
-//     res.status(500).json({ error: "Server error fetching auctions" });
-//   }
-// });
-
-// router.patch("/start-auction/:id", AuthMiddleWare, async (req, res) => {
-//   try {
-//     const auction = await Auction.findById(req.params.id);
-//     if (!auction) {
-//       return res.status(404).json({ error: "Auction not found" });
-//     }
-
-//     // Check if user is allowed to start the auction
-//     const userId = req.user.id;
-//     const userRole = req.user.role;
-
-//     const isOwner = auction.createdBy.toString() === userId.toString();
-//     const isAdmin = userRole === "admin" || userRole === "temp-admin";
-
-//     if (!isOwner && !isAdmin) {
-//       return res
-//         .status(403)
-//         .json({ error: "You are not authorized to start this auction" });
-//     }
-
-//     // Time and status checks
-//     const now = new Date();
-//     const startTime = new Date(auction.startDate);
-//     const deadline = new Date(startTime.getTime() + 60 * 60 * 1000);
-
-//     if (auction.status === "upcoming" && now >= startTime && now <= deadline) {
-//       auction.status = "live";
-//       auction.countdownStartedAt = null; // stop countdown timer
-//       await auction.save();
-//       // return res.json({
-//       //   message: "Auction started successfully",
-//       //   status: auction.status,
-//       // });
-//        // ── PUSH via WebSocket ───────────────────────────────
-//      const io = req.app.get("io");
-//      io.to(req.params.id).emit("auction:update", {
-//        type: "auction-started",
-//        payload: { status: auction.status }
-//      });
- 
-//      return res.json({
-//        message: "Auction started successfully",
-//        status: auction.status,
-//      });
-
-//     } else if (now > deadline) {
-//       return res
-//         .status(400)
-//         .json({ error: "Time window expired. Auction cannot be started." });
-//     } else if (auction.status !== "upcoming") {
-//       return res.status(400).json({
-//         error: `Cannot start auction. Current status is '${auction.status}'.`,
-//       });
-//     } else {
-//       return res
-//         .status(400)
-//         .json({ error: "Auction cannot be started yet. Too early." });
-//     }
-//   } catch (err) {
-//     console.error("Start auction error:", err);
-//     res.status(500).json({ error: "Server error starting auction" });
-//   }
-// });
-
-
 
 router.post(
   "/create-auction",
@@ -305,6 +67,7 @@ router.post(
           rtmCount: parsedRTMCount,
         })),
         selectedPlayers: parsedPlayers,
+        pendingRTMRequest:null,
       });
 
       await newAuction.save();
@@ -588,6 +351,10 @@ router.patch("/edit-auction/:id", AuthMiddleWare, async (req, res) => {
       return res.status(404).json({ error: "Auction not found" });
     }
 
+    if(auction.isPaused===false){
+      return res.status(404).json({error: "Pause the Auction before deleting"})
+    }
+
     // Update fields
     if (auctionName) auction.auctionName = auctionName;
     if (selectedPlayers) auction.selectedPlayers = selectedPlayers;
@@ -720,12 +487,34 @@ router.post("/join-auction/:id", AuthMiddleWare, async (req, res) => {
   }
 });
 
-router.delete('/delete-auction/:id', async (req, res) => {
+router.delete('/delete-auction/:id', AuthMiddleWare, async (req, res) => {
   try {
-    const result = await Auction.findByIdAndDelete(req.params.id);
-    if (!result) {
+    const auction = await Auction.findById(req.params.id);
+    if (!auction) {
       return res.status(404).json({ error: "Auction not found" });
     }
+    if(auction.isPaused===false){
+      return res.status(404).json({error: "Pause the Auction before deleting"})
+    }
+
+    // Reset fields
+    auction.currentPlayerOnBid = null;
+    auction.currentBid = { team: null, amount: 0 };
+    auction.selectedTeams = [];
+    auction.selectedPlayers = [];
+    auction.manualPlayerQueue = [];
+    auction.biddingHistory = [];
+    auction.bidAmount = { player: null, amount: 0 };
+    
+    // ✅ Fix currentQueuePosition separately
+    if (auction.currentQueuePosition) {
+      auction.currentQueuePosition.player = null;
+      auction.currentQueuePosition.type = 0;
+    }
+
+    await auction.save(); // Ensure reset is saved
+
+    await Auction.findByIdAndDelete(req.params.id); // Now delete
     res.status(204).end();
   } catch (err) {
     console.error("Delete Auction Error:", err);

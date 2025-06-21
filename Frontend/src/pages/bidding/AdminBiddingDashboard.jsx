@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import Api from "../../userManagement/Api";
+import RTMApprovalPopup from './RTMApprovalPopup';
 
 const SAMPLE_AUCTION = {
   lastSold: { name: "--/--", price: "--/--", team: "--/--" },
@@ -54,6 +55,10 @@ export default function AdminBiddingDashboard() {
   const [showAddMorePlayers, setShowAddMorePlayers] = useState(false);
   const [queueDisplay, setQueueDisplay] = useState({ current: 0, total: 0 });
   const lastBidTeamRef = useRef(null); // holds previous team name
+  const [showRTMPopup, setShowRTMPopup] = useState(false);
+const [pendingRTMRequest, setPendingRTMRequest] = useState(null);
+const [isProcessingRTM, setIsProcessingRTM] = useState(false);
+
 
   // -------------------------------
   // SOCKET.IO: connect, join room, listeners
@@ -298,12 +303,44 @@ export default function AdminBiddingDashboard() {
     });
 
     // 10. RTM used
+    // socket.on("player:rtm", (payload) => {
+    //   console.log("Received player:rtm", payload);
+    //   toast.success("RTM used: player transferred");
+    //   fetchAuctionData();
+    // });
+
     socket.on("player:rtm", (payload) => {
       console.log("Received player:rtm", payload);
       toast.success("RTM used: player transferred");
       fetchAuctionData();
     });
-
+  
+    // NEW: Listen for RTM requests (for admin approval)
+    socket.on("rtm:request", (payload) => {
+      console.log("Received RTM request", payload);
+      setPendingRTMRequest(payload);
+      setShowRTMPopup(true);
+      toast.info(`RTM request from ${payload.teamName} for ${payload.playerName}`);
+    });
+  
+    // NEW: Listen for RTM approval confirmations
+    socket.on("rtm:approved", (payload) => {
+      console.log("RTM approved", payload);
+      setShowRTMPopup(false);
+      setPendingRTMRequest(null);
+      setIsProcessingRTM(false);
+      toast.success(`RTM approved: ${payload.playerName} transferred`);
+      fetchAuctionData();
+    });
+  
+    // NEW: Listen for RTM rejection confirmations
+    socket.on("rtm:rejected", (payload) => {
+      console.log("RTM rejected", payload);
+      setShowRTMPopup(false);
+      setPendingRTMRequest(null);
+      setIsProcessingRTM(false);
+      toast.info(`RTM rejected for ${payload.playerName}`);
+    });
     // 11. Selection-mode updated
     socket.on("selection-mode:updated", (payload) => {
       console.log("Received selection-mode:updated", payload);
@@ -332,6 +369,10 @@ export default function AdminBiddingDashboard() {
         socketRef.current.emit("leave-auction", id); // always leave room
         socketRef.current.disconnect();
       }
+      socket.off("player:rtm");
+    socket.off("rtm:request");
+    socket.off("rtm:approved");
+    socket.off("rtm:rejected");
     };
   }, [id]);
 
@@ -362,6 +403,41 @@ export default function AdminBiddingDashboard() {
     } catch (error) {
       console.error("Error starting bidding:", error);
       alert("Internal server error");
+    }
+  };
+
+  const handleRTMApprove = async () => {
+    setIsProcessingRTM(true);
+    try {
+      await Api.post(`/rtm-decision/${auctionId}`, {
+        decision: 'approve'
+      });
+      // Success will be handled by socket listener
+    } catch (error) {
+      console.error("RTM approval error:", error);
+      toast.error(error.response?.data?.message || "Failed to approve RTM");
+      setIsProcessingRTM(false);
+    }
+  };
+
+  const handleRTMReject = async () => {
+    setIsProcessingRTM(true);
+    try {
+      await Api.post(`/rtm-decision/${auctionId}`, {
+        decision: 'reject'
+      });
+      // Success will be handled by socket listener
+    } catch (error) {
+      console.error("RTM rejection error:", error);
+      toast.error(error.response?.data?.message || "Failed to reject RTM");
+      setIsProcessingRTM(false);
+    }
+  };
+  
+  const handleCloseRTMPopup = () => {
+    if (!isProcessingRTM) {
+      setShowRTMPopup(false);
+      setPendingRTMRequest(null);
     }
   };
 
@@ -1792,6 +1868,16 @@ export default function AdminBiddingDashboard() {
           </motion.div>
         </motion.div>
       )}
+      {showRTMPopup && (
+      <RTMApprovalPopup
+        rtmRequest={pendingRTMRequest}
+        onApprove={handleRTMApprove}
+        onReject={handleRTMReject}
+        onClose={handleCloseRTMPopup}
+        isProcessing={isProcessingRTM}
+      />
+    )}
+
 
       {/* Edit Bid Modal */}
       {showEdit && (

@@ -112,6 +112,7 @@ export default function UserBiddingDashboardDesktop() {
   const [userTeamId, setUserTeamId] = useState(null);
   const userTeamIdRef = useRef(null);
   const emoteTimeoutRef = useRef(null);
+  const [rtmRequestPending, setRtmRequestPending] = useState(false);
 
   // ─── Sample Auction Data for initialization ────────────────────
   const sampleAuction = {
@@ -199,23 +200,6 @@ export default function UserBiddingDashboardDesktop() {
       // RTM count
       setRtmCount(data.team?.rtmCount || 0);
 
-      // Emote logic for last sold:
-      // const history = data.biddingHistory || [];
-      // const lastEntry = history[history.length - 1] || null;
-      // if (lastEntry) {
-      //   const soldTeamId = lastEntry.team?._id || lastEntry.team || null;
-      //   if (soldTeamId && soldTeamId !== lastSoldTeam) {
-      //     setLastSoldTeam(soldTeamId);
-      //     if (soldTeamId === data.team?.teamId) {
-      //       setEmoteToPlay("BidWon");
-      //     } else {
-      //       setEmoteToPlay("LostBid");
-      //     }
-      //     setTimeout(() => setEmoteToPlay(null), 5000);
-      //   }
-      // }
-
-      // Update “lastSold” and “mostExpensive” display
       const formatPlayerData = (entry) => {
         if (!entry || !entry.player)
           return { name: "--/--", price: "--/--", team: "--/--" };
@@ -240,29 +224,6 @@ export default function UserBiddingDashboardDesktop() {
     }
   };
 
-  // Open player detail modal
-  // const openPlayerModal = () => {
-  //   const p = auctionData.currentPlayer;
-  //   if (p) {
-  //     const formattedPlayer = {
-  //       name: p.name,
-  //       role: p.role,
-  //       battingStyle: p.battingStyle,
-  //       bowlingStyle: p.bowlingStyle,
-  //       basePrice: p.basePrice,
-  //       playerPic: p.playerPic,
-  //       nationality: p.country,
-  //       age: p.dob
-  //         ? new Date().getFullYear() - new Date(p.dob).getFullYear()
-  //         : "--",
-  //       matchesPlayed: p.matchesPlayed,
-  //       runs: p.runs,
-  //       wickets: p.wickets,
-  //     };
-  //     setSelectedPlayer(formattedPlayer);
-  //     setShowModal(true);
-  //   }
-  // };
   const openPlayerModal = () => {
     const p = auctionData.currentPlayer;
     if (p) {
@@ -363,22 +324,93 @@ export default function UserBiddingDashboardDesktop() {
   };
 
   // Handle RTM
+  // const handleUseRTM = async () => {
+  //   if (rtmCount <= 0) {
+  //     toast.error("No RTMs left");
+  //     return;
+  //   }
+
+  //   if (rtmRequestPending) {
+  //     toast.info("RTM request already pending approval");
+  //     return;
+  //   }
+
+  //   const myTeamId = auctionData?.team?.teamId;
+  //   try {
+  //     const response = await Api.post(`/use-rtm/${id}`, {
+  //       teamId: myTeamId,
+  //     });
+
+  //     if (response.data.status === "pending") {
+  //       setRtmRequestPending(true);
+  //       toast.success("RTM request sent for admin approval!");
+  //     } else {
+  //       toast.success("RTM successful!");
+  //       setRtmCount((prev) => prev - 1);
+  //     }
+
+  //     fetchAuctionData();
+  //   } catch (err) {
+  //     console.error("RTM error:", err);
+  //     toast.error(err.response?.data?.message || "Failed to use RTM");
+  //   }
+  // };
+
   const handleUseRTM = async () => {
+    console.log("RTM Debug - Starting:");
+    console.log("- RTM Count:", rtmCount);
+    console.log("- RTM Request Pending:", rtmRequestPending);
+    console.log("- Auction Data:", auctionData);
+    console.log("- Team ID:", auctionData?.team?.teamId);
+    console.log("- Auction ID:", id);
+  
     if (rtmCount <= 0) {
+      console.log("❌ No RTMs left");
       toast.error("No RTMs left");
       return;
     }
+  
+    if (rtmRequestPending) {
+      console.log("❌ RTM request already pending");
+      toast.info("RTM request already pending approval");
+      return;
+    }
+  
     const myTeamId = auctionData?.team?.teamId;
+    
+    if (!myTeamId) {
+      console.log("❌ No team ID found");
+      toast.error("Team ID not found");
+      return;
+    }
+  
+    console.log("✅ Sending RTM request...");
+    
     try {
-      const response = await Api.post(`/use-rtm/${id}`, {
+      const requestPayload = {
         teamId: myTeamId,
-      });
-      toast.success("RTM successful!");
-      setRtmCount((prev) => prev - 1);
-      // rely on socket update for full state refresh if backend emits
+      };
+      
+      console.log("Request payload:", requestPayload);
+      console.log("Request URL:", `/use-rtm/${id}`);
+  
+      const response = await Api.post(`/use-rtm/${id}`, requestPayload);
+      
+      console.log("✅ RTM Response:", response.data);
+  
+      if (response.data.status === "pending") {
+        setRtmRequestPending(true);
+        toast.success("RTM request sent for admin approval!");
+      } else {
+        toast.success("RTM successful!");
+        setRtmCount((prev) => prev - 1);
+      }
+  
       fetchAuctionData();
     } catch (err) {
-      console.error("RTM error:", err);
+      console.error("❌ RTM error:", err);
+      console.error("Error response:", err.response?.data);
+      console.error("Error status:", err.response?.status);
       toast.error(err.response?.data?.message || "Failed to use RTM");
     }
   };
@@ -452,10 +484,46 @@ export default function UserBiddingDashboardDesktop() {
       toast.success(`New bid ₹${formatIndianNumber(payload.newBid.amount)}`);
     });
     // socket.on("player:sold",      payload => { console.log("player:sold", payload); fetchAuctionData(); toast.success(`Sold for ₹${payload.amount.toLocaleString()}`); });
+    // socket.on("player:rtm", (payload) => {
+    //   console.log("player:rtm", payload);
+    //   fetchAuctionData();
+    //   toast.success("RTM used");
+    // });
+
     socket.on("player:rtm", (payload) => {
       console.log("player:rtm", payload);
       fetchAuctionData();
       toast.success("RTM used");
+    });
+
+    // NEW: Listen for RTM request confirmations
+    socket.on("rtm:request", (payload) => {
+      console.log("rtm:request", payload);
+      // If this is our team's request, show pending status
+      if (payload.teamId === auctionData?.team?.teamId) {
+        setRtmRequestPending(true);
+        toast.info("RTM request sent, waiting for admin approval...");
+      }
+    });
+
+    // NEW: Listen for RTM approvals
+    socket.on("rtm:approved", (payload) => {
+      console.log("rtm:approved", payload);
+      if (payload.toTeam === auctionData?.team?.teamId) {
+        setRtmRequestPending(false);
+        setRtmCount((prev) => prev - 1);
+        toast.success(`RTM approved! ${payload.playerName} added to your team`);
+      }
+      fetchAuctionData();
+    });
+
+    // NEW: Listen for RTM rejections
+    socket.on("rtm:rejected", (payload) => {
+      console.log("rtm:rejected", payload);
+      if (payload.teamId === auctionData?.team?.teamId) {
+        setRtmRequestPending(false);
+        toast.error(`RTM rejected for ${payload.playerName}`);
+      }
     });
     socket.on("auction:paused", () => {
       console.log("auction:paused");
@@ -536,8 +604,12 @@ export default function UserBiddingDashboardDesktop() {
       if (emoteTimeoutRef.current) {
         clearTimeout(emoteTimeoutRef.current);
       }
+      socket.off("player:rtm");
+      socket.off("rtm:request");
+      socket.off("rtm:approved");
+      socket.off("rtm:rejected");
     };
-  }, [id, navigate]);
+  }, [id, navigate, auctionData?.team?.teamId]);
 
   // Initial fetch once
   useEffect(() => {
@@ -739,9 +811,14 @@ export default function UserBiddingDashboardDesktop() {
           </div>
           <button
             onClick={handleUseRTM}
-            className="mt-2 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 rounded-xl text-white font-medium text-sm shadow-md w-full"
+            disabled={rtmCount <= 0 || rtmRequestPending}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              rtmCount <= 0 || rtmRequestPending
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-blue-600 text-white hover:bg-blue-700"
+            }`}
           >
-            RTM-{rtmCount}
+            {rtmRequestPending ? "RTM Pending..." : `Use RTM (${rtmCount})`}
           </button>
           <p className="mt-1 text-xs opacity-75">RTMs Remaining: {rtmCount}</p>
         </motion.div>

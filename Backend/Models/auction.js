@@ -114,7 +114,16 @@ const auctionSchema = new mongoose.Schema(
         bidAmount: Number,
         time: { type: Date, default: Date.now },
       },
-    ],   
+    ], 
+    
+    pendingRTMRequest: {
+      teamId: { type: mongoose.Schema.Types.ObjectId, ref: "Team" },
+      playerId: { type: mongoose.Schema.Types.ObjectId, ref: "Player" },
+      playerName: { type: String },
+      bidAmount: { type: Number },
+      fromTeam: { type: mongoose.Schema.Types.ObjectId, ref: "Team" },
+      requestedAt: { type: Date }
+    }
   },
   { timestamps: true }
 );
