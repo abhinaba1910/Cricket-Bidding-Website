@@ -13,26 +13,26 @@ import Api from "../../userManagement/Api";
 //   { id: "avatar5", src: "/avatars/avatar5.png", alt: "Avatar 5" },
 // ];
 const placeholderAvatars = [
-  {
-    id: "avatar1",
-    // this thumbnail could still be a PNG for the grid if you like…
-    thumbnail: "/avatars/avatar1-thumb.png",
-    // …but the .src you send (avatarUrl) should be your glb:
-    src: "/models/char1.glb",
-    alt: "Bidder1",
-  },
-  {
-    id: "avatar2",
-    thumbnail: "/avatars/avatar2-thumb.png",
-    src: "/models/char2.glb",
-    alt: "Bidder2",
-  },
-  {
-    id: "avatar3",
-    thumbnail: "/avatars/avatar2-thumb.png",
-    src: "/models/char3.glb",
-    alt: "Bidder3",
-  },
+  // {
+  //   id: "avatar1",
+  //   // this thumbnail could still be a PNG for the grid if you like…
+  //   thumbnail: "/avatars/avatar1-thumb.png",
+  //   // …but the .src you send (avatarUrl) should be your glb:
+  //   src: "/models/char1.glb",
+  //   alt: "Bidder1",
+  // },
+  // {
+  //   id: "avatar2",
+  //   thumbnail: "/avatars/avatar2-thumb.png",
+  //   src: "/models/char2.glb",
+  //   alt: "Bidder2",
+  // },
+  // {
+  //   id: "avatar3",
+  //   thumbnail: "/avatars/avatar2-thumb.png",
+  //   src: "/models/char3.glb",
+  //   alt: "Bidder3",
+  // },
   {
     id: "avatar4",
     thumbnail: "/models/avatarImages/bidder4.png",
@@ -44,6 +44,78 @@ const placeholderAvatars = [
     thumbnail: "/models/avatarImages/bidder5.png",
     src: "/models/char5.glb",
     alt: "Bidder5",
+  },
+  {
+    id: "avatar6",
+    thumbnail: "/models/avatarImages/bidder6.png",
+    src: "/models/char6.glb",
+    alt: "Bidder6",
+  },
+  {
+    id: "avatar7",
+    thumbnail: "/models/avatarImages/bidder7.png",
+    src: "/models/char7.glb",
+    alt: "Bidder7",
+  },
+  {
+    id: "avatar8",
+    thumbnail: "/models/avatarImages/bidder8.png",
+    src: "/models/char8.glb",
+    alt: "Bidder8",
+  },
+  {
+    id: "avatar9",
+    thumbnail: "/models/avatarImages/bidder9.png",
+    src: "/models/char9.glb",
+    alt: "Bidder9",
+  },
+  {
+    id: "avatar10",
+    thumbnail: "/models/avatarImages/bidder10.png",
+    src: "/models/char10.glb",
+    alt: "Bidder10",
+  },
+  {
+    id: "avatar11",
+    thumbnail: "/models/avatarImages/bidder11.png",
+    src: "/models/char11.glb",
+    alt: "Bidder11",
+  },
+  {
+    id: "avatar12",
+    thumbnail: "/models/avatarImages/bidder12.png",
+    src: "/models/char12.glb",
+    alt: "Bidder12",
+  },
+  {
+    id: "avatar13",
+    thumbnail: "/models/avatarImages/bidder13.png",
+    src: "/models/char13.glb",
+    alt: "Bidder13",
+  },
+  {
+    id: "avatar14",
+    thumbnail: "/models/avatarImages/bidder14.png",
+    src: "/models/char14.glb",
+    alt: "Bidder14",
+  },
+  {
+    id: "avatar15",
+    thumbnail: "/models/avatarImages/bidder15.png",
+    src: "/models/char15.glb",
+    alt: "Bidder15",
+  },
+  {
+    id: "avatar16",
+    thumbnail: "/models/avatarImages/bidder16.png",
+    src: "/models/char16.glb",
+    alt: "Bidder16",
+  },
+  {
+    id: "avatar17",
+    thumbnail: "/models/avatarImages/bidder17.png",
+    src: "/models/char17.glb",
+    alt: "Bidder17",
   },
   // …etc
 ];
