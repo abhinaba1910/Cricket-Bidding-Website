@@ -155,6 +155,7 @@ export default function UserBiddingDashboardMobile() {
   const [showModal, setShowModal] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const socketRef = useRef(null);
+  const emoteTimeoutRef = useRef(null);
 
   const toggleFullScreen = () => setFullScreen((fs) => !fs);
 
@@ -252,9 +253,9 @@ export default function UserBiddingDashboardMobile() {
         const soldTeamId = lastEntry.team._id || lastEntry.team;
         if (soldTeamId !== lastSoldTeam) {
           setLastSoldTeam(soldTeamId);
-          if (soldTeamId === data.team?.teamId) setEmoteToPlay("BidWon");
-          else setEmoteToPlay("LostBid");
-          setTimeout(() => setEmoteToPlay(null), 5000);
+          // if (soldTeamId === data.team?.teamId) setEmoteToPlay("BidWon");
+          // else setEmoteToPlay("LostBid");
+          // setTimeout(() => setEmoteToPlay(null), 5000);
         }
       }
     } catch (err) {
@@ -278,6 +279,8 @@ export default function UserBiddingDashboardMobile() {
       });
       toast.success("Bid Placed Successfully");
       fetchAuctionData();
+      setEmoteToPlay("HandRaise");
+      setTimeout(() => setEmoteToPlay(null), 2000);
     } catch (err) {
       console.error("Place bid error:", err);
       toast.error(err.response?.data?.error || "Failed to place bid");
@@ -320,7 +323,6 @@ export default function UserBiddingDashboardMobile() {
     [
       "bid:updated",
       "bid:placed",
-      "player:sold",
       "player:rtm",
       "auction:paused",
       "auction:resumed",
@@ -329,12 +331,47 @@ export default function UserBiddingDashboardMobile() {
     ].forEach((event) => {
       socket.on(event, () => fetchAuctionData());
     });
+    socket.on("player:sold", (payload) => {
+      console.log("Received player:sold", payload);
+      // Compare winnerTeamId or soldTo against user's team ID
+      console.log("[USER] got player:sold:", payload);
+      const winnerId = payload.soldTo;
+      const teamId = userTeamIdRef.current;
+      if (teamId && winnerId) {
+        if (winnerId === teamId) {
+          setEmoteToPlay("BidWon");
+        } else {
+          setEmoteToPlay("LostBid");
+        }
+        if (emoteTimeoutRef.current) {
+          clearTimeout(emoteTimeoutRef.current);
+        }
+        emoteTimeoutRef.current = setTimeout(() => {
+          setEmoteToPlay(null);
+          emoteTimeoutRef.current = null;
+        }, 3000);
+      }
+      // Refresh data
+      fetchAuctionData();
+      if (payload.amount != null) {
+        toast.success(`Sold for ₹${formatIndianNumber(payload.amount)}`);
+      } else {
+        toast.success("Player sold");
+      }
+    });
 
     return () => {
-      socket.emit("leave-auction", id);
-      socket.disconnect();
+
+        socketRef.current.emit("leave-auction", id);
+        socketRef.current.disconnect();
+      if (emoteTimeoutRef.current) {
+        clearTimeout(emoteTimeoutRef.current);
+      }
     };
-  }, [id]);
+  }, [id,navigate]);
+    useEffect(() => {
+      fetchAuctionData();
+    }, [id]);
 
   if (!auctionData) return <div className="text-white p-4">Loading...</div>;
 
@@ -734,16 +771,15 @@ export default function UserBiddingDashboardMobile() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
-          <div className="bg-gradient-to-br from-indigo-800/50 to-blue-700/50 rounded-xl p-4 w-full max-w-md shadow-xl">
-            <CharacterCard
-              modelPath={avatarUrl}
-              adminImageUrl={adminImageUrl}
-              emoteToPlay={emoteToPlay}
-            />
+          <div className="w-full flex justify-center items-center py-4">
+  {avatarUrl ? (
+              <CharacterCard modelPath={avatarUrl} triggerEmote={emoteToPlay} />
+            ) : (
+              <p>Loading your character…</p>
+            )}
           </div>
         </motion.div>
       </div>
-
       {/* ─── Player Modal ─────────────────────────────────────── */}
       {showModal && selectedPlayer && (
         <motion.div
