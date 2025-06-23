@@ -68,8 +68,8 @@ export default function AdminBiddingDashboard() {
       console.warn("No auth token found. Cannot connect socket.");
       return;
     }
-    const SOCKET_SERVER_URL = "https://cricket-bidding-website-backend.onrender.com"; // ← replace with your real URL
-    // const SOCKET_SERVER_URL = "http://localhost:6001";
+    // const SOCKET_SERVER_URL = "https://cricket-bidding-website-backend.onrender.com"; // ← replace with your real URL
+    const SOCKET_SERVER_URL = "http://localhost:6001";
     const socket = io(SOCKET_SERVER_URL, {
       auth: { token },
       transports: ["websocket"], // enforce WS transport for reliability
@@ -301,21 +301,12 @@ export default function AdminBiddingDashboard() {
       // Optionally refetch teams
     });
 
-    // 10. RTM used
-    // socket.on("player:rtm", (payload) => {
-    //   console.log("Received player:rtm", payload);
-    //   toast.success("RTM used: player transferred");
-    //   fetchAuctionData();
-    // });
-
     socket.on("player:rtm", (payload) => {
       console.log("Received player:rtm", payload);
       toast.success("RTM used: player transferred");
       fetchAuctionData();
     });
 
-    // NEW: Listen for RTM requests (for admin approval)
-    // ✅ Only show popup on new socket event
     socket.on("rtm:request", (payload) => {
       console.log("Received RTM request", payload);
       setPendingRTMRequest(payload);
@@ -331,7 +322,9 @@ export default function AdminBiddingDashboard() {
       setShowRTMPopup(false);
       setPendingRTMRequest(null); // ✅ Clear here
       setIsProcessingRTM(false);
-      toast.success(`RTM approved: ${payload.playerName} transferred`);
+      toast.success(
+        `RTM approved: ${payload.playerName} transferred to ${payload.teamName}`
+      );
       fetchAuctionData();
     });
 
@@ -341,7 +334,7 @@ export default function AdminBiddingDashboard() {
       setShowRTMPopup(false);
       setPendingRTMRequest(null); // ✅ Clear here
       setIsProcessingRTM(false);
-      toast.success(`RTM rejected for ${payload.playerName}`);
+      toast.error(`RTM rejected for ${payload.playerName}`);
     });
     // 11. Selection-mode updated
     socket.on("selection-mode:updated", (payload) => {
@@ -1114,23 +1107,6 @@ export default function AdminBiddingDashboard() {
     setPlayerPic(null);
   };
 
-  // Poll pause status occasionally (optional fallback)
-  // useEffect(() => {
-  //   const checkIsPaused = async () => {
-  //     try {
-  //       const res = await Api.get(`/get-auction-pause-status/${id}`);
-  //       const paused = res.data.isPaused;
-  //       setIsPaused(paused);
-  //       if (paused) setBiddingStarted(false);
-  //     } catch (err) {
-  //       console.error("Failed to fetch pause status");
-  //     }
-  //   };
-  //   const interval = setInterval(checkIsPaused, 5000);
-  //   checkIsPaused();
-  //   return () => clearInterval(interval);
-  // }, [id]);
-
   const handleManualSelect = () => {
     navigate(`/admin/admin-manual-player-selection/${id}`);
   };
@@ -1662,34 +1638,19 @@ export default function AdminBiddingDashboard() {
 
       {/* MOBILE-only Bottom Section */}
       <div className="md:hidden mt-4 space-y-4">
-        <div className="bg-gradient-to-r from-indigo-900/50 to-blue-800/50 rounded-xl p-4 shadow-lg">
+        <div className="bg-gradient-to-r from-indigo-900/50 to-blue-800/50 rounded-xl p-4 shadow-lg space-y-4">
+          {/* Player Selection Header */}
           <h3 className="text-sm font-semibold mb-3 text-center">
             Player Selection
           </h3>
+
+          {/* Selection Mode Toggle (Manual only) */}
           {!biddingStarted && (
             <div className="relative h-10 w-full bg-indigo-800/30 rounded-full overflow-hidden">
-              {/* <motion.div
-                className={`absolute top-0 h-full w-1/2 rounded-full z-0 ${
-                  selectionMode === "automatic"
-                    ? "bg-gradient-to-r from-emerald-500 to-cyan-400"
-                    : "bg-gradient-to-r from-amber-500 to-orange-400"
-                }`}
-                animate={{
-                  left: selectionMode === "automatic" ? "0" : "50%",
-                }}
-                transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              />
-              <button
-                onClick={() => handleModeToggle("automatic")}
-                className={`relative h-full w-1/2 z-10 text-sm font-medium ${
-                  selectionMode === "automatic" ? "text-white" : "text-gray-300"
-                }`}
-              >
-                Auto
-              </button> */}
               <button
                 onClick={() => handleModeToggle("manual")}
-                className={`relative h-full w-full z-10 text-sm font-semibold tracking-wide transition-all duration-300 ease-in-out  ${
+                disabled={biddingStarted}
+                className={`relative h-full w-full z-10 text-sm font-semibold tracking-wide transition-all duration-300 ease-in-out ${
                   selectionMode === "manual"
                     ? "bg-gray-500 cursor-not-allowed text-white hover:bg-stone-600"
                     : "bg-gradient-to-r from-orange-500 to-amber-400 text-white hover:from-orange-600 hover:to-amber-500 shadow-lg"
@@ -1699,91 +1660,88 @@ export default function AdminBiddingDashboard() {
               </button>
             </div>
           )}
-          {biddingStarted && (
-            <div className="p-3 bg-indigo-900/30 rounded-lg">
-              <p className="text-xs text-center mb-2 text-yellow-300">
-                Change Selection Mode:
-              </p>
-              <div className="flex gap-2">
-                {/* <button
-                  onClick={() => handleModeToggle("automatic")}
-                  disabled={!canChangeMode}
-                  className={`flex-1 px-2 py-1 rounded text-xs transition-colors ${
-                    selectionMode === "automatic"
-                      ? "bg-emerald-500 text-white"
-                      : canChangeMode
-                      ? "bg-gray-600 text-gray-300 hover:bg-gray-500"
-                      : "bg-gray-800 text-gray-600 cursor-not-allowed"
-                  }`}
-                >
-                  Auto
-                </button> */}
-                <button
-                  onClick={() => handleModeToggle("manual")}
-                  disabled={!canChangeMode}
-                  className={`flex-1 px-2 py-1 rounded text-xs transition-colors ${
-                    selectionMode === "manual"
-                      ? "bg-amber-500 text-white"
-                      : canChangeMode
-                      ? "bg-gray-600 text-gray-300 hover:bg-gray-500"
-                      : "bg-gray-800 text-gray-600 cursor-not-allowed"
-                  }`}
-                >
-                  Manual
-                </button>
-              </div>
-            </div>
-          )}
-          {/* {selectionMode === "automatic" && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              transition={{ duration: 0.3 }}
-              className="mt-3"
-            >
-              <label className="text-xs block mb-1 opacity-80">
-                Select Role:
-              </label>
-              <select
-                value={role}
-                onChange={(e) => handleRoleChange(e.target.value)}
-                className="w-full rounded-full bg-indigo-800/50 border border-indigo-600 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="All">All</option>
-                <option value="Batsman">Batsman</option>
-                <option value="Fast all-rounder">Fast-All-Rounder</option>
-                <option value="Spin all-rounder">Spin-All-Rounder</option>
-                <option value="Wicket keeper batsman">
-                  Wicket-keeper-batsman
-                </option>
-                <option value="Spin bowler">Spin Bowler</option>
-                <option value="Fast bowler">Fast Bowler</option>
-              </select>
-            </motion.div>
-          )} */}
+
+          {/* Manual Queue Status */}
           {selectionMode === "manual" && manualPlayerQueue.length > 0 && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               transition={{ duration: 0.3 }}
-              className="mt-3 p-2 bg-amber-900/30 rounded-lg"
+              className="p-2 bg-amber-900/30 rounded-lg"
             >
               <p className="text-xs text-center text-amber-300">
-                Queue: {queueDisplay.current} of {queueDisplay.total}
+                Queue: {currentQueuePosition + 1} of {manualPlayerQueue.length}
               </p>
-              {queueDisplay.current === queueDisplay.total && (
-                <p className="text-xs text-center text-red-300 mt-1">
-                  Add more players - Queue running low!
-                </p>
-              )}
-              <button
-                onClick={handleAddMorePlayers}
-                className="w-full mt-2 px-2 py-1 bg-amber-600 hover:bg-amber-700 rounded text-xs"
-              >
-                Add More Players in Queue
-              </button>
+              <p className="text-xs text-center text-gray-300 mt-1">
+                Processing {manualPlayerQueue.length} players in sequence
+              </p>
             </motion.div>
           )}
+
+          {/* Move to Unsell */}
+          <motion.button
+            onClick={onMoveToUnsell}
+            className="w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-500 rounded-xl hover:from-purple-700 hover:to-indigo-600 text-sm shadow-lg"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            Move to Unsell
+          </motion.button>
+
+          {/* Pause Auction */}
+          <motion.button
+            onClick={togglePause}
+            disabled={isPaused || !biddingStarted}
+            className={`w-full px-4 py-2 rounded text-sm shadow-md transition ${
+              isPaused
+                ? "bg-gray-600 text-white cursor-not-allowed"
+                : "bg-amber-500 hover:bg-amber-600 text-white"
+            }`}
+            whileHover={!isPaused ? { scale: 1.02 } : {}}
+            whileTap={!isPaused ? { scale: 0.98 } : {}}
+          >
+            {isPaused ? "Paused Auction" : "Pause Auction"}
+          </motion.button>
+
+          {/* End Auction */}
+          <motion.button
+            disabled={ending}
+            className={`w-full px-4 py-2 rounded-xl text-white shadow-lg text-sm ${
+              ending
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-red-600 hover:bg-red-700"
+            }`}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleEndAuction}
+          >
+            {ending ? "Ending..." : "End Auction"}
+          </motion.button>
+
+          {/* Current Bid Info */}
+          <motion.div
+            className="bg-gradient-to-r from-indigo-900/50 to-blue-800/50 rounded-xl p-4 text-center shadow-lg"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            {auctionData.currentBid?.teamLogo ? (
+              <img
+                src={auctionData.currentBid.teamLogo}
+                alt="Team Logo"
+                className="w-16 h-16 rounded-xl object-contain mx-auto border-2"
+              />
+            ) : (
+              <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 mx-auto" />
+            )}
+            <p className="text-xs opacity-75 mt-2">Bid By</p>
+            <h3 className="text-sm font-semibold mt-1">
+              {auctionData.currentBid?.team || "--"}
+              <p className="text-xs opacity-75 mt-1">
+                ₹{auctionData.currentBid?.amount?.toLocaleString() || "--"}
+              </p>
+            </h3>
+          </motion.div>
         </div>
 
         {/* Last Sold / Most Expensive bottom row */}
@@ -1980,4 +1938,70 @@ export default function AdminBiddingDashboard() {
       )}
     </div>
   );
+}
+
+{
+  /* <motion.div
+                className={`absolute top-0 h-full w-1/2 rounded-full z-0 ${
+                  selectionMode === "automatic"
+                    ? "bg-gradient-to-r from-emerald-500 to-cyan-400"
+                    : "bg-gradient-to-r from-amber-500 to-orange-400"
+                }`}
+                animate={{
+                  left: selectionMode === "automatic" ? "0" : "50%",
+                }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              />
+              <button
+                onClick={() => handleModeToggle("automatic")}
+                className={`relative h-full w-1/2 z-10 text-sm font-medium ${
+                  selectionMode === "automatic" ? "text-white" : "text-gray-300"
+                }`}
+              >
+                Auto
+              </button> */
+}
+{
+  /* <button
+                  onClick={() => handleModeToggle("automatic")}
+                  disabled={!canChangeMode}
+                  className={`flex-1 px-2 py-1 rounded text-xs transition-colors ${
+                    selectionMode === "automatic"
+                      ? "bg-emerald-500 text-white"
+                      : canChangeMode
+                      ? "bg-gray-600 text-gray-300 hover:bg-gray-500"
+                      : "bg-gray-800 text-gray-600 cursor-not-allowed"
+                  }`}
+                >
+                  Auto
+                </button> */
+}
+{
+  /* {selectionMode === "automatic" && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              transition={{ duration: 0.3 }}
+              className="mt-3"
+            >
+              <label className="text-xs block mb-1 opacity-80">
+                Select Role:
+              </label>
+              <select
+                value={role}
+                onChange={(e) => handleRoleChange(e.target.value)}
+                className="w-full rounded-full bg-indigo-800/50 border border-indigo-600 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="All">All</option>
+                <option value="Batsman">Batsman</option>
+                <option value="Fast all-rounder">Fast-All-Rounder</option>
+                <option value="Spin all-rounder">Spin-All-Rounder</option>
+                <option value="Wicket keeper batsman">
+                  Wicket-keeper-batsman
+                </option>
+                <option value="Spin bowler">Spin Bowler</option>
+                <option value="Fast bowler">Fast Bowler</option>
+              </select>
+            </motion.div>
+          )} */
 }

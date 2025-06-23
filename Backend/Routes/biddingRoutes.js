@@ -1302,6 +1302,7 @@ router.get("/bidding-portal/:auctionId", auth, async (req, res) => {
       bidAmount: auction.bidAmount.amount,
       team: userTeam,
       isPaused: auction.isPaused,
+      status:auction.status,
       biddingStarted: auction.biddingStarted,
       lastSoldPlayer: lastSold || null,
       mostExpensivePlayer: mostExpensive || null,
@@ -1588,11 +1589,124 @@ router.post("/use-rtm/:auctionId", auth, async (req, res) => {
 });
 
 // New route for admin to approve/reject RTM
+// router.post("/rtm-decision/:auctionId", auth, async (req, res) => {
+//   try {
+//     const { auctionId } = req.params;
+//     const { decision } = req.body; // 'approve' or 'reject'
+//     const userId = req.user.id;
+
+//     const auction = await Auction.findById(auctionId)
+//       .populate("biddingHistory.player")
+//       .populate("biddingHistory.team")
+//       .populate("selectedTeams.team")
+//       .populate("selectedTeams.manager");
+
+//     if (!auction) return res.status(404).json({ message: "Auction not found" });
+
+//     // Check if user is admin/creator of auction
+//     if (auction.createdBy.toString() !== userId) {
+//       return res
+//         .status(403)
+//         .json({ message: "Only auction admin can make this decision" });
+//     }
+
+//     if (!auction.pendingRTMRequest) {
+//       return res.status(400).json({ message: "No pending RTM request" });
+//     }
+
+//     const rtmRequest = auction.pendingRTMRequest;
+//     const io = req.app.get("io");
+
+//     if (decision === "approve") {
+//       // Execute the RTM transfer
+//       const { teamId, playerId, bidAmount, fromTeam } = rtmRequest;
+
+//       // Add player to new team and deduct purse
+//       await Team.findByIdAndUpdate(teamId, {
+//         $push: { players: { player: playerId, price: bidAmount } },
+//         $inc: { remaining: -bidAmount, rtmCount: -1 }, // ✅ Decrease RTM count here
+//       });
+
+//       // Mark player as RTM
+//       await Player.findByIdAndUpdate(playerId, {
+//         isRTM: true,
+//       });
+
+//       // Remove player from old team and add back the purse
+//       await Team.findByIdAndUpdate(fromTeam, {
+//         $pull: { players: { player: playerId } },
+//         $inc: { remaining: bidAmount },
+//       });
+
+//       // Update bidding history to reflect new team
+//       auction.biddingHistory = auction.biddingHistory.map((entry) => {
+//         if (entry.player._id.toString() === playerId.toString()) {
+//           return {
+//             ...entry._doc,
+//             team: teamId,
+//           };
+//         }
+//         return entry;
+//       });
+
+//       // ✅ Update RTM count in auction's selectedTeams using findOneAndUpdate
+//       await Auction.findOneAndUpdate(
+//         {
+//           _id: auctionId,
+//           "selectedTeams.team": teamId,
+//         },
+//         {
+//           $inc: { "selectedTeams.$.rtmCount": -1 },
+//         }
+//       );
+
+//       // Clear pending request
+//       auction.pendingRTMRequest = undefined;
+//       await auction.save();
+
+//       // Emit success
+//       io.to(auctionId).emit("rtm:approved", {
+//         message: "RTM approved and executed",
+//         playerId: playerId,
+//         playerName: rtmRequest.playerName,
+//         fromTeam: fromTeam,
+//         toTeam: teamId,
+//       });
+
+//       res.status(200).json({ message: "RTM approved and executed" });
+//     } else {
+//       // Reject the RTM
+//       auction.pendingRTMRequest = undefined;
+//       await auction.save();
+
+//       // Emit rejection
+//       io.to(auctionId).emit("rtm:rejected", {
+//         message: "RTM request rejected",
+//         playerId: rtmRequest.playerId,
+//         playerName: rtmRequest.playerName,
+//         teamId: rtmRequest.teamId,
+//       });
+
+//       res.status(200).json({ message: "RTM request rejected" });
+//     }
+//   } catch (error) {
+//     console.error("RTM decision error:", error);
+//     res.status(500).json({ message: "Internal server error" });
+//   }
+// });
+
+
+// Backend: Enhanced RTM Decision Handler with Better Error Handling
 router.post("/rtm-decision/:auctionId", auth, async (req, res) => {
   try {
     const { auctionId } = req.params;
     const { decision } = req.body; // 'approve' or 'reject'
     const userId = req.user.id;
+
+    console.log("=== RTM DECISION DEBUG ===");
+    console.log("Decision:", decision);
+    console.log("Auction ID:", auctionId);
+    console.log("User ID:", userId);
 
     const auction = await Auction.findById(auctionId)
       .populate("biddingHistory.player")
@@ -1600,30 +1714,44 @@ router.post("/rtm-decision/:auctionId", auth, async (req, res) => {
       .populate("selectedTeams.team")
       .populate("selectedTeams.manager");
 
-    if (!auction) return res.status(404).json({ message: "Auction not found" });
+    if (!auction) {
+      console.log("❌ Auction not found");
+      return res.status(404).json({ message: "Auction not found" });
+    }
 
     // Check if user is admin/creator of auction
     if (auction.createdBy.toString() !== userId) {
+      console.log("❌ Unauthorized user");
       return res
         .status(403)
         .json({ message: "Only auction admin can make this decision" });
     }
 
-    if (!auction.pendingRTMRequest) {
+    if (auction.pendingRTMRequest===null) {
+      console.log("❌ No pending RTM request");
       return res.status(400).json({ message: "No pending RTM request" });
     }
 
     const rtmRequest = auction.pendingRTMRequest;
+    console.log("RTM Request:", rtmRequest);
+    
+
     const io = req.app.get("io");
 
     if (decision === "approve") {
       // Execute the RTM transfer
-      const { teamId, playerId, bidAmount, fromTeam } = rtmRequest;
+      const { teamId, playerId, bidAmount, fromTeam, playerName } = rtmRequest;
+
+      console.log("✅ Approving RTM:");
+      console.log("- Player:", playerName);
+      console.log("- From team:", fromTeam);
+      console.log("- To team:", teamId);
+      console.log("- Amount:", bidAmount);
 
       // Add player to new team and deduct purse
       await Team.findByIdAndUpdate(teamId, {
         $push: { players: { player: playerId, price: bidAmount } },
-        $inc: { remaining: -bidAmount, rtmCount: -1 }, // ✅ Decrease RTM count here
+        $inc: { remaining: -bidAmount, rtmCount: -1 },
       });
 
       // Mark player as RTM
@@ -1648,7 +1776,7 @@ router.post("/rtm-decision/:auctionId", auth, async (req, res) => {
         return entry;
       });
 
-      // ✅ Update RTM count in auction's selectedTeams using findOneAndUpdate
+      // Update RTM count in auction's selectedTeams
       await Auction.findOneAndUpdate(
         {
           _id: auctionId,
@@ -1663,34 +1791,80 @@ router.post("/rtm-decision/:auctionId", auth, async (req, res) => {
       auction.pendingRTMRequest = undefined;
       await auction.save();
 
-      // Emit success
+      // Emit success with enhanced data
       io.to(auctionId).emit("rtm:approved", {
         message: "RTM approved and executed",
         playerId: playerId,
-        playerName: rtmRequest.playerName,
+        playerName: playerName || "Unknown Player", // Fallback
         fromTeam: fromTeam,
         toTeam: teamId,
+        bidAmount: bidAmount,
       });
 
-      res.status(200).json({ message: "RTM approved and executed" });
-    } else {
-      // Reject the RTM
+      console.log("✅ RTM approved and emitted");
+      res.status(200).json({ 
+        message: "RTM approved and executed",
+        playerName: playerName 
+      });
+
+    } else if (decision === "reject") {
+      // Enhanced rejection handling
+      const { teamId, playerId, playerName } = rtmRequest;
+      
+      console.log("❌ Rejecting RTM:");
+      console.log("- Player:", playerName);
+      console.log("- Team:", teamId);
+      console.log("- Player ID:", playerId);
+
+      // Clear pending request first
       auction.pendingRTMRequest = undefined;
       await auction.save();
 
-      // Emit rejection
-      io.to(auctionId).emit("rtm:rejected", {
+      // Get additional player info if playerName is missing
+      let finalPlayerName = playerName;
+      if (!finalPlayerName) {
+        try {
+          const player = await Player.findById(playerId);
+          finalPlayerName = player?.name || "Unknown Player";
+          console.log("Retrieved player name from DB:", finalPlayerName);
+        } catch (error) {
+          console.log("Error retrieving player name:", error);
+          finalPlayerName = "Unknown Player";
+        }
+      }
+
+      // Emit rejection with enhanced data
+      const rejectionPayload = {
         message: "RTM request rejected",
-        playerId: rtmRequest.playerId,
-        playerName: rtmRequest.playerName,
-        teamId: rtmRequest.teamId,
+        playerId: playerId,
+        playerName: finalPlayerName,
+        teamId: teamId,
+        // Add these for better debugging
+        originalPlayerName: playerName,
+        retrievedPlayerName: finalPlayerName,
+      };
+
+      console.log("Emitting rejection payload:", rejectionPayload);
+      
+      io.to(auctionId).emit("rtm:rejected", rejectionPayload);
+
+      console.log("✅ RTM rejection emitted");
+      res.status(200).json({ 
+        message: "RTM request rejected",
+        playerName: finalPlayerName 
       });
 
-      res.status(200).json({ message: "RTM request rejected" });
+    } else {
+      console.log("❌ Invalid decision");
+      return res.status(400).json({ message: "Invalid decision. Use 'approve' or 'reject'" });
     }
+
   } catch (error) {
     console.error("RTM decision error:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ 
+      message: "Internal server error",
+      error: error.message 
+    });
   }
 });
 

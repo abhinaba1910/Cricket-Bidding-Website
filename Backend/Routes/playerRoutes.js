@@ -307,6 +307,43 @@ router.put(
         bio,
       } = req.body;
 
+      // 🔍 Check if availability is being changed and if player is in any team
+      if (availability && availability !== player.availability) {
+        
+        // Check if player is in any team's players array
+        const teamWithPlayer = await Team.findOne({
+          'players.player': playerId
+        });
+
+        if (teamWithPlayer) {
+          // If player is in a team, restrict certain availability changes
+          const currentAvailability = player.availability;
+          const newAvailability = availability;
+
+          // Define restricted transitions when player is in a team
+          const restrictedTransitions = [
+            { from: 'Sold', to: 'Available' },
+            { from: 'Sold', to: 'Unsold' },
+            { from: 'Retained', to: 'Available' },
+            { from: 'Retained', to: 'Unsold' }
+          ];
+
+          const isRestrictedTransition = restrictedTransitions.some(
+            transition => transition.from === currentAvailability && transition.to === newAvailability
+          );
+
+          if (isRestrictedTransition) {
+            return res.status(400).json({ 
+              error: `Cannot change availability from "${currentAvailability}" to "${newAvailability}" because player is currently in team "${teamWithPlayer.teamName}". Please remove player from team first.`,
+              teamInfo: {
+                teamName: teamWithPlayer.teamName,
+                teamId: teamWithPlayer._id
+              }
+            });
+          }
+        }
+      }
+
       const updateFields = {
         name,
         country,
@@ -317,7 +354,7 @@ router.put(
         basePrice,
         grade,
         points,
-        availability,
+        availability, // ✅ Now availability can be updated
         playerId: customPlayerId,
         matchesPlayed,
         runs,
@@ -369,18 +406,148 @@ router.put(
   }
 );
 
+// router.put(
+//   "/update-player/:id",
+//   authMiddleware,
+//   upload.single("photoFile"),
+//   async (req, res) => {
+//     try {
+//       const playerId = req.params.id;
+//       const player = await Player.findById(playerId);
+//       if (!player) {
+//         return res.status(404).json({ error: "Player not found" });
+//       }
+
+//       if (player.createdBy.toString() !== req.user.id) {
+//         return res.status(403).json({ error: "Unauthorized to edit this player" });
+//       }
+
+//       const {
+//         name,
+//         country,
+//         dob,
+//         role,
+//         battingStyle,
+//         bowlingStyle,
+//         basePrice,
+//         grade,
+//         points,
+//         availability,
+//         playerId: customPlayerId,
+//         matchesPlayed,
+//         runs,
+//         wickets,
+//         strikeRate,
+//         previousTeams,
+//         isCapped,
+//         bio,
+//       } = req.body;
+
+//       const updateFields = {
+//         name,
+//         country,
+//         dob,
+//         role,
+//         battingStyle,
+//         bowlingStyle,
+//         basePrice,
+//         grade,
+//         points,
+//         availability,
+//         playerId: customPlayerId,
+//         matchesPlayed,
+//         runs,
+//         wickets,
+//         strikeRate,
+//         previousTeams,
+//         isCapped: isCapped === "true",
+//         bio,
+//       };
+
+//       // ➕ Add performanceStats handling
+//       const parseStats = (prefix) => {
+//         const statKeys = Object.keys(req.body).filter((key) =>
+//           key.startsWith(`performanceStats.${prefix}.`)
+//         );
+//         if (statKeys.length === 0) return undefined;
+//         const result = {};
+//         statKeys.forEach((key) => {
+//           const shortKey = key.replace(`performanceStats.${prefix}.`, "");
+//           const val = req.body[key];
+//           result[shortKey] = isNaN(val) ? val : Number(val);
+//         });
+//         return result;
+//       };
+
+//       const battingStats = parseStats("batting");
+//       const bowlingStats = parseStats("bowling");
+//       const allRounderStats = parseStats("allRounder");
+
+//       updateFields.performanceStats = {};
+//       if (battingStats) updateFields.performanceStats.batting = battingStats;
+//       if (bowlingStats) updateFields.performanceStats.bowling = bowlingStats;
+//       if (allRounderStats) updateFields.performanceStats.allRounder = allRounderStats;
+
+//       // 📷 Handle image
+//       if (req.file?.path) {
+//         updateFields.playerPic = req.file.path;
+//       }
+
+//       const updated = await Player.findByIdAndUpdate(playerId, updateFields, {
+//         new: true,
+//       });
+
+//       res.json(updated);
+//     } catch (err) {
+//       console.error("Update player error:", err);
+//       res.status(500).json({ error: "Server error while updating player" });
+//     }
+//   }
+// );
 
 
-router.delete('/delete-player/:id', async (req, res) => {
+
+router.delete('/delete-player/:id', authMiddleware, async (req, res) => {
   const { id } = req.params;
 
   try {
+    // Check if player exists
+    const player = await Player.findById(id);
+    if (!player) {
+      return res.status(404).json({ error: 'Player not found' });
+    }
+
+    // Check authorization
+    if (player.createdBy.toString() !== req.user.id) {
+      return res.status(403).json({ error: "Unauthorized to delete this player" });
+    }
+
+    
+    const teamWithPlayer = await Team.findOne({
+      'players.player': id
+    });
+
+    if (teamWithPlayer) {
+      return res.status(400).json({ 
+        error: `Cannot delete player because they are currently in team "${teamWithPlayer.teamName}". Please remove player from team first.`,
+        teamInfo: {
+          teamName: teamWithPlayer.teamName,
+          teamId: teamWithPlayer._id,
+          playerName: player.name
+        }
+      });
+    }
+
+    // If player is not in any team, proceed with deletion
     const deleted = await Player.findByIdAndDelete(id);
     if (!deleted) {
       return res.status(404).json({ error: 'Player not found' });
     }
 
-    res.status(204).end(); // No content
+    res.status(200).json({ 
+      message: 'Player deleted successfully',
+      playerName: deleted.name 
+    });
   } catch (err) {
     console.error("Error deleting player:", err);
     res.status(500).json({ error: 'Failed to delete player' });
