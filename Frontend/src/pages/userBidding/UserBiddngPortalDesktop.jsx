@@ -608,7 +608,6 @@ export default function UserBiddingDashboardDesktop() {
             </p>
           </motion.div>
         ))}
-
         {/* ─ Current Player Details ─ */}
         <motion.div
           onClick={openPlayerModal}
