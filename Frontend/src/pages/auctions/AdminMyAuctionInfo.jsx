@@ -16,32 +16,48 @@
 //   completed: { color: "bg-gray-100 text-gray-800" },
 // };
 
+// // Convert UTC date + time to IST Date object
+// const convertUTCtoIST = (utcString) => {
+//   const formatter = new Intl.DateTimeFormat("en-IN", {
+//     timeZone: "Asia/Kolkata",
+//     hour12: false,
+//     year: "numeric",
+//     month: "2-digit",
+//     day: "2-digit",
+//     hour: "2-digit",
+//     minute: "2-digit",
+//   });
+//   const parts = formatter.formatToParts(new Date(utcString));
+//   const values = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+//   return new Date(
+//     `${values.year}-${values.month}-${values.day}T${values.hour}:${values.minute}:00`
+//   );
+// };
+
 // export default function AuctionsInfo() {
 //   const [activeTab, setActiveTab] = useState("upcoming");
 //   const [search, setSearch] = useState("");
 //   const [auctions, setAuctions] = useState([]);
-//   const [joinedAuctions, setJoinedAuctions] = useState({}); // Track which auctions have been joined (started)
-
+//   const [joinedAuctions, setJoinedAuctions] = useState({});
 //   const navigate = useNavigate();
 
-//   // Fetch auctions from backend and set state
 //   const fetchAuctions = async () => {
 //     try {
 //       const res = await Api.get("/get-auction");
 //       const data = res.data.auctions;
-//       console.log(data);
 
-//       // Normalize auction data: parse start time, no countdown logic here (backend handles it)
-//       // const normalized = data.map((a) => ({
-//       //   ...a,
-//       //   startTime: new Date(`${a.date}T${a.time}:00`), // add seconds for correct Date
-//       // }));
-//       const normalized = data.map((a) => ({
-//         ...a,
-//         startTime: new Date(`${a.date} ${a.time}`), // ✅ local time
-//       }));
+//       const updated = data.map((a) => {
+//         const startTime = convertUTCtoIST(a.startDate);
+//         const endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // 1 hour window
 
-//       setAuctions(normalized);
+//         return {
+//           ...a,
+//           startTime,
+//           endTime,
+//         };
+//       });
+
+//       setAuctions(updated);
 //     } catch (err) {
 //       console.error("Error fetching auctions:", err);
 //     }
@@ -49,57 +65,43 @@
 
 //   useEffect(() => {
 //     fetchAuctions();
-
-//     // Poll backend every 10 seconds for fresh data and status/timer updates
-//     const interval = setInterval(fetchAuctions, 200);
+//     const interval = setInterval(fetchAuctions, 30000);
 //     return () => clearInterval(interval);
 //   }, []);
 
-//   // Handle starting auction (host clicks Join Auction)
 //   const handleStartAuction = async (id, status) => {
 //     if (status !== "upcoming") return;
-
 //     try {
 //       const res = await Api.patch(`/start-auction/${id}`);
-
 //       if (res.data.status === "live") {
-//         // Update auction status locally to live and clear countdown timer
 //         setAuctions((prev) =>
-//           prev.map((a) =>
-//             a.id === id ? { ...a, status: "live", countdownRemaining: 0 } : a
-//           )
+//           prev.map((a) => (a.id === id ? { ...a, status: "live" } : a))
 //         );
 //         setJoinedAuctions((prev) => ({ ...prev, [id]: true }));
-
-//         // Navigate to auction dashboard or wherever the host should go
 //         navigate(`/admin/admin-bidding-dashboard/${id}`);
 //       }
 //     } catch (err) {
-//       console.error(
-//         "Error starting auction:",
-//         err.response?.data || err.message
-//       );
+//       console.error("Error starting auction:", err);
 //       alert(err.response?.data?.error || "Error starting auction");
 //     }
 //   };
 
-//   // Format countdown seconds into MM:SS
-//   const formatCountdown = (seconds) => {
-//     if (seconds == null || seconds <= 0) return "00:00";
-//     const m = Math.floor(seconds / 60);
-//     const s = seconds % 60;
-//     return `${m}:${s.toString().padStart(2, "0")}`;
-//   };
-
-//   // Format auction time to readable string (e.g., "2:00 PM")
-//   const formatTime = (timeStr) =>
-//     new Date(`1970-01-01T${timeStr}:00`).toLocaleTimeString([], {
+//   const formatISTTime = (dateObj) =>
+//     dateObj.toLocaleString("en-IN", {
+//       timeZone: "Asia/Kolkata",
 //       hour: "2-digit",
 //       minute: "2-digit",
 //       hour12: true,
 //     });
 
-//   // Filter auctions by active tab and search term
+//   const formatISTDate = (dateObj) =>
+//     dateObj.toLocaleDateString("en-IN", {
+//       timeZone: "Asia/Kolkata",
+//       day: "2-digit",
+//       month: "2-digit",
+//       year: "numeric",
+//     });
+
 //   const filteredAuctions = useMemo(() => {
 //     return auctions
 //       .filter((a) => a.status === activeTab)
@@ -114,7 +116,6 @@
 
 //   return (
 //     <div className="min-h-screen p-4 md:p-8 pb-16 bg-gray-50">
-//       {/* Header and Search */}
 //       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 space-y-4 md:space-y-0">
 //         <h1 className="text-2xl font-bold text-gray-900">My Auctions</h1>
 //         <div className="flex space-x-2 w-full md:w-auto">
@@ -137,7 +138,6 @@
 //         </div>
 //       </div>
 
-//       {/* Tabs */}
 //       <div className="flex space-x-4 mb-6 overflow-x-auto">
 //         {TABS.map((tab) => (
 //           <button
@@ -154,23 +154,11 @@
 //         ))}
 //       </div>
 
-//       {/* Auctions List */}
 //       {filteredAuctions.length > 0 ? (
 //         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 //           {filteredAuctions.map((a) => {
-//             // Determine if Join Auction button should be shown:
-//             // Only if auction is upcoming, current time is within start time + 60 min window, and timer > 0
-//             const startTime = a.startTime;
-//             const deadline = new Date(startTime.getTime() + 60 * 60 * 1000);
-//             const canJoin =
-//               a.status === "upcoming" &&
-//               now >= startTime &&
-//               now <= deadline &&
-//               a.countdownRemaining > 0;
-//             console.log("startTime:", startTime);
-//             console.log("now:", now);
-//             console.log("deadline:", deadline);
-//             console.log("remaining:", a.countdownRemaining);
+//             const canStart =
+//               a.status === "upcoming" && now >= a.startTime && now <= a.endTime;
 
 //             return (
 //               <div
@@ -196,22 +184,16 @@
 //                   </div>
 //                   <p className="text-sm text-gray-600 mb-2">{a.description}</p>
 //                   <p className="text-sm text-gray-500">
-//                     {a.date} at {formatTime(a.time)}
+//                     {formatISTDate(a.startTime)} at {formatISTTime(a.startTime)}{" "}
+//                     (IST)
 //                   </p>
 
 //                   <p className="mt-1 text-sm text-gray-600">
 //                     Join Code:{" "}
 //                     <span className="font-semibold">{a.joinCode}</span>
 //                   </p>
-//                   {/* Show countdown timer if upcoming and countdownRemaining present */}
-//                   {a.status === "upcoming" && a.countdownRemaining > 0 && (
-//                     <p className="text-sm text-blue-600 font-semibold mt-1">
-//                       Starts in: {formatCountdown(a.countdownRemaining)}
-//                     </p>
-//                   )}
 
-//                   {/* Join Auction button */}
-//                   {canJoin && !joinedAuctions[a.id] && (
+//                   {canStart && !joinedAuctions[a.id] && (
 //                     <button
 //                       onClick={() => handleStartAuction(a.id, a.status)}
 //                       className="mt-2 bg-green-600 text-white px-4 py-2 rounded"
@@ -220,7 +202,6 @@
 //                     </button>
 //                   )}
 
-//                   {/* Return to Auction button if auction is live or already joined */}
 //                   {(a.status === "live" || joinedAuctions[a.id]) && (
 //                     <button
 //                       onClick={() =>
@@ -231,19 +212,18 @@
 //                       Return to Auction
 //                     </button>
 //                   )}
+
 //                   <Link
-//                     to={`/edit-auction/${a.id} `}
-//                     className="inline-flex m-2  items-center bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-[9px] rounded text-sm"
+//                     to={`/edit-auction/${a.id}`}
+//                     className="inline-flex m-2 items-center bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-[9px] rounded text-sm"
 //                   >
 //                     <FiEdit className="mr-1" size={14} /> Edit
 //                   </Link>
 
-//                   {/* Started label for live auctions */}
 //                   {a.status === "live" && (
 //                     <p className="mt-1 text-green-700 font-semibold">Started</p>
 //                   )}
 
-//                   {/* Completed label for completed auctions */}
 //                   {a.status === "completed" && (
 //                     <p className="mt-1 text-gray-500 font-semibold">
 //                       Completed
@@ -253,22 +233,25 @@
 //               </div>
 //             );
 //           })}
-
 //         </div>
 //       ) : (
 //         <p className="text-center text-gray-500">No auctions found.</p>
 //       )}
-//       <MobileStickyNav/>
+//       <MobileStickyNav />
 //     </div>
-
 //   );
 // }
 
+
+
+
+
 import React, { useEffect, useMemo, useState } from "react";
-import { FiSearch, FiPlus, FiEdit } from "react-icons/fi";
+import { FiSearch, FiPlus, FiEdit, FiClock } from "react-icons/fi";
 import { Link, useNavigate } from "react-router-dom";
 import MobileStickyNav from "../../components/layout/MobileStickyNav";
 import Api from "../../userManagement/Api";
+import io from "socket.io-client";
 
 const TABS = [
   { key: "upcoming", label: "Upcoming" },
@@ -294,8 +277,64 @@ const convertUTCtoIST = (utcString) => {
     minute: "2-digit",
   });
   const parts = formatter.formatToParts(new Date(utcString));
-  const values = Object.fromEntries(parts.map(p => [p.type, p.value]));
-  return new Date(`${values.year}-${values.month}-${values.day}T${values.hour}:${values.minute}:00`);
+  const values = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+  return new Date(
+    `${values.year}-${values.month}-${values.day}T${values.hour}:${values.minute}:00`
+  );
+};
+
+// Timer component for displaying countdown
+const AuctionTimer = ({ auction, onTimerExpired }) => {
+  const [timeRemaining, setTimeRemaining] = useState(0);
+  const [isActive, setIsActive] = useState(false);
+
+  useEffect(() => {
+    if (!auction.countdownStartedAt || auction.status !== "upcoming") {
+      setIsActive(false);
+      return;
+    }
+
+    const startTime = new Date(auction.startDate);
+    const endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // 1 hour window
+    const now = new Date();
+
+    if (now >= startTime && now <= endTime) {
+      setIsActive(true);
+      const remaining = endTime.getTime() - now.getTime();
+      setTimeRemaining(Math.max(0, remaining));
+    }
+  }, [auction]);
+
+  useEffect(() => {
+    if (!isActive) return;
+
+    const interval = setInterval(() => {
+      setTimeRemaining((prev) => {
+        const newTime = Math.max(0, prev - 1000);
+        if (newTime === 0) {
+          setIsActive(false);
+          onTimerExpired(auction.id);
+        }
+        return newTime;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isActive, auction.id, onTimerExpired]);
+
+  if (!isActive || timeRemaining <= 0) return null;
+
+  const minutes = Math.floor(timeRemaining / 60000);
+  const seconds = Math.floor((timeRemaining % 60000) / 1000);
+
+  return (
+    <div className="flex items-center mt-2 text-orange-600">
+      <FiClock className="mr-1" size={16} />
+      <span className="text-sm font-semibold">
+        Time to start: {minutes}m {seconds}s
+      </span>
+    </div>
+  );
 };
 
 export default function AuctionsInfo() {
@@ -303,7 +342,56 @@ export default function AuctionsInfo() {
   const [search, setSearch] = useState("");
   const [auctions, setAuctions] = useState([]);
   const [joinedAuctions, setJoinedAuctions] = useState({});
+  const [socket, setSocket] = useState(null);
   const navigate = useNavigate();
+
+  // Initialize socket connection
+  useEffect(() => {
+    const socketInstance = io("http://localhost:6001");
+    setSocket(socketInstance);
+
+    // Listen for auction timer events
+    socketInstance.on("auction:timer-started", (data) => {
+      setAuctions((prev) =>
+        prev.map((a) =>
+          a.id === data.auctionId
+            ? { ...a, countdownStartedAt: data.countdownStartedAt }
+            : a
+        )
+      );
+    });
+
+    // Listen for auto-completion events
+    socketInstance.on("auction:auto-completed", (data) => {
+      setAuctions((prev) =>
+        prev.map((a) =>
+          a.id === data.auctionId ? { ...a, status: "completed" } : a
+        )
+      );
+      
+      // Show notification to user
+      if (data.message) {
+        alert(data.message);
+      }
+    });
+
+    // Listen for auction updates
+    socketInstance.on("auction:update", (data) => {
+      if (data.type === "auction-started") {
+        setAuctions((prev) =>
+          prev.map((a) =>
+            a.id === data.payload.auctionId
+              ? { ...a, status: data.payload.status }
+              : a
+          )
+        );
+      }
+    });
+
+    return () => {
+      socketInstance.disconnect();
+    };
+  }, []);
 
   const fetchAuctions = async () => {
     try {
@@ -318,10 +406,18 @@ export default function AuctionsInfo() {
           ...a,
           startTime,
           endTime,
+          countdownStartedAt: a.countdownStartedAt ? new Date(a.countdownStartedAt) : null,
         };
       });
 
       setAuctions(updated);
+
+      // Join socket rooms for all auctions
+      if (socket) {
+        updated.forEach((auction) => {
+          socket.emit("join-auction", auction.id);
+        });
+      }
     } catch (err) {
       console.error("Error fetching auctions:", err);
     }
@@ -331,7 +427,7 @@ export default function AuctionsInfo() {
     fetchAuctions();
     const interval = setInterval(fetchAuctions, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [socket]);
 
   const handleStartAuction = async (id, status) => {
     if (status !== "upcoming") return;
@@ -348,6 +444,14 @@ export default function AuctionsInfo() {
       console.error("Error starting auction:", err);
       alert(err.response?.data?.error || "Error starting auction");
     }
+  };
+
+  const handleTimerExpired = (auctionId) => {
+    setAuctions((prev) =>
+      prev.map((a) =>
+        a.id === auctionId ? { ...a, status: "completed" } : a
+      )
+    );
   };
 
   const formatISTTime = (dateObj) =>
@@ -423,6 +527,7 @@ export default function AuctionsInfo() {
           {filteredAuctions.map((a) => {
             const canStart =
               a.status === "upcoming" && now >= a.startTime && now <= a.endTime;
+            const hasExpired = a.status === "upcoming" && now > a.endTime;
 
             return (
               <div
@@ -457,10 +562,25 @@ export default function AuctionsInfo() {
                     <span className="font-semibold">{a.joinCode}</span>
                   </p>
 
-                  {canStart && !joinedAuctions[a.id] && (
+                  {/* Timer Display */}
+                  {a.status === "upcoming" && a.countdownStartedAt && (
+                    <AuctionTimer 
+                      auction={a} 
+                      onTimerExpired={handleTimerExpired}
+                    />
+                  )}
+
+                  {/* Expired Notice */}
+                  {hasExpired && (
+                    <div className="mt-2 text-red-600 text-sm font-semibold">
+                      ⚠️ Auction window expired - will be marked as completed
+                    </div>
+                  )}
+
+                  {canStart && !joinedAuctions[a.id] && !hasExpired && (
                     <button
                       onClick={() => handleStartAuction(a.id, a.status)}
-                      className="mt-2 bg-green-600 text-white px-4 py-2 rounded"
+                      className="mt-2 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors"
                     >
                       Start Auction
                     </button>
@@ -471,7 +591,7 @@ export default function AuctionsInfo() {
                       onClick={() =>
                         navigate(`/admin/admin-bidding-dashboard/${a.id}`)
                       }
-                      className="mt-2 bg-green-700 text-white px-4 py-2 rounded"
+                      className="mt-2 bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800 transition-colors"
                     >
                       Return to Auction
                     </button>
@@ -479,7 +599,7 @@ export default function AuctionsInfo() {
 
                   <Link
                     to={`/edit-auction/${a.id}`}
-                    className="inline-flex m-2 items-center bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-[9px] rounded text-sm"
+                    className="inline-flex m-2 items-center bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-[9px] rounded text-sm transition-colors"
                   >
                     <FiEdit className="mr-1" size={14} /> Edit
                   </Link>
@@ -489,9 +609,14 @@ export default function AuctionsInfo() {
                   )}
 
                   {a.status === "completed" && (
-                    <p className="mt-1 text-gray-500 font-semibold">
-                      Completed
-                    </p>
+                    <div className="mt-1">
+                      <p className="text-gray-500 font-semibold">Completed</p>
+                      {a.countdownStartedAt && (
+                        <p className="text-xs text-gray-400">
+                          Auto-completed due to timeout
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>

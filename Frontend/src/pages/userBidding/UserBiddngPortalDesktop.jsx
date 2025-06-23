@@ -196,6 +196,15 @@ export default function UserBiddingDashboardDesktop() {
       } else {
         setAvatarUrl(null);
       }
+      // Sync RTM pending status if applicable
+      if (
+        data.pendingRTMRequest &&
+        data.pendingRTMRequest.teamId === userTeamIdRef.current
+      ) {
+        setRtmRequestPending(true);
+      } else {
+        setRtmRequestPending(false);
+      }
 
       // RTM count
       setRtmCount(data.team?.rtmCount || 0);
@@ -323,39 +332,6 @@ export default function UserBiddingDashboardDesktop() {
     }
   };
 
-  // Handle RTM
-  // const handleUseRTM = async () => {
-  //   if (rtmCount <= 0) {
-  //     toast.error("No RTMs left");
-  //     return;
-  //   }
-
-  //   if (rtmRequestPending) {
-  //     toast.info("RTM request already pending approval");
-  //     return;
-  //   }
-
-  //   const myTeamId = auctionData?.team?.teamId;
-  //   try {
-  //     const response = await Api.post(`/use-rtm/${id}`, {
-  //       teamId: myTeamId,
-  //     });
-
-  //     if (response.data.status === "pending") {
-  //       setRtmRequestPending(true);
-  //       toast.success("RTM request sent for admin approval!");
-  //     } else {
-  //       toast.success("RTM successful!");
-  //       setRtmCount((prev) => prev - 1);
-  //     }
-
-  //     fetchAuctionData();
-  //   } catch (err) {
-  //     console.error("RTM error:", err);
-  //     toast.error(err.response?.data?.message || "Failed to use RTM");
-  //   }
-  // };
-
   const handleUseRTM = async () => {
     console.log("RTM Debug - Starting:");
     console.log("- RTM Count:", rtmCount);
@@ -363,49 +339,49 @@ export default function UserBiddingDashboardDesktop() {
     console.log("- Auction Data:", auctionData);
     console.log("- Team ID:", auctionData?.team?.teamId);
     console.log("- Auction ID:", id);
-  
+
     if (rtmCount <= 0) {
       console.log("❌ No RTMs left");
       toast.error("No RTMs left");
       return;
     }
-  
+
     if (rtmRequestPending) {
       console.log("❌ RTM request already pending");
-      toast.info("RTM request already pending approval");
+      toast.error("RTM request already pending approval");
       return;
     }
-  
+
     const myTeamId = auctionData?.team?.teamId;
-    
+
     if (!myTeamId) {
       console.log("❌ No team ID found");
       toast.error("Team ID not found");
       return;
     }
-  
+
     console.log("✅ Sending RTM request...");
-    
+
     try {
       const requestPayload = {
         teamId: myTeamId,
       };
-      
+
       console.log("Request payload:", requestPayload);
       console.log("Request URL:", `/use-rtm/${id}`);
-  
+
       const response = await Api.post(`/use-rtm/${id}`, requestPayload);
-      
+
       console.log("✅ RTM Response:", response.data);
-  
+
       if (response.data.status === "pending") {
-        setRtmRequestPending(true);
+        // setRtmRequestPending(true);
         toast.success("RTM request sent for admin approval!");
       } else {
         toast.success("RTM successful!");
         setRtmCount((prev) => prev - 1);
       }
-  
+
       fetchAuctionData();
     } catch (err) {
       console.error("❌ RTM error:", err);
@@ -423,8 +399,8 @@ export default function UserBiddingDashboardDesktop() {
       return;
     }
     // ⚠️ Specify your backend URL here:
-    // const socket = io("http://localhost:6001", {
-      const socket = io("https://cricket-bidding-website-backend.onrender.com", {
+    const socket = io("http://localhost:6001", {
+      // const socket = io("https://cricket-bidding-website-backend.onrender.com", {
 
       auth: { token },
       // only websocket transport (optional but more reliable)
@@ -501,100 +477,56 @@ export default function UserBiddingDashboardDesktop() {
       console.log("rtm:request", payload);
       // If this is our team's request, show pending status
       if (payload.teamId === auctionData?.team?.teamId) {
-        setRtmRequestPending(true);
-        toast.info("RTM request sent, waiting for admin approval...");
+        // setRtmRequestPending(true);
+        toast.success("RTM request sent, waiting for admin approval...");
       }
     });
 
     // NEW: Listen for RTM approvals
     socket.on("rtm:approved", (payload) => {
       console.log("rtm:approved", payload);
-      if (payload.toTeam === auctionData?.team?.teamId) {
+      if (payload.toTeam === userTeamIdRef.current) {
         setRtmRequestPending(false);
         setRtmCount((prev) => prev - 1);
         toast.success(`RTM approved! ${payload.playerName} added to your team`);
       }
+
       fetchAuctionData();
     });
 
-    // NEW: Listen for RTM rejections
     socket.on("rtm:rejected", (payload) => {
       console.log("rtm:rejected", payload);
-      if (payload.teamId === auctionData?.team?.teamId) {
+
+      const myTeamId = userTeamIdRef.current;
+      if (!myTeamId) {
+        console.warn("userTeamIdRef.current not ready yet");
+        return;
+      }
+
+      if (payload.teamId === myTeamId) {
+        console.log("✅ RTM rejected for my team, clearing state");
         setRtmRequestPending(false);
         toast.error(`RTM rejected for ${payload.playerName}`);
       }
+      fetchAuctionData()
     });
+
     socket.on("auction:paused", () => {
       console.log("auction:paused");
-      toast.info("Auction paused");
+      toast.success("Auction paused");
     });
     socket.on("auction:resumed", () => {
       console.log("auction:resumed");
-      toast.info("Auction resumed");
+      toast.success("Auction resumed");
     });
     socket.on("auction:ended", () => {
       console.log("auction:ended");
-      toast.info("Auction ended");
+      toast.success("Auction ended");
     });
     socket.on("bidding:started", (payload) => {
       console.log("bidding:started", payload);
       fetchAuctionData();
     });
-
-    // In case backend emits other specific events:
-    //     socket.on("bid:updated", (payload) => {
-    //       console.log("Received bid:updated:", payload);
-    //       fetchAuctionData();
-    //       if (payload.newBidAmount) {
-    //         toast.success(`New bid: ₹${payload.amount.toLocaleString()}`);
-    //       }
-    //     });
-    //     socket.on("bid:placed", (payload) => {
-    //       console.log("Received bid:placed:", payload);
-    //       fetchAuctionData();
-    //       if (payload.amount) {
-    //         toast.success(`New bid: ₹${payload.amount.toLocaleString()}`);
-    //       }
-    //     });
-    // socket.on("player:sold", (payload) => {
-    //   console.log("Received player:sold", payload);
-    //   if (userTeamId) {
-    //     if (payload.soldTo === userTeamId) {
-    //       setEmoteToPlay("BidWon");
-    //     } else {
-    //       setEmoteToPlay("LostBid");
-    //     }
-    //     if (emoteTimeoutRef.current) {
-    //       clearTimeout(emoteTimeoutRef.current);
-    //     }
-    //     emoteTimeoutRef.current = setTimeout(() => {
-    //       setEmoteToPlay(null);
-    //       emoteTimeoutRef.current = null;
-    //     }, 3000);
-    //   }
-    //   fetchAuctionData();
-    //   toast.success(`Sold for ₹${payload.amount.toLocaleString()}`);
-    // });
-
-    //     socket.on("player:rtm", (payload) => {
-    //       console.log("Received player:rtm:", payload);
-    //       fetchAuctionData();
-    //       toast.success("RTM event occurred");
-    //     });
-    //     socket.on("auction:paused", () => {
-    //       console.log("Received auction:paused");
-    //       toast.info("Auction paused");
-    //     });
-    //     socket.on("auction:resumed", () => {
-    //       console.log("Received auction:resumed");
-    //       toast.info("Auction resumed");
-    //     });
-    //     socket.on("auction:ended", () => {
-    //       console.log("Received auction:ended");
-    //       toast.info("Auction ended");
-    //       navigate("/admin-auction-info");
-    //     });
 
     return () => {
       if (socketRef.current) {
@@ -846,109 +778,6 @@ export default function UserBiddingDashboardDesktop() {
           )}
         </motion.div>
       </div>
-
-      {/* {showModal && selectedPlayer && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-md"
-          onClick={closePlayerModal}
-        >
-          <div
-            className="relative w-[90%] max-w-xl rounded-3xl bg-gradient-to-tr from-[#1e1e2f] via-[#2a2a3b] to-[#1e1e2f] p-6 shadow-[0_0_30px_rgba(0,0,0,0.8)] border border-gray-700 text-white"
-            onClick={(e) => e.stopPropagation()}
-          >
-
-            <button
-              className="absolute top-4 right-5 text-gray-400 hover:text-red-500 text-3xl font-bold transition-all duration-200"
-              onClick={closePlayerModal}
-            >
-              &times;
-            </button>
-
-
-            <div className="text-center">
-              <img
-                src={selectedPlayer.playerPic}
-                alt={selectedPlayer.name}
-                className="mx-auto w-32 h-32 object-cover rounded-full border-4 border-emerald-400 shadow-lg mb-4"
-              />
-              <h2 className="text-3xl font-bold tracking-wide text-emerald-300">
-                {selectedPlayer.name}
-              </h2>
-              <p className="text-sm italic text-gray-400 uppercase tracking-wider mt-1">
-                {selectedPlayer.role}
-              </p>
-            </div>
-
-
-            <div className="mt-5 border-t border-gray-600 opacity-40" />
-
-            <div className="mt-6 grid grid-cols-2 gap-x-6 gap-y-4 text-sm font-light">
-              <div>
-                <span className="block text-gray-400 text-xs mb-1">
-                  Batting Style
-                </span>
-                <span className="text-white font-medium">
-                  {selectedPlayer.battingStyle}
-                </span>
-              </div>
-              <div>
-                <span className="block text-gray-400 text-xs mb-1">
-                  Bowling Style
-                </span>
-                <span className="text-white font-medium">
-                  {selectedPlayer.bowlingStyle}
-                </span>
-              </div>
-              <div>
-                <span className="block text-gray-400 text-xs mb-1">
-                  Base Price
-                </span>
-                <span className="text-emerald-400 font-semibold">
-                  ₹{selectedPlayer.basePrice?.toLocaleString()}
-                </span>
-              </div>
-              <div>
-                <span className="block text-gray-400 text-xs mb-1">
-                  Nationality
-                </span>
-                <span className="text-white font-medium">
-                  {selectedPlayer.nationality}
-                </span>
-              </div>
-              <div>
-                <span className="block text-gray-400 text-xs mb-1">Age</span>
-                <span className="text-white font-medium">
-                  {selectedPlayer.age}
-                </span>
-              </div>
-              <div>
-                <span className="block text-gray-400 text-xs mb-1">
-                  Matches Played
-                </span>
-                <span className="text-white font-medium">
-                  {selectedPlayer.matchesPlayed}
-                </span>
-              </div>
-              <div>
-                <span className="block text-gray-400 text-xs mb-1">
-                  Runs Scored
-                </span>
-                <span className="text-white font-medium">
-                  {selectedPlayer.runs}
-                </span>
-              </div>
-              <div>
-                <span className="block text-gray-400 text-xs mb-1">
-                  Wickets Taken
-                </span>
-                <span className="text-white font-medium">
-                  {selectedPlayer.wickets}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )} */}
       {showModal && selectedPlayer && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-md px-4 py-6"

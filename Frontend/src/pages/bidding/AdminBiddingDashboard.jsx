@@ -68,8 +68,8 @@ export default function AdminBiddingDashboard() {
       console.warn("No auth token found. Cannot connect socket.");
       return;
     }
-    const SOCKET_SERVER_URL = "https://cricket-bidding-website-backend.onrender.com"; // ← replace with your real URL
-    // const SOCKET_SERVER_URL = "http://localhost:6001";
+    // const SOCKET_SERVER_URL = "https://cricket-bidding-website-backend.onrender.com"; // ← replace with your real URL
+    const SOCKET_SERVER_URL = "http://localhost:6001";
     const socket = io(SOCKET_SERVER_URL, {
       auth: { token },
       transports: ["websocket"], // enforce WS transport for reliability
@@ -234,18 +234,18 @@ export default function AdminBiddingDashboard() {
     // 5. Auction resumed
     socket.on("auction:resumed", (payload) => {
       console.log("Received auction:resumed", payload);
-      toast.info("Auction resumed");
+      toast.success("Auction resumed");
       setIsPaused(false);
     });
     // 6. Pending pause
     socket.on("auction:pause-pending", (payload) => {
       console.log("Received auction:pause-pending", payload);
-      toast.info("Auction will pause after current player is sold");
+      toast.success("Auction will pause after current player is sold");
     });
     // 7. Auction ended
     socket.on("auction:ended", (payload) => {
       console.log("Received auction:ended", payload);
-      toast.info("Auction ended");
+      toast.success("Auction ended");
       setStatus("completed");
       setBiddingStarted(false);
       setIsPaused(true);
@@ -315,12 +315,12 @@ export default function AdminBiddingDashboard() {
     });
 
     // NEW: Listen for RTM requests (for admin approval)
+    // ✅ Only show popup on new socket event
     socket.on("rtm:request", (payload) => {
       console.log("Received RTM request", payload);
       setPendingRTMRequest(payload);
-      setRTMRequest({ ...data });
-      setShowRTMPopup(true);
-      toast.info(
+      setShowRTMPopup(true); // 👈 Show only here
+      toast.success(
         `RTM request from ${payload.teamName} for ${payload.playerName}`
       );
     });
@@ -341,7 +341,7 @@ export default function AdminBiddingDashboard() {
       setShowRTMPopup(false);
       setPendingRTMRequest(null); // ✅ Clear here
       setIsProcessingRTM(false);
-      toast.info(`RTM rejected for ${payload.playerName}`);
+      toast.success(`RTM rejected for ${payload.playerName}`);
     });
     // 11. Selection-mode updated
     socket.on("selection-mode:updated", (payload) => {
@@ -674,6 +674,12 @@ export default function AdminBiddingDashboard() {
           teamLogo: data.currentBid?.team?.logoUrl || prev.currentBid.teamLogo,
         },
       }));
+      if (data.pendingRTMRequest) {
+        setPendingRTMRequest(data.pendingRTMRequest);
+      } else {
+        setPendingRTMRequest(null);
+        setShowRTMPopup(false);
+      }
 
       setBiddingStarted(data.biddingStarted || false);
       setSelectionMode(data.selectionMode || "automatic");

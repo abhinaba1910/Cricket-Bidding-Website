@@ -87,7 +87,7 @@ router.post(
 );
 
 
-// GET AUCTIONS
+// Updated backend route with timer functionality
 router.get("/get-auction", AuthMiddleWare, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -102,20 +102,61 @@ router.get("/get-auction", AuthMiddleWare, async (req, res) => {
       .populate("selectedPlayers", "name photo")
       .sort({ createdAt: -1 });
 
-      const normalized = auctions.map(a => ({
-        id: a._id,
-        name: a.auctionName,
-        shortName: a.shortName,
-        logo: a.auctionImage,
-        description: a.description,
-        startDate: a.startDate, // Full ISO string in UTC
-        status: a.status,
-        selectedTeams: a.selectedTeams,
-        selectedPlayers: a.selectedPlayers,
-        joinCode: a.shortName,
-        createdAt: a.createdAt,
-      }));
-      
+    const io = req.app.get("io");
+    const now = new Date();
+
+    // Process each auction to handle timer logic
+    const processedAuctions = await Promise.all(
+      auctions.map(async (auction) => {
+        const startTime = new Date(auction.startDate);
+        const endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // 1 hour window
+
+        // If auction is upcoming and start time has passed
+        if (auction.status === "upcoming" && now >= startTime) {
+          // Start countdown if not already started
+          if (!auction.countdownStartedAt) {
+            auction.countdownStartedAt = startTime;
+            await auction.save();
+
+            // Emit timer started event
+            io.to(auction._id.toString()).emit("auction:timer-started", {
+              auctionId: auction._id,
+              countdownStartedAt: auction.countdownStartedAt,
+              endTime: endTime
+            });
+          }
+
+          // Check if the 1-hour window has expired and auction hasn't started
+          if (now >= endTime && auction.status === "upcoming") {
+            auction.status = "completed";
+            await auction.save();
+
+            // Emit auction auto-completed event
+            io.to(auction._id.toString()).emit("auction:auto-completed", {
+              auctionId: auction._id,
+              message: "Auction automatically completed - host didn't start in time"
+            });
+          }
+        }
+
+        return auction;
+      })
+    );
+
+    const normalized = processedAuctions.map(a => ({
+      id: a._id,
+      name: a.auctionName,
+      shortName: a.shortName,
+      logo: a.auctionImage,
+      description: a.description,
+      startDate: a.startDate, // Full ISO string in UTC
+      status: a.status,
+      selectedTeams: a.selectedTeams,
+      selectedPlayers: a.selectedPlayers,
+      joinCode: a.shortName,
+      createdAt: a.createdAt,
+      countdownStartedAt: a.countdownStartedAt, // Include countdown start time
+    }));
 
     res.json({ auctions: normalized });
   } catch (error) {
@@ -124,8 +165,7 @@ router.get("/get-auction", AuthMiddleWare, async (req, res) => {
   }
 });
 
-
-// START AUCTION
+// Updated start auction route
 router.patch("/start-auction/:id", AuthMiddleWare, async (req, res) => {
   try {
     const auction = await Auction.findById(req.params.id);
@@ -147,26 +187,152 @@ router.patch("/start-auction/:id", AuthMiddleWare, async (req, res) => {
 
     const now = new Date();
     const startTime = new Date(auction.startDate);
+    const endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // 1 hour window
 
-    if (now >= startTime) {
+    // Check if we're within the allowed time window
+    if (now >= startTime && now <= endTime) {
       auction.status = "live";
       await auction.save();
 
       const io = req.app.get("io");
       io.to(req.params.id).emit("auction:update", {
         type: "auction-started",
-        payload: { status: auction.status },
+        payload: { 
+          status: auction.status,
+          startedAt: now 
+        },
       });
 
       return res.json({ message: "Auction started successfully", status: auction.status });
-    } else {
+    } else if (now < startTime) {
       return res.status(400).json({ error: "Auction cannot be started yet. Too early." });
+    } else {
+      // Time window has expired, mark as completed
+      auction.status = "completed";
+      await auction.save();
+
+      const io = req.app.get("io");
+      io.to(req.params.id).emit("auction:auto-completed", {
+        auctionId: req.params.id,
+        message: "Auction window expired - cannot start anymore"
+      });
+
+      return res.status(400).json({ error: "Auction window has expired. Auction marked as completed." });
     }
   } catch (err) {
     console.error("Start auction error:", err);
     res.status(500).json({ error: "Server error starting auction" });
   }
 });
+
+// Add a new route to get timer status for a specific auction
+router.get("/auction-timer/:id", AuthMiddleWare, async (req, res) => {
+  try {
+    const auction = await Auction.findById(req.params.id);
+    if (!auction) return res.status(404).json({ error: "Auction not found" });
+
+    const startTime = new Date(auction.startDate);
+    const endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
+    const now = new Date();
+
+    const timerData = {
+      auctionId: auction._id,
+      status: auction.status,
+      startDate: auction.startDate,
+      countdownStartedAt: auction.countdownStartedAt,
+      timeRemaining: auction.status === "upcoming" && auction.countdownStartedAt ? 
+        Math.max(0, endTime.getTime() - now.getTime()) : 0,
+      canStart: now >= startTime && now <= endTime && auction.status === "upcoming",
+      hasExpired: now > endTime && auction.status === "upcoming"
+    };
+
+    res.json(timerData);
+  } catch (error) {
+    console.error("Error fetching timer data:", error);
+    res.status(500).json({ error: "Server error fetching timer data" });
+  }
+});
+
+// GET AUCTIONS
+// router.get("/get-auction", AuthMiddleWare, async (req, res) => {
+//   try {
+//     const userId = req.user.id;
+//     const user = await Person.findById(userId);
+
+//     if (!user || !["admin", "temp-admin"].includes(user.role)) {
+//       return res.status(403).json({ error: "Access denied. Only admins or temp-admins allowed." });
+//     }
+
+//     const auctions = await Auction.find({ createdBy: userId })
+//       .populate("selectedTeams.team", "name logo")
+//       .populate("selectedPlayers", "name photo")
+//       .sort({ createdAt: -1 });
+
+//       const normalized = auctions.map(a => ({
+//         id: a._id,
+//         name: a.auctionName,
+//         shortName: a.shortName,
+//         logo: a.auctionImage,
+//         description: a.description,
+//         startDate: a.startDate, // Full ISO string in UTC
+//         status: a.status,
+//         selectedTeams: a.selectedTeams,
+//         selectedPlayers: a.selectedPlayers,
+//         joinCode: a.shortName,
+//         createdAt: a.createdAt,
+//       }));
+      
+
+//     res.json({ auctions: normalized });
+//   } catch (error) {
+//     console.error("Error fetching auctions:", error);
+//     res.status(500).json({ error: "Server error fetching auctions" });
+//   }
+// });
+
+
+// // START AUCTION
+// router.patch("/start-auction/:id", AuthMiddleWare, async (req, res) => {
+//   try {
+//     const auction = await Auction.findById(req.params.id);
+//     if (!auction) return res.status(404).json({ error: "Auction not found" });
+
+//     const userId = req.user.id;
+//     const userRole = req.user.role;
+
+//     const isOwner = auction.createdBy.toString() === userId.toString();
+//     const isAdmin = ["admin", "temp-admin"].includes(userRole);
+
+//     if (!isOwner && !isAdmin) {
+//       return res.status(403).json({ error: "You are not authorized to start this auction" });
+//     }
+
+//     if (auction.status !== "upcoming") {
+//       return res.status(400).json({ error: `Cannot start auction. Current status is '${auction.status}'.` });
+//     }
+
+//     const now = new Date();
+//     const startTime = new Date(auction.startDate);
+
+//     if (now >= startTime) {
+//       auction.status = "live";
+//       await auction.save();
+
+//       const io = req.app.get("io");
+//       io.to(req.params.id).emit("auction:update", {
+//         type: "auction-started",
+//         payload: { status: auction.status },
+//       });
+
+//       return res.json({ message: "Auction started successfully", status: auction.status });
+//     } else {
+//       return res.status(400).json({ error: "Auction cannot be started yet. Too early." });
+//     }
+//   } catch (err) {
+//     console.error("Start auction error:", err);
+//     res.status(500).json({ error: "Server error starting auction" });
+//   }
+// });
 
 //vinay working
 router.get("/get-auction/:id", AuthMiddleWare, async (req, res) => {
@@ -234,6 +400,7 @@ router.get("/get-auction/:id", AuthMiddleWare, async (req, res) => {
         logoUrl: team?.logoUrl,
         manager: entry.manager,
         avatar: entry.avatar,
+        rtmCount: entry.rtmCount,
         boughtPlayers: (team?.players || []).map(p => ({
           playerId: p.player?._id,
           playerName: p.player?.name,
@@ -271,6 +438,7 @@ router.get("/get-auction/:id", AuthMiddleWare, async (req, res) => {
       biddingStarted: auction.biddingStarted,
       currentQueuePosition: auction.currentQueuePosition,
       bidAmount: auction.bidAmount,
+      pendingRTMRequest: auction.pendingRTMRequest || null,
     });
   } catch (error) {
     console.error("Error fetching auction:", error);
@@ -278,60 +446,6 @@ router.get("/get-auction/:id", AuthMiddleWare, async (req, res) => {
   }
 });
 
-
-// router.patch("/edit-auction/:id", AuthMiddleWare, async (req, res) => {
-//   try {
-//     const userId = req.user.id;
-//     const user = await Person.findById(userId);
-
-//     if (!user || !["admin", "temp-admin"].includes(user.role)) {
-//       return res.status(403).json({ error: "Unauthorized access" });
-//     }
-
-//     const { id } = req.params;
-//     const { auctionName, selectedPlayers, selectedTeams } = req.body;
-
-//     const auction = await Auction.findById(id);
-
-//     if (!auction) {
-//       return res.status(404).json({ error: "Auction not found" });
-//     }
-
-//     // Update fields
-//     if (auctionName) auction.auctionName = auctionName;
-//     if (selectedPlayers) auction.selectedPlayers = selectedPlayers;
-    
-
-//     if (selectedTeams && Array.isArray(selectedTeams)) {
-//       const existingTeamsMap = new Map();
-//       auction.selectedTeams.forEach((teamEntry) => {
-//         existingTeamsMap.set(String(teamEntry.team), teamEntry);
-//       });
-    
-//       selectedTeams.forEach((newTeamObj) => {
-//         const teamIdStr = String(newTeamObj.team);
-//         if (!existingTeamsMap.has(teamIdStr)) {
-//           existingTeamsMap.set(teamIdStr, {
-//             team: newTeamObj.team,
-//             manager: newTeamObj.manager || null,
-//             avatar: newTeamObj.avatar || null,
-//             rtmCount: newTeamObj.rtmCount || 0,
-//           });
-//         }
-//       });
-    
-//       auction.selectedTeams = Array.from(existingTeamsMap.values());
-//     }
-    
-
-//     await auction.save();
-
-//     res.json({ message: "Auction updated successfully.", auction });
-//   } catch (error) {
-//     console.error("Error updating auction:", error);
-//     res.status(500).json({ error: "Internal server error." });
-//   }
-// });
 
 router.patch("/edit-auction/:id", AuthMiddleWare, async (req, res) => {
   try {

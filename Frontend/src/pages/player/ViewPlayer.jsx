@@ -118,7 +118,7 @@ export default function ViewPlayer() {
     <PageWrapper>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white pb-28">
         {/* Header with back button */}
-        <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-sm border-b border-gray-100 p-4 shadow-sm">
+        <header className="relative top-0 z-20 bg-white/80 backdrop-blur-sm border-b border-gray-100 p-4 shadow-sm">
           <div className="max-w-5xl mx-auto flex items-center">
             <button
               onClick={() => navigate(-1)}
