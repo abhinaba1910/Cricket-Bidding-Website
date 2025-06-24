@@ -465,9 +465,9 @@ router.patch("/edit-auction/:id", AuthMiddleWare, async (req, res) => {
       return res.status(404).json({ error: "Auction not found" });
     }
 
-    if(auction.isPaused===false){
-      return res.status(404).json({error: "Pause the Auction before deleting"})
-    }
+    // if(auction.isPaused===false){
+    //   return res.status(404).json({error: "Pause the Auction before deleting"})
+    // }
 
     // Update fields
     if (auctionName) auction.auctionName = auctionName;
@@ -607,9 +607,9 @@ router.delete('/delete-auction/:id', AuthMiddleWare, async (req, res) => {
     if (!auction) {
       return res.status(404).json({ error: "Auction not found" });
     }
-    if(auction.isPaused===false){
-      return res.status(404).json({error: "Pause the Auction before deleting"})
-    }
+    // if(auction.isPaused===false){
+    //   return res.status(404).json({error: "Pause the Auction before deleting"})
+    // }
 
     // Reset fields
     auction.currentPlayerOnBid = null;

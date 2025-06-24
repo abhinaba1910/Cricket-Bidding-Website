@@ -314,6 +314,7 @@ export default function CreateAuctionForm() {
         ]);
         setTeams(teamRes.data);
         setPlayers(playerRes.data);
+        console.log(playerRes.data);
       } catch (err) {
         console.error("Fetching teams/players failed:", err);
         setToast({ type: "error", message: "Failed to load teams or players" });

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useFormContext, Controller } from "react-hook-form";
+import { IoMdAirplane } from "react-icons/io";
 export default function AuctionStep3Players({
   onSubmit,
   onBack,
@@ -42,24 +43,19 @@ export default function AuctionStep3Players({
     "Wicket-keeper",
   ];
 
-  // const filteredByTeam = selectedTeamIds.length
-  //   ? allPlayers.filter(p => selectedTeamIds.includes(p.teamId))
-  //   : allPlayers;
-
   const areAllDisplayedSelected = (field) =>
-  displayedOptions.every((opt) => field.value.includes(opt.value));
+    displayedOptions.every((opt) => field.value.includes(opt.value));
 
-const handleSelectAll = (field) => {
-  const allIds = displayedOptions.map((opt) => opt.value);
-  const currentlySelected = field.value;
+  const handleSelectAll = (field) => {
+    const allIds = displayedOptions.map((opt) => opt.value);
+    const currentlySelected = field.value;
 
-  const newSelected = areAllDisplayedSelected(field)
-    ? currentlySelected.filter((id) => !allIds.includes(id)) // Deselect all visible
-    : Array.from(new Set([...currentlySelected, ...allIds])); // Select all visible
+    const newSelected = areAllDisplayedSelected(field)
+      ? currentlySelected.filter((id) => !allIds.includes(id)) // Deselect all visible
+      : Array.from(new Set([...currentlySelected, ...allIds])); // Select all visible
 
-  field.onChange(newSelected);
-};
-
+    field.onChange(newSelected);
+  };
 
   const filteredPlayers = allPlayers.filter((p) => {
     const gradeOK = selectedGrade === "all" || p.grade === selectedGrade;
@@ -72,6 +68,7 @@ const handleSelectAll = (field) => {
     value: player._id,
     label: player.name,
     playerPic: player.playerPic,
+    country: player.country || "India",
   }));
 
   console.log(playerOptions);
@@ -187,23 +184,30 @@ const handleSelectAll = (field) => {
     return (
       <div style={styles.drawerOverlay} onClick={() => setDrawerOpen(false)}>
         <div style={styles.drawerContent} onClick={(e) => e.stopPropagation()}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-  <h2>Select Players</h2>
-  <button
-    type="button"
-    onClick={() => handleSelectAll(field)}
-    style={{
-      fontSize: 14,
-      padding: "4px 10px",
-      borderRadius: 6,
-      backgroundColor: "#f0f0f0",
-      border: "1px solid #ccc",
-      cursor: "pointer",
-    }}
-  >
-    {areAllDisplayedSelected(field) ? "Deselect All" : "Select All"}
-  </button>
-</div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 12,
+            }}
+          >
+            <h2>Select Players</h2>
+            <button
+              type="button"
+              onClick={() => handleSelectAll(field)}
+              style={{
+                fontSize: 14,
+                padding: "4px 10px",
+                borderRadius: 6,
+                backgroundColor: "#f0f0f0",
+                border: "1px solid #ccc",
+                cursor: "pointer",
+              }}
+            >
+              {areAllDisplayedSelected(field) ? "Deselect All" : "Select All"}
+            </button>
+          </div>
 
           <input
             type="text"
@@ -329,7 +333,22 @@ const handleSelectAll = (field) => {
                                 }}
                               />
                             )}
-                            {opt.label}
+                            {/* {opt.label} */}
+                            <span
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 4,
+                              }}
+                            >
+                              {opt.label}
+                              {opt.country.toLowerCase() !== "india" && (
+                                <IoMdAirplane
+                                  title="Overseas Player"
+                                  style={{ color: "blue" }}
+                                />
+                              )}
+                            </span>
                           </span>
                         ))
                     ) : (
@@ -344,54 +363,78 @@ const handleSelectAll = (field) => {
               </>
             ) : (
               <div>
-                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
-  <button
-    type="button"
-    onClick={() => handleSelectAll(field)}
-    style={{
-      fontSize: 14,
-      padding: "6px 12px",
-      borderRadius: 6,
-      backgroundColor: "#f0f0f0",
-      border: "1px solid #ccc",
-      cursor: "pointer",
-    }}
-  >
-    {areAllDisplayedSelected(field) ? "Deselect All" : "Select All"}
-  </button>
-</div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    marginBottom: 8,
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleSelectAll(field)}
+                    style={{
+                      fontSize: 14,
+                      padding: "6px 12px",
+                      borderRadius: 6,
+                      backgroundColor: "#f0f0f0",
+                      border: "1px solid #ccc",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {areAllDisplayedSelected(field)
+                      ? "Deselect All"
+                      : "Select All"}
+                  </button>
+                </div>
 
-              <div style={styles.playerList}>
-                {playerOptions.length === 0 ? (
-                  <div>No players available.</div>
-                ) : (
-                  playerOptions.map((opt) => (
-                    <label key={opt.value} style={styles.playerItem}>
-                      <input
-                        type="checkbox"
-                        checked={field.value.includes(opt.value)}
-                        onChange={() => togglePlayer(field, opt.value)}
-                        style={styles.checkbox}
-                      />
-                      {opt.playerPic ? (
-                        <img
-                          src={opt.playerPic}
-                          alt={opt.label}
-                          style={styles.playerImage}
+                <div style={styles.playerList}>
+                  {playerOptions.length === 0 ? (
+                    <div>No players available.</div>
+                  ) : (
+                    playerOptions.map((opt) => (
+                      <label key={opt.value} style={styles.playerItem}>
+                        <input
+                          type="checkbox"
+                          checked={field.value.includes(opt.value)}
+                          onChange={() => togglePlayer(field, opt.value)}
+                          style={styles.checkbox}
                         />
-                      ) : (
-                        <div
+                        {opt.playerPic ? (
+                          <img
+                            src={opt.playerPic}
+                            alt={opt.label}
+                            style={styles.playerImage}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              ...styles.playerImage,
+                              backgroundColor: "#ccc",
+                            }}
+                          />
+                        )}
+                        {/* <span>{opt.label}</span> */}
+
+                        <span
                           style={{
-                            ...styles.playerImage,
-                            backgroundColor: "#ccc",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 4,
                           }}
-                        />
-                      )}
-                      <span>{opt.label}</span>
-                    </label>
-                  ))
-                )}
-              </div>
+                        >
+                          {opt.label}
+                          {opt.country.toLowerCase() !== "india" && (
+                            <IoMdAirplane
+                              title="Overseas Player"
+                              style={{ color: "blue" }}
+                            />
+                          )}
+                        </span>
+                      </label>
+                    ))
+                  )}
+                </div>
               </div>
             )}
             {errors.selectedPlayers && (
