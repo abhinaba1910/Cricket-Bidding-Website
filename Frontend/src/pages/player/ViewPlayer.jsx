@@ -161,7 +161,10 @@ export default function ViewPlayer() {
               <h1 className="text-3xl font-bold text-gray-800 mb-1">{name}</h1>
               <div className="flex items-center justify-center text-gray-500 mb-4">
                 <FiGlobe className="mr-1.5" />
-                <span>{country}</span>
+                <span>
+  {country} {country !== "India" && "✈️"}
+</span>
+
               </div>
               
               {/* Stats */}

@@ -117,7 +117,7 @@ export default function EditTeam() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 md:px-8">
+    <div className="min-h-screen bg-gray-50 py-8 px-1 md:px-8">
       <div className="max-w-2xl mx-auto bg-white shadow rounded-lg overflow-hidden">
         <div className="flex items-center border-b px-6 py-4">
           <button
@@ -248,89 +248,83 @@ export default function EditTeam() {
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                      {/* Retain */}
-                      {player.availability !== "Retained" && (
-                        <label className="flex items-center gap-1">
-                          <input
-                            type="checkbox"
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setRetainedPlayers((prev) => [
-                                  ...prev,
-                                  { playerId: player._id, price },
-                                ]);
-                                setReleasedPlayers((prev) =>
-                                  prev.filter((id) => id !== player._id)
-                                );
-                              } else {
-                                setRetainedPlayers((prev) =>
-                                  prev.filter((p) => p.playerId !== player._id)
-                                );
-                              }
-                            }}
-                            checked={retainedPlayers.some(
-                              (p) => p.playerId === player._id
-                            )}
-                          />
-                          Retain
-                        </label>
-                      )}
+                    <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4">
+  {/* Retain */}
+  {player.availability !== "Retained" && (
+    <label className="flex items-center gap-1 text-sm">
+      <input
+        type="checkbox"
+        onChange={(e) => {
+          if (e.target.checked) {
+            setRetainedPlayers((prev) => [
+              ...prev,
+              { playerId: player._id, price },
+            ]);
+            setReleasedPlayers((prev) =>
+              prev.filter((id) => id !== player._id)
+            );
+          } else {
+            setRetainedPlayers((prev) =>
+              prev.filter((p) => p.playerId !== player._id)
+            );
+          }
+        }}
+        checked={retainedPlayers.some((p) => p.playerId === player._id)}
+      />
+      Retain
+    </label>
+  )}
 
-                      {/* Retain Price */}
-                      <input
-                        type="number"
-                        className="w-24 border px-2 py-1 rounded"
-                        value={
-                          retainedPlayers.find((p) => p.playerId === player._id)
-                            ?.price || ""
-                        }
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value) || 0;
-                          setRetainedPlayers((prev) =>
-                            prev.map((p) =>
-                              p.playerId === player._id
-                                ? { ...p, price: val }
-                                : p
-                            )
-                          );
-                        }}
-                        disabled={
-                          !retainedPlayers.some(
-                            (p) => p.playerId === player._id
-                          )
-                        }
-                      />
+  {/* Retain Price */}
+  <input
+    type="number"
+    className="w-full md:w-24 border px-2 py-1 rounded text-sm"
+    value={
+      retainedPlayers.find((p) => p.playerId === player._id)?.price || ""
+    }
+    onChange={(e) => {
+      const val = parseInt(e.target.value) || 0;
+      setRetainedPlayers((prev) =>
+        prev.map((p) =>
+          p.playerId === player._id ? { ...p, price: val } : p
+        )
+      );
+    }}
+    disabled={
+      !retainedPlayers.some((p) => p.playerId === player._id)
+    }
+  />
 
-                      {/* Release */}
-                      {releasedPlayers.includes(player._id) ? (
-                        <span className="text-gray-500 italic">Released</span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedReleasePlayer({
-                              id: player._id,
-                              name: player.name,
-                            });
-                            setShowReleaseModal(true);
-                          }}
-                          className="text-red-500 hover:underline text-sm"
-                        >
-                          Release
-                        </button>
-                      )}
-                    </div>
+  {/* Release */}
+  {releasedPlayers.includes(player._id) ? (
+    <span className="text-gray-500 italic text-sm">Released</span>
+  ) : (
+    <button
+      type="button"
+      onClick={() => {
+        setSelectedReleasePlayer({
+          id: player._id,
+          name: player.name,
+        });
+        setShowReleaseModal(true);
+      }}
+      className="text-red-500 hover:underline text-sm"
+    >
+      Release
+    </button>
+  )}
+</div>
+
                   </div>
                 ))}
             </div>
 
             {/* Save */}
-            <div className="text-right">
+            <div className="text-right gap-2">
               <button
                 type="submit"
                 disabled={submitting}
-                className={`px-6 py-2 rounded text-white ${
+                className={`px-6 py-2 rounded mr-2 text-white ${
                   submitting
                     ? "bg-blue-400 cursor-not-allowed"
                     : "bg-blue-600 hover:bg-blue-700"

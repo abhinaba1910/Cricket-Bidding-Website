@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { FiSearch, FiArrowLeft } from "react-icons/fi";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Api from "../../userManagement/Api";
+import { IoMdAirplane } from "react-icons/io";
 
 
 const allRoles = [
@@ -173,9 +174,19 @@ export default function ManualPlayerSelection() {
                 {p.grade || "—"}
               </span>
             </div>
-            <p className="text-sm text-gray-600">
-              {p.role} • {p.country}
-            </p>
+            <div className="text-sm text-gray-600">
+                              {p.role}      
+                              <div className="flex items-center gap-1">
+                              {p.country}
+                              {p.country.toLowerCase() !== "india" && (
+                                <IoMdAirplane
+                                className="text-blue-500"
+                                title="Overseas Player"
+                                />
+                              )}
+                              </div>          
+            
+                            </div>
             <p className="text-sm font-medium mt-1">
               ₹{p.basePrice?.toLocaleString() || 0}
             </p>
@@ -205,7 +216,15 @@ export default function ManualPlayerSelection() {
         <td className="px-4 py-2">{p.name}</td>
         <td className="px-4 py-2">{p.grade || "—"}</td>
         <td className="px-4 py-2">{p.role}</td>
-        <td className="px-4 py-2">{p.country}</td>
+        <td className="px-4 py-6 flex items-center gap-1">
+                                            {p.country}
+                                            {p.country.toLowerCase() !== "india" && (
+                                              <IoMdAirplane
+                                                className="text-blue-500"
+                                                title="Overseas Player"
+                                              />
+                                            )}
+                                          </td>
         <td className="px-4 py-2">₹{p.basePrice?.toLocaleString() || 0}</td>
       </tr>
     );
