@@ -168,10 +168,11 @@ export default function EditAuction() {
       </button>
       <button
   onClick={handleDeleteAuction}
-  className="w-full mt-2 px-4 bg-red-600 hover:bg-red-700 text-white py-2 rounded"
+  className="w-full mt-2 px-4 bg-red-600 hover:bg-red-700 text-white py-2  rounded"
 >
   Delete Auction
 </button>
+<div className="pb-10"></div>
 
 
       {/* Modals */}
