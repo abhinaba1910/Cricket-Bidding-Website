@@ -28,8 +28,7 @@ export default function EditPlayer() {
       try {
         const res = await Api.get(`/get-player/${id}`); // 🔗 TODO: adjust endpoint
         const p = res.data;
-        console.log(p)
-
+        console.log(p);
 
         reset({
           name: p.name,
@@ -50,7 +49,7 @@ export default function EditPlayer() {
           previousTeams: p.previousTeams,
           isCapped: p.isCapped,
           bio: p.bio,
-        
+
           // ✅ Add these to initialize form fields correctly
           performanceStats: {
             batting: {
@@ -68,28 +67,31 @@ export default function EditPlayer() {
               bestBowling: p.performanceStats?.bowling?.bestBowling ?? "",
               average: p.performanceStats?.bowling?.average ?? "",
               economy: p.performanceStats?.bowling?.economy ?? "",
-              fiveWicketHauls: p.performanceStats?.bowling?.fiveWicketHauls ?? "",
+              fiveWicketHauls:
+                p.performanceStats?.bowling?.fiveWicketHauls ?? "",
             },
             allRounder: {
               matches: p.performanceStats?.allRounder?.matches ?? "",
               runs: p.performanceStats?.allRounder?.runs ?? "",
               highScore: p.performanceStats?.allRounder?.highScore ?? "",
-              battingAverage: p.performanceStats?.allRounder?.battingAverage ?? "",
+              battingAverage:
+                p.performanceStats?.allRounder?.battingAverage ?? "",
               battingStrikeRate:
                 p.performanceStats?.allRounder?.battingStrikeRate ?? "",
               centuries: p.performanceStats?.allRounder?.centuries ?? "",
               fifties: p.performanceStats?.allRounder?.fifties ?? "",
               wickets: p.performanceStats?.allRounder?.wickets ?? "",
               bestBowling: p.performanceStats?.allRounder?.bestBowling ?? "",
-              bowlingAverage: p.performanceStats?.allRounder?.bowlingAverage ?? "",
+              bowlingAverage:
+                p.performanceStats?.allRounder?.bowlingAverage ?? "",
               economy: p.performanceStats?.allRounder?.economy ?? "",
               fiveWicketHauls:
                 p.performanceStats?.allRounder?.fiveWicketHauls ?? "",
             },
           },
         });
-        
-        setPreview(p.playerPic); 
+
+        setPreview(p.playerPic);
         setSelectedRole(p.role);
       } catch (err) {
         console.error("Failed to load player", err);
@@ -104,7 +106,7 @@ export default function EditPlayer() {
     try {
       setSubmitting(true);
       const formData = new FormData();
-  
+
       const flatten = (obj, prefix = "") => {
         for (const [key, val] of Object.entries(obj)) {
           const path = prefix ? `${prefix}.${key}` : key;
@@ -119,9 +121,9 @@ export default function EditPlayer() {
           }
         }
       };
-  
+
       flatten(data);
-  
+
       await Api.put(`/update-player/${id}`, formData);
       toast.success("Player updated successfully!");
       setTimeout(() => navigate(-1), 1000);
@@ -132,7 +134,6 @@ export default function EditPlayer() {
       setSubmitting(false);
     }
   };
-  
 
   // 🔥 Delete handler
   const handleDelete = async () => {
@@ -280,7 +281,6 @@ export default function EditPlayer() {
                 </div>
               </div>
             </section>
-
             {/* Role Section */}
             <section>
               <h2 className="text-xl font-semibold mb-4">Player Role</h2>
@@ -372,7 +372,42 @@ export default function EditPlayer() {
                 </div>
               </div>
             </section>
-
+            {/* Availability Section */}
+            <section>
+              <h2 className="text-xl font-semibold mb-4">
+                Player Availability
+              </h2>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-medium mb-1">
+                    Availability Status
+                  </label>
+                  <select
+                    {...register("availability")}
+                    className="w-full border px-3 py-2 rounded"
+                  >
+                    <option value="">Select availability...</option>
+                    <option value="Available">Available</option>
+                    <option value="Sold">Sold</option>
+                    <option value="Retained">Retained</option>
+                    <option value="Unsold">Unsold</option>
+                  </select>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Note: Some availability changes may be restricted if player
+                    is already in a team.
+                  </p>
+                </div>
+                <div>
+                  <label className="block font-medium mb-1">Points</label>
+                  <input
+                    {...register("points", { valueAsNumber: true })}
+                    type="number"
+                    placeholder="e.g., 8"
+                    className="w-full border px-3 py-2 rounded"
+                  />
+                </div>
+              </div>
+            </section>
             {/* Auction Details */}
             <section>
               <h2 className="text-xl font-semibold mb-4">
@@ -406,7 +441,6 @@ export default function EditPlayer() {
                 </div>
               </div>
             </section>
-
             {/* Performance */}
             <section className="bg-white p-6 rounded-xl shadow-md border mt-6">
               <h2 className="text-xl font-bold mb-6 text-gray-800 border-b pb-2">
@@ -673,7 +707,6 @@ export default function EditPlayer() {
                 />
               </div>
             </section>
-
             {/* Submit */}
             <div className="text-right space-x-2">
               <button

@@ -179,6 +179,9 @@ export default function UserBiddingDashboardDesktop() {
 
       // Update state
       setAuctionData(data);
+      if(data.status==="completed"){
+        navigate("/dashboard");
+      }
 
       // Set userTeamId from response
       if (data.team && (data.team.teamId || data.team._id)) {
@@ -332,221 +335,512 @@ export default function UserBiddingDashboardDesktop() {
     }
   };
 
-  const handleUseRTM = async () => {
-    console.log("RTM Debug - Starting:");
-    console.log("- RTM Count:", rtmCount);
-    console.log("- RTM Request Pending:", rtmRequestPending);
-    console.log("- Auction Data:", auctionData);
-    console.log("- Team ID:", auctionData?.team?.teamId);
-    console.log("- Auction ID:", id);
+  // const handleUseRTM = async () => {
+  //   console.log("RTM Debug - Starting:");
+  //   console.log("- RTM Count:", rtmCount);
+  //   console.log("- RTM Request Pending:", rtmRequestPending);
+  //   console.log("- Auction Data:", auctionData);
+  //   console.log("- Team ID:", auctionData?.team?.teamId);
+  //   console.log("- Auction ID:", id);
 
-    if (rtmCount <= 0) {
-      console.log("❌ No RTMs left");
-      toast.error("No RTMs left");
-      return;
+  //   if (rtmCount <= 0) {
+  //     console.log("❌ No RTMs left");
+  //     toast.error("No RTMs left");
+  //     return;
+  //   }
+
+  //   if (rtmRequestPending) {
+  //     console.log("❌ RTM request already pending");
+  //     toast.error("RTM request already pending approval");
+  //     return;
+  //   }
+
+  //   const myTeamId = auctionData?.team?.teamId;
+
+  //   if (!myTeamId) {
+  //     console.log("❌ No team ID found");
+  //     toast.error("Team ID not found");
+  //     return;
+  //   }
+
+  //   console.log("✅ Sending RTM request...");
+
+  //   try {
+  //     const requestPayload = {
+  //       teamId: myTeamId,
+  //     };
+
+  //     console.log("Request payload:", requestPayload);
+  //     console.log("Request URL:", `/use-rtm/${id}`);
+
+  //     const response = await Api.post(`/use-rtm/${id}`, requestPayload);
+
+  //     console.log("✅ RTM Response:", response.data);
+
+  //     if (response.data.status === "pending") {
+  //       // setRtmRequestPending(true);
+  //       toast.success("RTM request sent for admin approval!");
+  //     } else {
+  //       toast.success("RTM successful!");
+  //       setRtmCount((prev) => prev - 1);
+  //     }
+
+  //     fetchAuctionData();
+  //   } catch (err) {
+  //     console.error("❌ RTM error:", err);
+  //     console.error("Error response:", err.response?.data);
+  //     console.error("Error status:", err.response?.status);
+  //     toast.error(err.response?.data?.message || "Failed to use RTM");
+  //   }
+  // };
+
+  // // ─── Setup Socket.IO ─────────────────────────────────────────────
+  // useEffect(() => {
+  //   const token = localStorage.getItem("token");
+  //   if (!token) {
+  //     console.warn("No auth token; skipping socket connect");
+  //     return;
+  //   }
+  //   // ⚠️ Specify your backend URL here:
+  //   const socket = io("http://localhost:6001", {
+  //     // const socket = io("https://cricket-bidding-website-backend.onrender.com", {
+
+  //     auth: { token },
+  //     // only websocket transport (optional but more reliable)
+  //     transports: ["websocket"],
+  //   });
+  //   socketRef.current = socket;
+
+  //   socket.on("connect", () => {
+  //     console.log("Socket connected (user bidding):", socket.id);
+  //     if (id) {
+  //       socket.emit("join-auction", id);
+  //     }
+  //   });
+  //   socket.on("disconnect", (reason) => {
+  //     console.log("Socket disconnected:", reason);
+  //   });
+
+  //   socket.on("player:sold", (payload) => {
+  //     console.log("Received player:sold", payload);
+  //     // Compare winnerTeamId or soldTo against user's team ID
+  //     console.log("[USER] got player:sold:", payload);
+  //     const winnerId = payload.soldTo;
+  //     const teamId = userTeamIdRef.current;
+  //     if (teamId && winnerId) {
+  //       if (winnerId === teamId) {
+  //         setEmoteToPlay("BidWon");
+  //       } else {
+  //         setEmoteToPlay("LostBid");
+  //       }
+  //       if (emoteTimeoutRef.current) {
+  //         clearTimeout(emoteTimeoutRef.current);
+  //       }
+  //       emoteTimeoutRef.current = setTimeout(() => {
+  //         setEmoteToPlay(null);
+  //         emoteTimeoutRef.current = null;
+  //       }, 3000);
+  //     }
+  //     // Refresh data
+  //     fetchAuctionData();
+  //     if (payload.amount != null) {
+  //       toast.success(`Sold for ₹${formatIndianNumber(payload.amount)}`);
+  //     } else {
+  //       toast.success("Player sold");
+  //     }
+  //   });
+
+  //   // Listen for auction updates
+  //   // —— listen on the *specific* event channels your server emits — no need to duplicate
+  //   socket.on("bid:updated", (payload) => {
+  //     console.log("bid:updated", payload);
+  //     fetchAuctionData();
+  //     toast.success(`New bid ₹${formatIndianNumber(payload.newBid.amount)}`);
+  //   });
+  //   socket.on("bid:placed", (payload) => {
+  //     console.log("bid:placed", payload);
+  //     fetchAuctionData();
+  //     toast.success(`New bid ₹${formatIndianNumber(payload.newBid.amount)}`);
+  //   });
+
+  //   socket.on("player:rtm", (payload) => {
+  //     console.log("player:rtm", payload);
+  //     fetchAuctionData();
+  //     toast.success("RTM used");
+  //   });
+
+  //   // NEW: Listen for RTM request confirmations
+  //   socket.on("rtm:request", (payload) => {
+  //     console.log("rtm:request", payload);
+  //     // If this is our team's request, show pending status
+  //     if (payload.teamId === auctionData?.team?.teamId) {
+  //       // setRtmRequestPending(true);
+  //       toast.success("RTM request sent, waiting for admin approval...");
+  //     }
+  //   });
+
+  //   // NEW: Listen for RTM approvals
+  //   socket.on("rtm:approved", (payload) => {
+  //     console.log("rtm:approved", payload);
+  //     if (payload.toTeam === userTeamIdRef.current) {
+  //       setRtmRequestPending(false);
+  //       setRtmCount((prev) => prev - 1);
+  //       toast.success(`RTM approved! ${payload.playerName} added to your team`);
+  //     }
+
+  //     fetchAuctionData();
+  //   });
+
+  //   socket.on("rtm:rejected", (payload) => {
+  //     console.log("rtm:rejected", payload);
+
+  //     const myTeamId = userTeamIdRef.current;
+  //     if (!myTeamId) {
+  //       console.warn("userTeamIdRef.current not ready yet");
+  //       return;
+  //     }
+
+  //     if (payload.teamId === myTeamId) {
+  //       console.log("✅ RTM rejected for my team, clearing state");
+  //       setRtmRequestPending(false);
+  //       toast.error(`RTM rejected for ${payload.playerName}`);
+  //     }
+  //     fetchAuctionData();
+  //   });
+
+  //   socket.on("auction:paused", () => {
+  //     console.log("auction:paused");
+  //     toast.success("Auction paused");
+  //   });
+  //   socket.on("auction:resumed", () => {
+  //     console.log("auction:resumed");
+  //     toast.success("Auction resumed");
+  //   });
+  //   socket.on("auction:ended", () => {
+  //     console.log("auction:ended");
+  //     toast.success("Auction ended");
+  //   });
+  //   socket.on("bidding:started", (payload) => {
+  //     console.log("bidding:started", payload);
+  //     fetchAuctionData();
+  //   });
+
+  //   return () => {
+  //     if (socketRef.current) {
+  //       socketRef.current.emit("leave-auction", id);
+  //       socketRef.current.disconnect();
+  //     }
+  //     if (emoteTimeoutRef.current) {
+  //       clearTimeout(emoteTimeoutRef.current);
+  //     }
+  //     socket.off("player:rtm");
+  //     socket.off("rtm:request");
+  //     socket.off("rtm:approved");
+  //     socket.off("rtm:rejected");
+  //   };
+  // }, [id, navigate, auctionData?.team?.teamId]);
+
+  // // Initial fetch once
+  // useEffect(() => {
+  //   fetchAuctionData();
+  // }, [id]);
+
+  // Desktop Version: Enhanced Socket Setup with Fixed RTM Handlers
+useEffect(() => {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    console.warn("No auth token; skipping socket connect");
+    return;
+  }
+  
+  const socket = io("https://cricket-bidding-website-backend.onrender.com", {
+  // const socket = io("http://localhost:6001", {
+    auth: { token },
+    transports: ["websocket"],
+  });
+  socketRef.current = socket;
+
+  socket.on("connect", () => {
+    console.log("Socket connected (user bidding desktop):", socket.id);
+    if (id) {
+      socket.emit("join-auction", id);
     }
+  });
 
-    if (rtmRequestPending) {
-      console.log("❌ RTM request already pending");
-      toast.error("RTM request already pending approval");
-      return;
-    }
+  socket.on("disconnect", (reason) => {
+    console.log("Socket disconnected:", reason);
+  });
 
-    const myTeamId = auctionData?.team?.teamId;
-
-    if (!myTeamId) {
-      console.log("❌ No team ID found");
-      toast.error("Team ID not found");
-      return;
-    }
-
-    console.log("✅ Sending RTM request...");
-
-    try {
-      const requestPayload = {
-        teamId: myTeamId,
-      };
-
-      console.log("Request payload:", requestPayload);
-      console.log("Request URL:", `/use-rtm/${id}`);
-
-      const response = await Api.post(`/use-rtm/${id}`, requestPayload);
-
-      console.log("✅ RTM Response:", response.data);
-
-      if (response.data.status === "pending") {
-        // setRtmRequestPending(true);
-        toast.success("RTM request sent for admin approval!");
+  socket.on("player:sold", (payload) => {
+    console.log("Received player:sold", payload);
+    console.log("[DESKTOP USER] got player:sold:", payload);
+    const winnerId = payload.soldTo;
+    const teamId = userTeamIdRef.current;
+    if (teamId && winnerId) {
+      if (winnerId === teamId) {
+        setEmoteToPlay("BidWon");
       } else {
-        toast.success("RTM successful!");
-        setRtmCount((prev) => prev - 1);
-      }
-
-      fetchAuctionData();
-    } catch (err) {
-      console.error("❌ RTM error:", err);
-      console.error("Error response:", err.response?.data);
-      console.error("Error status:", err.response?.status);
-      toast.error(err.response?.data?.message || "Failed to use RTM");
-    }
-  };
-
-  // ─── Setup Socket.IO ─────────────────────────────────────────────
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      console.warn("No auth token; skipping socket connect");
-      return;
-    }
-    // ⚠️ Specify your backend URL here:
-    // const socket = io("http://localhost:6001", {
-      const socket = io("https://cricket-bidding-website-backend.onrender.com", {
-
-      auth: { token },
-      // only websocket transport (optional but more reliable)
-      transports: ["websocket"],
-    });
-    socketRef.current = socket;
-
-    socket.on("connect", () => {
-      console.log("Socket connected (user bidding):", socket.id);
-      if (id) {
-        socket.emit("join-auction", id);
-      }
-    });
-    socket.on("disconnect", (reason) => {
-      console.log("Socket disconnected:", reason);
-    });
-
-    socket.on("player:sold", (payload) => {
-      console.log("Received player:sold", payload);
-      // Compare winnerTeamId or soldTo against user's team ID
-      console.log("[USER] got player:sold:", payload);
-      const winnerId = payload.soldTo;
-      const teamId = userTeamIdRef.current;
-      if (teamId && winnerId) {
-        if (winnerId === teamId) {
-          setEmoteToPlay("BidWon");
-        } else {
-          setEmoteToPlay("LostBid");
-        }
-        if (emoteTimeoutRef.current) {
-          clearTimeout(emoteTimeoutRef.current);
-        }
-        emoteTimeoutRef.current = setTimeout(() => {
-          setEmoteToPlay(null);
-          emoteTimeoutRef.current = null;
-        }, 3000);
-      }
-      // Refresh data
-      fetchAuctionData();
-      if (payload.amount != null) {
-        toast.success(`Sold for ₹${formatIndianNumber(payload.amount)}`);
-      } else {
-        toast.success("Player sold");
-      }
-    });
-
-    // Listen for auction updates
-    // —— listen on the *specific* event channels your server emits — no need to duplicate
-    socket.on("bid:updated", (payload) => {
-      console.log("bid:updated", payload);
-      fetchAuctionData();
-      toast.success(`New bid ₹${formatIndianNumber(payload.newBid.amount)}`);
-    });
-    socket.on("bid:placed", (payload) => {
-      console.log("bid:placed", payload);
-      fetchAuctionData();
-      toast.success(`New bid ₹${formatIndianNumber(payload.newBid.amount)}`);
-    });
-    // socket.on("player:sold",      payload => { console.log("player:sold", payload); fetchAuctionData(); toast.success(`Sold for ₹${payload.amount.toLocaleString()}`); });
-    // socket.on("player:rtm", (payload) => {
-    //   console.log("player:rtm", payload);
-    //   fetchAuctionData();
-    //   toast.success("RTM used");
-    // });
-
-    socket.on("player:rtm", (payload) => {
-      console.log("player:rtm", payload);
-      fetchAuctionData();
-      toast.success("RTM used");
-    });
-
-    // NEW: Listen for RTM request confirmations
-    socket.on("rtm:request", (payload) => {
-      console.log("rtm:request", payload);
-      // If this is our team's request, show pending status
-      if (payload.teamId === auctionData?.team?.teamId) {
-        // setRtmRequestPending(true);
-        toast.success("RTM request sent, waiting for admin approval...");
-      }
-    });
-
-    // NEW: Listen for RTM approvals
-    socket.on("rtm:approved", (payload) => {
-      console.log("rtm:approved", payload);
-      if (payload.toTeam === userTeamIdRef.current) {
-        setRtmRequestPending(false);
-        setRtmCount((prev) => prev - 1);
-        toast.success(`RTM approved! ${payload.playerName} added to your team`);
-      }
-
-      fetchAuctionData();
-    });
-
-    socket.on("rtm:rejected", (payload) => {
-      console.log("rtm:rejected", payload);
-
-      const myTeamId = userTeamIdRef.current;
-      if (!myTeamId) {
-        console.warn("userTeamIdRef.current not ready yet");
-        return;
-      }
-
-      if (payload.teamId === myTeamId) {
-        console.log("✅ RTM rejected for my team, clearing state");
-        setRtmRequestPending(false);
-        toast.error(`RTM rejected for ${payload.playerName}`);
-      }
-      fetchAuctionData()
-    });
-
-    socket.on("auction:paused", () => {
-      console.log("auction:paused");
-      toast.success("Auction paused");
-    });
-    socket.on("auction:resumed", () => {
-      console.log("auction:resumed");
-      toast.success("Auction resumed");
-    });
-    socket.on("auction:ended", () => {
-      console.log("auction:ended");
-      toast.success("Auction ended");
-    });
-    socket.on("bidding:started", (payload) => {
-      console.log("bidding:started", payload);
-      fetchAuctionData();
-    });
-
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.emit("leave-auction", id);
-        socketRef.current.disconnect();
+        setEmoteToPlay("LostBid");
       }
       if (emoteTimeoutRef.current) {
         clearTimeout(emoteTimeoutRef.current);
       }
-      socket.off("player:rtm");
-      socket.off("rtm:request");
-      socket.off("rtm:approved");
-      socket.off("rtm:rejected");
-    };
-  }, [id, navigate, auctionData?.team?.teamId]);
-
-  // Initial fetch once
-  useEffect(() => {
+      emoteTimeoutRef.current = setTimeout(() => {
+        setEmoteToPlay(null);
+        emoteTimeoutRef.current = null;
+      }, 3000);
+    }
     fetchAuctionData();
-  }, [id]);
+    if (payload.amount != null) {
+      toast.success(`Sold for ₹${formatIndianNumber(payload.amount)}`);
+    } else {
+      toast.success("Player sold");
+    }
+  });
+
+  // Bid events
+  socket.on("bid:updated", (payload) => {
+    console.log("bid:updated", payload);
+    fetchAuctionData();
+    toast.success(`New bid ₹${formatIndianNumber(payload.newBid.amount)}`);
+  });
+
+  socket.on("bid:placed", (payload) => {
+    console.log("bid:placed", payload);
+    fetchAuctionData();
+    toast.success(`New bid ₹${formatIndianNumber(payload.newBid.amount)}`);
+  });
+
+  socket.on("player:rtm", (payload) => {
+    console.log("player:rtm", payload);
+    fetchAuctionData();
+    toast.success("RTM used");
+  });
+
+  // ENHANCED: RTM request confirmations
+  socket.on("rtm:request", (payload) => {
+    console.log("=== RTM REQUEST DEBUG (Desktop) ===");
+    console.log("Full payload:", payload);
+    console.log("Payload teamId:", payload.teamId);
+    console.log("userTeamIdRef.current:", userTeamIdRef.current);
+    console.log("auctionData?.team?.teamId:", auctionData?.team?.teamId);
+
+    // Get current team ID with fallbacks
+    const currentTeamId = userTeamIdRef.current || auctionData?.team?.teamId;
+    
+    // Compare team IDs (handle both string and ObjectId)
+    const isMyTeamRequest = payload.teamId === currentTeamId ||
+                           payload.teamId === String(currentTeamId) ||
+                           String(payload.teamId) === String(currentTeamId);
+
+    console.log("Is my team request:", isMyTeamRequest);
+
+    if (isMyTeamRequest) {
+      console.log("✅ RTM request from my team");
+      toast.success("RTM request sent, waiting for admin approval...");
+      // Don't set pending here, let fetchAuctionData handle it
+    }
+  });
+
+  // ENHANCED: RTM approvals
+  socket.on("rtm:approved", (payload) => {
+    console.log("=== RTM APPROVED DEBUG (Desktop) ===");
+    console.log("Full payload:", payload);
+    console.log("Payload toTeam:", payload.toTeam);
+    console.log("Payload playerName:", payload.playerName);
+    console.log("userTeamIdRef.current:", userTeamIdRef.current);
+
+    // Get current team ID with fallbacks
+    const currentTeamId = userTeamIdRef.current || auctionData?.team?.teamId;
+    
+    // Compare team IDs (handle both string and ObjectId)
+    const isMyTeamApproval = payload.toTeam === currentTeamId ||
+                            payload.toTeam === String(currentTeamId) ||
+                            String(payload.toTeam) === String(currentTeamId);
+
+    console.log("Is my team approval:", isMyTeamApproval);
+
+    if (isMyTeamApproval) {
+      console.log("✅ RTM approved for my team");
+      setRtmRequestPending(false);
+      setRtmCount((prev) => Math.max(0, prev - 1)); // Ensure it doesn't go below 0
+      
+      const playerName = payload.playerName || "Player";
+      toast.success(`RTM approved! ${playerName} added to your team`);
+    } else {
+      // Show generic approval message for other teams
+      const playerName = payload.playerName || "Player";
+      toast.info(`RTM approved for ${playerName}`);
+    }
+
+    fetchAuctionData();
+  });
+
+  // ENHANCED: RTM rejections
+  socket.on("rtm:rejected", (payload) => {
+    console.log("=== RTM REJECTED DEBUG (Desktop) ===");
+    console.log("Full payload:", payload);
+    console.log("Payload teamId:", payload.teamId);
+    console.log("Payload playerName:", payload.playerName);
+    console.log("userTeamIdRef.current:", userTeamIdRef.current);
+    console.log("auctionData?.team?.teamId:", auctionData?.team?.teamId);
+
+    // Get current team ID with fallbacks
+    const currentTeamId = userTeamIdRef.current || auctionData?.team?.teamId;
+    
+    console.log("Current team ID:", currentTeamId);
+
+    if (!currentTeamId) {
+      console.warn("⚠️ No team ID available, but showing generic toast");
+      const playerName = payload.playerName || payload.originalPlayerName || payload.retrievedPlayerName || "Player";
+      toast.error(`RTM rejected for ${playerName}`);
+      fetchAuctionData();
+      return;
+    }
+
+    // Compare team IDs (handle both string and ObjectId)
+    const isMyTeamRejection = payload.teamId === currentTeamId ||
+                             payload.teamId === String(currentTeamId) ||
+                             String(payload.teamId) === String(currentTeamId);
+
+    console.log("Is my team rejection:", isMyTeamRejection);
+
+    if (isMyTeamRejection) {
+      console.log("✅ RTM rejected for my team, clearing state");
+      setRtmRequestPending(false);
+      
+      // Enhanced player name with multiple fallbacks
+      const playerName = payload.playerName || 
+                        payload.originalPlayerName || 
+                        payload.retrievedPlayerName || 
+                        payload.player?.name || 
+                        "Player";
+      
+      console.log("Final player name for toast:", playerName);
+      toast.error(`RTM rejected for ${playerName}`);
+    } else {
+      // Show generic rejection message for other teams
+      const playerName = payload.playerName || 
+                        payload.originalPlayerName || 
+                        payload.retrievedPlayerName || 
+                        "Player";
+      toast.info(`RTM rejected for ${playerName}`);
+    }
+
+    fetchAuctionData();
+  });
+
+  // Auction state events
+  socket.on("auction:paused", () => {
+    console.log("auction:paused");
+    toast.success("Auction paused");
+  });
+
+  socket.on("auction:resumed", () => {
+    console.log("auction:resumed");
+    toast.success("Auction resumed");
+  });
+
+  socket.on("auction:ended", () => {
+    console.log("auction:ended");
+    toast.success("Auction ended");
+    navigate("/dashboard");
+  });
+
+  socket.on("bidding:started", (payload) => {
+    console.log("bidding:started", payload);
+    fetchAuctionData();
+  });
+
+  return () => {
+    if (socketRef.current) {
+      socketRef.current.emit("leave-auction", id);
+      socketRef.current.disconnect();
+    }
+    if (emoteTimeoutRef.current) {
+      clearTimeout(emoteTimeoutRef.current);
+    }
+    // Clean up all RTM event listeners
+    socket.off("player:rtm");
+    socket.off("rtm:request");
+    socket.off("rtm:approved");
+    socket.off("rtm:rejected");
+  };
+}, [id, navigate]); // Removed auctionData dependency to prevent socket recreation
+
+// ENHANCED: Ensure userTeamIdRef is always synchronized
+useEffect(() => {
+  if (auctionData?.team && (auctionData.team.teamId || auctionData.team._id)) {
+    const tid = auctionData.team.teamId ?? auctionData.team._id;
+    setUserTeamId(tid);
+    userTeamIdRef.current = tid;
+    console.log("Updated userTeamIdRef (Desktop):", tid);
+  }
+}, [auctionData?.team]);
+
+// Initial fetch
+useEffect(() => {
+  fetchAuctionData();
+}, [id]);
+
+// ENHANCED: RTM Handler with better error handling
+const handleUseRTM = async () => {
+  console.log("=== RTM DEBUG (Desktop) - Starting ===");
+  console.log("- RTM Count:", rtmCount);
+  console.log("- RTM Request Pending:", rtmRequestPending);
+  console.log("- Team ID:", auctionData?.team?.teamId);
+  console.log("- Auction ID:", id);
+
+  if (rtmCount <= 0) {
+    console.log("❌ No RTMs left");
+    toast.error("No RTMs left");
+    return;
+  }
+
+  if (rtmRequestPending) {
+    console.log("❌ RTM request already pending");
+    toast.error("RTM request already pending approval");
+    return;
+  }
+
+  const myTeamId = auctionData?.team?.teamId || auctionData?.team?._id;
+
+  if (!myTeamId) {
+    console.log("❌ No team ID found");
+    toast.error("Team ID not found");
+    return;
+  }
+
+  console.log("✅ Sending RTM request...");
+
+  try {
+    const requestPayload = {
+      teamId: myTeamId,
+    };
+
+    console.log("Request payload:", requestPayload);
+    console.log("Request URL:", `/use-rtm/${id}`);
+
+    const response = await Api.post(`/use-rtm/${id}`, requestPayload);
+
+    console.log("✅ RTM Response:", response.data);
+
+    if (response.data.status === "pending") {
+      toast.success("RTM request sent for admin approval!");
+      // Don't manually set pending state, let socket events and fetchAuctionData handle it
+    } else {
+      toast.success("RTM successful!");
+      setRtmCount((prev) => Math.max(0, prev - 1));
+    }
+
+    fetchAuctionData();
+  } catch (err) {
+    console.error("❌ RTM error:", err);
+    console.error("Error response:", err.response?.data);
+    console.error("Error status:", err.response?.status);
+    toast.error(err.response?.data?.message || "Failed to use RTM");
+  }
+};
 
   // ─── Render ───────────────────────────────────────────────────────
   // Container classes
