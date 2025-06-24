@@ -1331,7 +1331,7 @@ export default function PlayersInfo() {
                 </td>
                 <td className="px-4 py-2">{p.grade || "—"}</td>
                 <td className="px-4 py-2">{p.role}</td>
-                <td className="px-4 py-2 flex items-center gap-1">
+                <td className="px-4 py-6 flex items-center gap-1">
   {p.country}
   {p.country.toLowerCase() !== "india" && <IoMdAirplane className="text-blue-500" title="Overseas Player" />}
 </td>
