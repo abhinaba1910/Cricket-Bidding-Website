@@ -25,7 +25,7 @@ const MobileStickyNav = () => {
     { label: 'Auctions', icon: <RiAuctionLine />,     href: '/admins-my-auction-info' },
     { label: 'Players',  icon: <Users />,               href: '/admin-players-info' },
     { label: 'Teams',    icon: <Briefcase />,           href: '/admin-teams-info' },
-    { label: 'Users',    icon: <Users />,               href: '/admin-users-info' },
+    { label: 'Profile',    icon: <UserIcon />,          href: '/admin-profile' },
   ];
 
   // normal user items

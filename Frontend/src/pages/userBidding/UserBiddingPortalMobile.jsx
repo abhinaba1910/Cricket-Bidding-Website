@@ -10,7 +10,8 @@ import { GiMoneyStack, GiCardRandom, GiTeamIdea } from "react-icons/gi";
 import Api from "../../userManagement/Api";
 import { io } from "socket.io-client";
 import { formatIndianNumber } from "../../types/formatIndianNumber";
-
+import { IoIosHelpCircle } from "react-icons/io";
+import { ArrowLeft } from "lucide-react";
 const TeamInfoCard = ({ team }) => {
   if (!team) return null;
 
@@ -801,24 +802,36 @@ export default function UserBiddingDashboardMobile() {
   return (
     <div className={`${containerClasses} md:hidden`} {...handlers}>
       {/* ─── Header ───────────────────────────────────────────── */}
-      <div className="flex justify-between items-center px-4 py-3 bg-gray-800/60 backdrop-blur-sm">
-        <motion.h1
-          className="text-xl sm:text-2xl font-bold"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          IPL Auction
-        </motion.h1>
-        <motion.button
-          onClick={toggleFullScreen}
-          className="px-3 py-1 bg-black bg-opacity-50 rounded-full hover:bg-opacity-75 text-xs sm:text-sm transition-all duration-200"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          {fullScreen ? "Exit Full Screen" : "Full Screen"}
-        </motion.button>
-      </div>
+
+<motion.div
+  className="sm:hidden flex justify-between items-center px-3 py-2 bg-gray-800/70 backdrop-blur-md sticky top-0 z-50"
+  initial={{ y: -50 }}
+  animate={{ y: 0 }}
+  transition={{ type: 'spring', stiffness: 200 }}
+>
+  {/* Back Button */}
+  <button
+    onClick={() => navigate('/admin-auction-info')}
+    className="flex items-center space-x-1 text-white bg-indigo-700 hover:bg-indigo-800 px-2 py-1 rounded-md shadow-sm text-xs"
+  >
+    <ArrowLeft size={16} />
+    <span className="font-medium">Back</span>
+  </button>
+
+  {/* Title */}
+  <h1 className="text-base font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
+    CricBid Auction
+  </h1>
+
+  {/* Guidelines Button */}
+  <button
+    onClick={() => navigate(`/user-bidding-portal/${id}/user-guidelines`)}
+    className="flex items-center space-x-1 text-white bg-indigo-700 hover:bg-indigo-800 px-2 py-1 rounded-md shadow-sm text-xs"
+  >
+    <IoIosHelpCircle size={16} />
+    <span className="font-medium">Help</span>
+  </button>
+</motion.div>
 
       {/* ─── Mobile Tabs Navigation ──────────────────────────────── */}
       <div className="flex justify-around border-b border-blue-700 bg-gray-800">
