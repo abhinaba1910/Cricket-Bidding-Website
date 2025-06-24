@@ -23,6 +23,9 @@ export default function CreateTeam() {
       formData.append("shortName", data.shortName);
       formData.append("purse", data.purse);
       formData.append("logoFile", data.logoFile);
+      if (data.manager) {
+        formData.append("manager", data.manager.trim());
+      }
 
       const response = await Api.post("/create-team", formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -104,6 +107,19 @@ export default function CreateTeam() {
                   {errors.shortName.message}
                 </p>
               )}
+            </div>
+            <div>
+              <label className="block font-medium mb-1">
+                Manager Username (Optional)
+              </label>
+              <input
+                {...register("manager")}
+                placeholder="e.g., johndoe123"
+                className="w-full border px-3 py-2 rounded"
+              />
+              <p className="text-gray-500 text-sm mt-1">
+                Only the user with this username will be allowed to select this team.
+              </p>
             </div>
 
             {/* Logo Upload */}

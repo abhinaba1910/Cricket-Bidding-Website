@@ -17,7 +17,7 @@ router.post(
   upload.single("logoFile"),
   async (req, res) => {
     try {
-      const { teamName, shortName, purse } = req.body;
+      const { teamName, shortName, purse ,manager} = req.body;
       const logoUrl = req.file?.path;
 
       // Check for missing fields
@@ -56,6 +56,7 @@ router.post(
         shortName: shortName.trim().toUpperCase(),
         logoUrl,
         purse,
+        manager: manager?.trim() || null,
         remaining:purse,
         createdBy: req.user.id,
       });
@@ -111,40 +112,6 @@ router.get("/get-team/:id", authMiddleware, async (req, res) => {
   }
 });
 
-// router.put(
-//   "/update-team/:id",
-//   authMiddleware,
-//   upload.single("logoFile"),
-//   async (req, res) => {
-//     try {
-//       const { id } = req.params;
-//       const { teamName, shortName, purse } = req.body;
-//       const userId = req.user.id;
-
-//       const team = await Team.findById(id);
-//       if (!team) return res.status(404).json({ error: "Team not found" });
-//       if (team.createdBy.toString() !== userId)
-//         return res
-//           .status(403)
-//           .json({ error: "Unauthorized to update this team" });
-
-//       team.teamName = teamName || team.teamName;
-//       team.shortName = shortName || team.shortName;
-//       team.purse = purse || team.purse;
-
-//       if (req.file && req.file.path) {
-//         team.logoUrl = req.file.path;
-//       }
-
-//       await team.save();
-//       res.json({ message: "Team updated successfully", team });
-//     } catch (err) {
-//       console.error(err);
-//       res.status(500).json({ error: "Failed to update team" });
-//     }
-//   }
-// );
-
 
 router.put(
   "/update-team/:id",
@@ -157,6 +124,7 @@ router.put(
         teamName,
         shortName,
         purse,
+        manager,
         retainedPlayers, // [{playerId, price}]
         releasedPlayers, // [playerId]
       } = req.body;
@@ -175,6 +143,9 @@ router.put(
       // Handle logo update
       if (req.file && req.file.path) {
         team.logoUrl = req.file.path;
+      }
+      if (manager !== undefined) {
+        team.manager = manager?.trim() || null;
       }
 
       // Parse if sent as JSON strings

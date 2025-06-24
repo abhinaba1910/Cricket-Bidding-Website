@@ -1133,10 +1133,74 @@ router.get("/get-bidding-data/:auctionId", auth, async (req, res) => {
 /////////////////////////USER BIDDING ROUTES////////////////////////////
 
 // Confirm join-auction: assign team & avatar
+// router.post("/join-auction/:auctionId/confirm", auth, async (req, res) => {
+//   try {
+//     const { auctionId } = req.params;
+//     const userId = req.user.id;
+//     const { teamId, avatarUrl } = req.body;
+
+//     if (!teamId || !avatarUrl) {
+//       return res.status(400).json({ message: "Team and avatar are required." });
+//     }
+
+//     const auction = await Auction.findById(auctionId);
+//     if (!auction) {
+//       return res.status(404).json({ message: "Auction not found." });
+//     }
+
+//     // Check if user already a manager
+//     const alreadyManager = auction.selectedTeams.find(
+//       (entry) => entry && entry.manager && entry.manager.toString() === userId
+//     );
+//     if (alreadyManager) {
+//       return res
+//         .status(409)
+//         .json({ message: "You have already selected a team and avatar." });
+//     }
+
+//     // Validate team selection
+//     const teamEntry = auction.selectedTeams.find(
+//       (t) => t?.team?.toString() === teamId
+//     );
+//     if (!teamEntry) {
+//       return res.status(400).json({ message: "Invalid team selection." });
+//     }
+//     if (teamEntry.manager) {
+//       return res
+//         .status(409)
+//         .json({ message: "Team already selected by another user." });
+//     }
+
+//     // Assign manager and avatar
+//     teamEntry.manager = userId;
+//     teamEntry.avatar = avatarUrl;
+
+//     await auction.save();
+
+//     // Emit that a new manager joined this auction
+//     {
+//       const io = req.app.get("io");
+//       io.to(auctionId).emit("team:joined", {
+//         message: "A manager joined the auction",
+//         teamId,
+//         managerId: userId,
+//         avatarUrl,
+//       });
+//     }
+
+//     res.status(200).json({ message: "Team and avatar selection successful." });
+//   } catch (err) {
+//     console.error("Error in join-auction/confirm:", err);
+//     res.status(500).json({ message: "Internal server error." });
+//   }
+// });
+
+
 router.post("/join-auction/:auctionId/confirm", auth, async (req, res) => {
   try {
     const { auctionId } = req.params;
     const userId = req.user.id;
+    const username = req.user.username;
     const { teamId, avatarUrl } = req.body;
 
     if (!teamId || !avatarUrl) {
@@ -1148,17 +1212,34 @@ router.post("/join-auction/:auctionId/confirm", auth, async (req, res) => {
       return res.status(404).json({ message: "Auction not found." });
     }
 
-    // Check if user already a manager
+    // Check if user already a manager in auction
     const alreadyManager = auction.selectedTeams.find(
-      (entry) => entry && entry.manager && entry.manager.toString() === userId
+      (entry) => entry?.manager?.toString() === userId
     );
     if (alreadyManager) {
-      return res
-        .status(409)
-        .json({ message: "You have already selected a team and avatar." });
+      return res.status(409).json({
+        message: "You have already selected a team and avatar.",
+      });
     }
 
-    // Validate team selection
+    // Find which team this user is assigned to (via team.manager field)
+    const userTeam = await Team.findOne({ manager: username });
+
+    if (!userTeam) {
+      return res.status(403).json({
+        message:
+          "You are not assigned to any team. Please contact the admin.",
+      });
+    }
+
+    // If user is assigned to a team, ensure it's the one being selected
+    if (userTeam._id.toString() !== teamId) {
+      return res.status(403).json({
+        message: `You are assigned to the team '${userTeam.teamName}'. Please select that team.`,
+      });
+    }
+
+    // Validate that the team exists in auction list
     const teamEntry = auction.selectedTeams.find(
       (t) => t?.team?.toString() === teamId
     );
@@ -1166,27 +1247,24 @@ router.post("/join-auction/:auctionId/confirm", auth, async (req, res) => {
       return res.status(400).json({ message: "Invalid team selection." });
     }
     if (teamEntry.manager) {
-      return res
-        .status(409)
-        .json({ message: "Team already selected by another user." });
+      return res.status(409).json({
+        message: "This team is already selected by another user.",
+      });
     }
 
-    // Assign manager and avatar
+    // ✅ Everything passed — allow selection
     teamEntry.manager = userId;
     teamEntry.avatar = avatarUrl;
 
     await auction.save();
 
-    // Emit that a new manager joined this auction
-    {
-      const io = req.app.get("io");
-      io.to(auctionId).emit("team:joined", {
-        message: "A manager joined the auction",
-        teamId,
-        managerId: userId,
-        avatarUrl,
-      });
-    }
+    const io = req.app.get("io");
+    io.to(auctionId).emit("team:joined", {
+      message: "A manager joined the auction",
+      teamId,
+      managerId: userId,
+      avatarUrl,
+    });
 
     res.status(200).json({ message: "Team and avatar selection successful." });
   } catch (err) {
@@ -1194,6 +1272,8 @@ router.post("/join-auction/:auctionId/confirm", auth, async (req, res) => {
     res.status(500).json({ message: "Internal server error." });
   }
 });
+
+
 
 // Fetch available teams for join-auction (GET: no emit)
 router.get("/join-auction/:auctionId/teams", auth, async (req, res) => {

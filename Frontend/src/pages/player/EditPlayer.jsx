@@ -398,7 +398,7 @@ export default function EditPlayer() {
                   </p>
                 </div>
                 <div>
-                  <label className="block font-medium mb-1">Points</label>
+                  <label className="block font-medium mb-1">Rating</label>
                   <input
                     {...register("points", { valueAsNumber: true })}
                     type="number"
