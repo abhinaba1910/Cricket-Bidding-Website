@@ -32,7 +32,7 @@ export default function EditTeam() {
         const res = await Api.get(`/get-team/${id}`);
         const t = res.data;
         console.log(t);
-        reset({ teamName: t.teamName, shortName: t.shortName, purse: t.purse });
+        reset({ teamName: t.teamName, shortName: t.shortName, purse: t.purse ,manager: t.manager || ""});
         setPreview(t.logoUrl);
         setTeamPlayers(t.players || []); // Assuming populated players
       } catch (err) {
@@ -63,6 +63,10 @@ export default function EditTeam() {
       formData.append("purse", data.purse);
       formData.append("retainedPlayers", JSON.stringify(retainedPlayers));
       formData.append("releasedPlayers", JSON.stringify(releasedPlayers));
+      if (data.manager) {
+        formData.append("manager", data.manager.trim());
+      }
+      
 
       if (data.logoFile instanceof File) {
         formData.append("logoFile", data.logoFile);
@@ -215,6 +219,19 @@ export default function EditTeam() {
                 </p>
               )}
             </div>
+            {/* Manager Username (optional) */}
+<div>
+  <label className="block font-medium mb-1">Manager Username (Optional)</label>
+  <input
+    {...register("manager")}
+    placeholder="e.g., johndoe123"
+    className="w-full border px-3 py-2 rounded"
+  />
+  <p className="text-gray-500 text-sm mt-1">
+    Only this user will be allowed to select this team while joining auction.
+  </p>
+</div>
+
             <div>
               <h2 className="text-lg font-semibold mb-2">Players</h2>
               {teamPlayers

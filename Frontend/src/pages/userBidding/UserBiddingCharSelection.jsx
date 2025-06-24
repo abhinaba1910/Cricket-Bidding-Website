@@ -169,7 +169,7 @@ export default function UserBiddingCharSelection() {
         toast.success(message);
         navigate(`/user-bidding-portal/${id}`);
       } else {
-        setError(message);
+        toast.error(message);
       }
     }
   };

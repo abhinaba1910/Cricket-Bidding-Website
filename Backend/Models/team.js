@@ -22,6 +22,10 @@ const teamSchema = new mongoose.Schema({
     type:Number,
     min: 0,
   },
+  manager: {
+    type: String, // username of manager (optional)
+    default: null,
+  },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Person',
