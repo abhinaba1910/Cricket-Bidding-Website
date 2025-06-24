@@ -3,14 +3,14 @@ import { useNavigate, useParams } from "react-router-dom";
 import Api from "../../userManagement/Api";
 import MobileStickyNav from "../../components/layout/MobileStickyNav";
 import { motion } from "framer-motion";
-import { 
-  FiArrowLeft, 
-  FiEdit2, 
-  FiAward, 
-  FiDollarSign, 
-  FiGlobe, 
-  FiCalendar, 
-  FiUser 
+import {
+  FiArrowLeft,
+  FiEdit2,
+  FiAward,
+  FiDollarSign,
+  FiGlobe,
+  FiCalendar,
+  FiUser,
 } from "react-icons/fi";
 import { FaRunning, FaBaseballBall, FaMedal } from "react-icons/fa";
 
@@ -107,11 +107,11 @@ export default function ViewPlayer() {
   const age = new Date().getFullYear() - new Date(dob).getFullYear();
 
   const roleColors = {
-    "Batsman": "bg-orange-500",
-    "Bowler": "bg-green-500",
+    Batsman: "bg-orange-500",
+    Bowler: "bg-green-500",
     "All-Rounder": "bg-purple-500",
     "Wicket-Keeper": "bg-blue-500",
-    "default": "bg-gray-500"
+    default: "bg-gray-500",
   };
 
   return (
@@ -133,7 +133,7 @@ export default function ViewPlayer() {
         {/* Main content */}
         <main className="max-w-5xl mx-auto px-4 pt-6 pb-20">
           {/* Player profile card */}
-          <motion.div 
+          <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.4 }}
@@ -155,35 +155,30 @@ export default function ViewPlayer() {
 
             {/* Player info */}
             <div className="pt-20 pb-6 px-6 text-center">
-              <div className={`inline-block px-3 py-1 rounded-full text-xs font-semibold text-white mb-3 ${roleColors[role] || roleColors.default}`}>
+              <div
+                className={`inline-block px-3 py-1 rounded-full text-xs font-semibold text-white mb-3 ${
+                  roleColors[role] || roleColors.default
+                }`}
+              >
                 {role}
               </div>
               <h1 className="text-3xl font-bold text-gray-800 mb-1">{name}</h1>
               <div className="flex items-center justify-center text-gray-500 mb-4">
                 <FiGlobe className="mr-1.5" />
                 <span>
-  {country} {country !== "India" && "✈️"}
-</span>
-
+                  {country} {country.toLowerCase() !== "india" &&  "✈️"}
+                </span>
               </div>
-              
+
               {/* Stats */}
               <div className="grid grid-cols-3 gap-4 mt-6">
-                <StatItem 
-                  title="Price" 
-                  value={`₹${formatIndianNumber(basePrice)}`} 
+                <StatItem
+                  title="Price"
+                  value={`₹${formatIndianNumber(basePrice)}`}
                   icon={<FiDollarSign />}
                 />
-                <StatItem 
-                  title="Rating" 
-                  value={points} 
-                  icon={<FiAward />}
-                />
-                <StatItem 
-                  title="Age" 
-                  value={age} 
-                  icon={<FiCalendar />}
-                />
+                <StatItem title="Rating" value={points} icon={<FiAward />} />
+                <StatItem title="Age" value={age} icon={<FiCalendar />} />
               </div>
             </div>
           </motion.div>
@@ -201,19 +196,19 @@ export default function ViewPlayer() {
                 <span className="w-2 h-6 bg-blue-500 rounded-full mr-3"></span>
                 Player Skills
               </h3>
-              
+
               <div className="space-y-4">
-                <DetailItem 
+                <DetailItem
                   icon={<FaRunning className="text-orange-500" />}
                   title="Batting Style"
                   value={battingStyle}
                 />
-                <DetailItem 
+                <DetailItem
                   icon={<FaBaseballBall className="text-green-500" />}
                   title="Bowling Style"
                   value={bowlingStyle || "N/A"}
                 />
-                <DetailItem 
+                <DetailItem
                   icon={<FaMedal className="text-blue-500" />}
                   title="Status"
                   value={isCapped ? "Internationally Capped" : "Uncapped"}
@@ -257,7 +252,7 @@ export default function ViewPlayer() {
 
         {/* Footer spacer */}
         <div className="h-24"></div>
-        
+
         <MobileStickyNav />
       </div>
     </PageWrapper>
