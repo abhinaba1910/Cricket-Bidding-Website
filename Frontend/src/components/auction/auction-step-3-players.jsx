@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useFormContext, Controller } from "react-hook-form";
-
 export default function AuctionStep3Players({
   onSubmit,
   onBack,
@@ -46,6 +45,21 @@ export default function AuctionStep3Players({
   // const filteredByTeam = selectedTeamIds.length
   //   ? allPlayers.filter(p => selectedTeamIds.includes(p.teamId))
   //   : allPlayers;
+
+  const areAllDisplayedSelected = (field) =>
+  displayedOptions.every((opt) => field.value.includes(opt.value));
+
+const handleSelectAll = (field) => {
+  const allIds = displayedOptions.map((opt) => opt.value);
+  const currentlySelected = field.value;
+
+  const newSelected = areAllDisplayedSelected(field)
+    ? currentlySelected.filter((id) => !allIds.includes(id)) // Deselect all visible
+    : Array.from(new Set([...currentlySelected, ...allIds])); // Select all visible
+
+  field.onChange(newSelected);
+};
+
 
   const filteredPlayers = allPlayers.filter((p) => {
     const gradeOK = selectedGrade === "all" || p.grade === selectedGrade;
@@ -173,7 +187,24 @@ export default function AuctionStep3Players({
     return (
       <div style={styles.drawerOverlay} onClick={() => setDrawerOpen(false)}>
         <div style={styles.drawerContent} onClick={(e) => e.stopPropagation()}>
-          <h2>Select Players</h2>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+  <h2>Select Players</h2>
+  <button
+    type="button"
+    onClick={() => handleSelectAll(field)}
+    style={{
+      fontSize: 14,
+      padding: "4px 10px",
+      borderRadius: 6,
+      backgroundColor: "#f0f0f0",
+      border: "1px solid #ccc",
+      cursor: "pointer",
+    }}
+  >
+    {areAllDisplayedSelected(field) ? "Deselect All" : "Select All"}
+  </button>
+</div>
+
           <input
             type="text"
             placeholder="Search players..."
@@ -312,6 +343,24 @@ export default function AuctionStep3Players({
                 {renderDrawer(field)}
               </>
             ) : (
+              <div>
+                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+  <button
+    type="button"
+    onClick={() => handleSelectAll(field)}
+    style={{
+      fontSize: 14,
+      padding: "6px 12px",
+      borderRadius: 6,
+      backgroundColor: "#f0f0f0",
+      border: "1px solid #ccc",
+      cursor: "pointer",
+    }}
+  >
+    {areAllDisplayedSelected(field) ? "Deselect All" : "Select All"}
+  </button>
+</div>
+
               <div style={styles.playerList}>
                 {playerOptions.length === 0 ? (
                   <div>No players available.</div>
@@ -342,6 +391,7 @@ export default function AuctionStep3Players({
                     </label>
                   ))
                 )}
+              </div>
               </div>
             )}
             {errors.selectedPlayers && (

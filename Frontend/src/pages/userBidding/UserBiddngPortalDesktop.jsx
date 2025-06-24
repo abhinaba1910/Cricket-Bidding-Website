@@ -10,6 +10,7 @@ import { GiMoneyStack, GiCardRandom } from "react-icons/gi";
 import Api from "../../userManagement/Api";
 import { io } from "socket.io-client";
 import { ArrowLeft } from "lucide-react";
+import { IoIosHelpCircle } from "react-icons/io";
 // ─── Shared “CriteriaTable” for Desktop ────────────────────────────
 // Bid paddle animation variants (unchanged)
 const paddleVariants = {
@@ -873,6 +874,13 @@ const handleUseRTM = async () => {
         <h1 className="text-xl sm:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500">
           CricBid Auction
         </h1>
+        <button
+          onClick={() => navigate(`/user-bidding-portal/${id}/user-guidelines`)}
+          className="absolute top-4 right-4 z-50 flex items-center space-x-2 text-white bg-indigo-700 hover:bg-indigo-800 px-3 py-1.5 rounded-lg shadow-md transition"
+        >
+          <IoIosHelpCircle size={18}/>
+          <span className="text-sm font-medium">Guidelines</span>
+        </button>
       </motion.div>
 
       {/* ─── LEFT COLUMN ─────────────────────────────────────────── */}
@@ -902,7 +910,6 @@ const handleUseRTM = async () => {
             </p>
           </motion.div>
         ))}
-
         {/* ─ Current Player Details ─ */}
         <motion.div
           onClick={openPlayerModal}
