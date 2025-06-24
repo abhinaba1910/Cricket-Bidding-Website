@@ -166,7 +166,7 @@ export default function AdminBiddingTeamsList() {
                   </div>
                   <button
                     onClick={() =>
-                      navigate(`/admin/bidding-teams-view/${team._id}`)
+                      navigate(`/admin/bidding-teams-view/${id}/${team._id}`)
                     }
                     className="p-2 bg-gray-100 rounded hover:bg-gray-200 transition"
                   >
