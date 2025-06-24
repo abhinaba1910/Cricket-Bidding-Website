@@ -172,7 +172,7 @@ export default function ViewPlayer() {
                   icon={<FiDollarSign />}
                 />
                 <StatItem 
-                  title="Points" 
+                  title="Rating" 
                   value={points} 
                   icon={<FiAward />}
                 />
