@@ -3,6 +3,7 @@ import { FiSearch, FiArrowLeft, FiEye } from "react-icons/fi";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../userManagement/Api";
 import { IoMdAirplane } from "react-icons/io";
+import { formatIndianNumber } from "../../types/formatIndianNumber";
 const allRoles = [
   "Batsman",
   "Fast all-rounder",
@@ -215,7 +216,7 @@ export default function UserBiddingPlayerList() {
                 <th className="px-4 py-3">Rank</th>
                 <th className="px-4 py-3">Role</th>
                 <th className="px-4 py-3">Country</th>
-                <th className="px-4 py-3">Price</th>
+                <th className="px-4 py-3">Base Price</th>
                 <th className="w-20 px-4 py-3">View</th>
               </tr>
             </thead>
@@ -242,7 +243,7 @@ export default function UserBiddingPlayerList() {
                   )}
                 </td>
                   <td className="px-4 py-2">
-                    ₹{p.basePrice?.toLocaleString() || 0}
+                  ₹{formatIndianNumber(p.basePrice) || "0"}
                   </td>
                   <td className="px-4 py-2">
                     <button
@@ -300,7 +301,7 @@ export default function UserBiddingPlayerList() {
 
                 </div>
                 <p className="text-sm font-semibold mt-1">
-                  ₹{p.basePrice?.toLocaleString() || 0}
+                  ₹{formatIndianNumber(p.basePrice) || "0"}
                 </p>
               </div>
               <button

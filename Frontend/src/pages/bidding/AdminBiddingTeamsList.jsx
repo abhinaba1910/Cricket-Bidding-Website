@@ -12,20 +12,52 @@ export default function AdminBiddingTeamsList() {
   const [auctionDetails, setAuctionDetails] = useState(null);
 
   // Fetch auction details and selected teams
+  // useEffect(() => {
+  //   Api
+  //     .get(`/get-auction/${id}`)
+  //     .then((res) => {
+  //       setAuctionDetails(res.data);
+  //       setTeams(res.data.selectedTeams || []);
+  //       console.log(res.data.selectedTeams);
+  //     })
+  //     .catch((err) => {
+  //       console.error("Error fetching auction details:", err);
+  //       alert("Failed to fetch auction details.");
+  //     })
+  //     .finally(() => setLoading(false));
+  // }, [id]);
+
   useEffect(() => {
-    Api
-      .get(`/get-auction/${id}`)
-      .then((res) => {
-        setAuctionDetails(res.data);
-        setTeams(res.data.selectedTeams || []);
-        console.log(res.data.selectedTeams);
-      })
-      .catch((err) => {
-        console.error("Error fetching auction details:", err);
-        alert("Failed to fetch auction details.");
-      })
-      .finally(() => setLoading(false));
+    const fetchTeams = async () => {
+      setLoading(true);
+  
+      try {
+        const user = JSON.parse(localStorage.getItem("user")); // or however you're storing logged in user
+        const isAdmin = user?.role === "admin" || user?.role === "temp-admin";
+  
+        const res = await Api.get(
+          isAdmin ? `/get-auction/${id}` : `/get-auction-teams/${id}`
+        );
+  
+        if (isAdmin) {
+          setAuctionDetails(res.data);
+          setTeams(res.data.selectedTeams || []);
+        } else {
+          setAuctionDetails({ auctionName: "Selected Auction" }); // fallback
+          setTeams(res.data.selectedTeams || []);
+          console.log(res.data.selectedTeams)
+        }
+      } catch (err) {
+        console.error("Error fetching teams:", err);
+        alert("Failed to fetch auction teams.");
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+    fetchTeams();
   }, [id]);
+  
 
   // Filter by ID or teamName or shortName
   const filtered = useMemo(() => {

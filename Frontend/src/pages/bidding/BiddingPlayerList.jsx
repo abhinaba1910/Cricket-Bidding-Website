@@ -3,7 +3,15 @@ import { FiSearch, FiArrowLeft, FiEye } from "react-icons/fi";
 import { useNavigate, useParams } from "react-router-dom";
 import Api from "../../userManagement/Api";
 import { IoMdAirplane } from "react-icons/io";
-const allRoles = ["Batsman", "Bowler", "All-Rounder", "Wicket-Keeper"];
+import { formatIndianNumber } from "../../types/formatIndianNumber";
+const allRoles = [
+  "Batsman",
+  "Fast all-rounder",
+  "Spin all-rounder",
+  "Wicket keeper batsman",
+  "Spin bowler",
+  "Fast bowler",
+];
 const allBattingStyles = ["Right Handed Batsman", "Left Handed Batsman"];
 const allBowlingStyles = [
   "Right Arm Fast",
@@ -61,8 +69,7 @@ export default function BiddingPlayerList() {
   );
 
   const [tab, setTab] = useState("available");
-  const list =
-    tab === "available" ? available : tab === "sold" ? sold : unsold;
+  const list = tab === "available" ? available : tab === "sold" ? sold : unsold;
 
   const filtered = useMemo(() => {
     const term = search.toLowerCase();
@@ -210,7 +217,7 @@ export default function BiddingPlayerList() {
                 <th className="px-4 py-3">Rank</th>
                 <th className="px-4 py-3">Role</th>
                 <th className="px-4 py-3">Country</th>
-                <th className="px-4 py-3">Price</th>
+                <th className="px-4 py-3">Base Price</th>
                 <th className="w-20 px-4 py-3">View</th>
               </tr>
             </thead>
@@ -227,17 +234,17 @@ export default function BiddingPlayerList() {
                   <td className="px-4 py-2">{p.name}</td>
                   <td className="px-4 py-2">{p.grade || "—"}</td>
                   <td className="px-4 py-2">{p.role}</td>
-                                  <td className="px-4 py-6 flex items-center gap-1">
-                                    {p.country}
-                                    {p.country.toLowerCase() !== "india" && (
-                                      <IoMdAirplane
-                                        className="text-blue-500"
-                                        title="Overseas Player"
-                                      />
-                                    )}
-                                  </td>
+                  <td className="px-4 py-6 flex items-center gap-1">
+                    {p.country}
+                    {p.country.toLowerCase() !== "india" && (
+                      <IoMdAirplane
+                        className="text-blue-500"
+                        title="Overseas Player"
+                      />
+                    )}
+                  </td>
                   <td className="px-4 py-2">
-                    ₹{p.basePrice?.toLocaleString() || 0}
+                    ₹{formatIndianNumber(p.basePrice) || "0"}
                   </td>
                   <td className="px-4 py-2">
                     <button
@@ -279,20 +286,19 @@ export default function BiddingPlayerList() {
               <div className="flex-1">
                 <h3 className="font-medium text-gray-900">{p.name}</h3>
                 <div className="text-sm text-gray-600">
-                  {p.role}      
+                  {p.role}
                   <div className="flex items-center gap-1">
-                  {p.country}
-                  {p.country.toLowerCase() !== "india" && (
-                    <IoMdAirplane
-                    className="text-blue-500"
-                    title="Overseas Player"
-                    />
-                  )}
-                  </div>          
-
+                    {p.country}
+                    {p.country.toLowerCase() !== "india" && (
+                      <IoMdAirplane
+                        className="text-blue-500"
+                        title="Overseas Player"
+                      />
+                    )}
+                  </div>
                 </div>
                 <p className="text-sm font-semibold mt-1">
-                  ₹{p.basePrice?.toLocaleString() || 0}
+                ₹{formatIndianNumber(p.basePrice) || "0"}
                 </p>
               </div>
               <button

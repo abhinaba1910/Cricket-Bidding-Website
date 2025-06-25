@@ -253,87 +253,6 @@ router.get("/auction-timer/:id", AuthMiddleWare, async (req, res) => {
   }
 });
 
-// GET AUCTIONS
-// router.get("/get-auction", AuthMiddleWare, async (req, res) => {
-//   try {
-//     const userId = req.user.id;
-//     const user = await Person.findById(userId);
-
-//     if (!user || !["admin", "temp-admin"].includes(user.role)) {
-//       return res.status(403).json({ error: "Access denied. Only admins or temp-admins allowed." });
-//     }
-
-//     const auctions = await Auction.find({ createdBy: userId })
-//       .populate("selectedTeams.team", "name logo")
-//       .populate("selectedPlayers", "name photo")
-//       .sort({ createdAt: -1 });
-
-//       const normalized = auctions.map(a => ({
-//         id: a._id,
-//         name: a.auctionName,
-//         shortName: a.shortName,
-//         logo: a.auctionImage,
-//         description: a.description,
-//         startDate: a.startDate, // Full ISO string in UTC
-//         status: a.status,
-//         selectedTeams: a.selectedTeams,
-//         selectedPlayers: a.selectedPlayers,
-//         joinCode: a.shortName,
-//         createdAt: a.createdAt,
-//       }));
-      
-
-//     res.json({ auctions: normalized });
-//   } catch (error) {
-//     console.error("Error fetching auctions:", error);
-//     res.status(500).json({ error: "Server error fetching auctions" });
-//   }
-// });
-
-
-// // START AUCTION
-// router.patch("/start-auction/:id", AuthMiddleWare, async (req, res) => {
-//   try {
-//     const auction = await Auction.findById(req.params.id);
-//     if (!auction) return res.status(404).json({ error: "Auction not found" });
-
-//     const userId = req.user.id;
-//     const userRole = req.user.role;
-
-//     const isOwner = auction.createdBy.toString() === userId.toString();
-//     const isAdmin = ["admin", "temp-admin"].includes(userRole);
-
-//     if (!isOwner && !isAdmin) {
-//       return res.status(403).json({ error: "You are not authorized to start this auction" });
-//     }
-
-//     if (auction.status !== "upcoming") {
-//       return res.status(400).json({ error: `Cannot start auction. Current status is '${auction.status}'.` });
-//     }
-
-//     const now = new Date();
-//     const startTime = new Date(auction.startDate);
-
-//     if (now >= startTime) {
-//       auction.status = "live";
-//       await auction.save();
-
-//       const io = req.app.get("io");
-//       io.to(req.params.id).emit("auction:update", {
-//         type: "auction-started",
-//         payload: { status: auction.status },
-//       });
-
-//       return res.json({ message: "Auction started successfully", status: auction.status });
-//     } else {
-//       return res.status(400).json({ error: "Auction cannot be started yet. Too early." });
-//     }
-//   } catch (err) {
-//     console.error("Start auction error:", err);
-//     res.status(500).json({ error: "Server error starting auction" });
-//   }
-// });
-
 //vinay working
 router.get("/get-auction/:id", AuthMiddleWare, async (req, res) => {
   try {
@@ -357,7 +276,8 @@ router.get("/get-auction/:id", AuthMiddleWare, async (req, res) => {
       .populate("currentBid.team")
       .populate("biddingHistory.player")
       .populate("biddingHistory.team")
-      .populate("manualPlayerQueue.player");
+      .populate("manualPlayerQueue.player")
+      .populate("selectedTeams.manager"); 
 
     if (!auction) {
       return res.status(404).json({ message: "Auction not found." });
@@ -389,6 +309,7 @@ router.get("/get-auction/:id", AuthMiddleWare, async (req, res) => {
       const team = entry.team;
       const purse = team?.purse ?? 0;
       const remaining = team?.remaining ?? 0;
+      const manager = entry.manager;
 
       return {
         _id: team?._id,
@@ -398,7 +319,13 @@ router.get("/get-auction/:id", AuthMiddleWare, async (req, res) => {
         remaining,
         totalSpent: purse - remaining,
         logoUrl: team?.logoUrl,
-        manager: entry.manager,
+        manager: manager
+          ? {
+              _id: manager._id,
+              name: manager.username,
+              photo: manager.profilePic || "/manager-placeholder.jpg",
+            }
+          : null,
         avatar: entry.avatar,
         rtmCount: entry.rtmCount,
         boughtPlayers: (team?.players || []).map(p => ({
@@ -445,6 +372,65 @@ router.get("/get-auction/:id", AuthMiddleWare, async (req, res) => {
     return res.status(500).json({ message: "Server error while fetching auction." });
   }
 });
+
+
+router.get("/get-auction-teams/:id", async (req, res) => {
+  try {
+    const auctionId = req.params.id;
+
+    const auction = await Auction.findById(auctionId)
+      .populate({
+        path: "selectedTeams.team",
+        populate: {
+          path: "players.player",
+          model: "Player",
+        },
+      })
+      .populate("selectedTeams.manager"); // ✅ Populate manager info
+
+    if (!auction) {
+      return res.status(404).json({ message: "Auction not found." });
+    }
+
+    const mappedTeams = auction.selectedTeams.map((entry) => {
+      const team = entry.team;
+      const manager = entry.manager;
+
+      return {
+        _id: team?._id,
+        teamName: team?.teamName,
+        shortName: team?.shortName,
+        purse: team?.purse ?? 0,
+        remaining: team?.remaining ?? 0,
+        totalSpent: (team?.purse ?? 0) - (team?.remaining ?? 0),
+        logoUrl: team?.logoUrl,
+        manager: manager
+          ? {
+              _id: manager._id,
+              name: manager.username,
+              photo: manager.profilePic || "/manager-placeholder.jpg",
+            }
+          : null,
+        avatar: entry.avatar,
+        rtmCount: entry.rtmCount,
+        boughtPlayers: (team?.players || []).map((p) => ({
+          playerId: p.player?._id,
+          playerName: p.player?.name,
+          playerImage: p.player?.image,
+          price: p.price,
+          role: p.player?.role,
+          nationality: p.player?.nationality,
+        })),
+      };
+    });
+
+    return res.status(200).json({ selectedTeams: mappedTeams });
+  } catch (err) {
+    console.error("Error fetching auction teams:", err);
+    res.status(500).json({ message: "Server error while fetching teams." });
+  }
+});
+
 
 
 router.patch("/edit-auction/:id", AuthMiddleWare, async (req, res) => {

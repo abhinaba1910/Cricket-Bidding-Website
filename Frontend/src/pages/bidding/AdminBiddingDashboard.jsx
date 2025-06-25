@@ -59,6 +59,12 @@ export default function AdminBiddingDashboard() {
   const [pendingRTMRequest, setPendingRTMRequest] = useState(null);
   const [isProcessingRTM, setIsProcessingRTM] = useState(false);
 
+  const user = JSON.parse(localStorage.getItem("user")); // or your user context/session
+  const isAdmin = user?.role === "admin" || user?.role === "temp-admin";
+
+  if(!isAdmin){
+    navigate(-1)
+  }
   // -------------------------------
   // SOCKET.IO: connect, join room, listeners
   // -------------------------------
@@ -68,7 +74,8 @@ export default function AdminBiddingDashboard() {
       console.warn("No auth token found. Cannot connect socket.");
       return;
     }
-    const SOCKET_SERVER_URL = "https://cricket-bidding-website-backend.onrender.com"; // ← replace with your real URL
+    const SOCKET_SERVER_URL =
+      "https://cricket-bidding-website-backend.onrender.com"; // ← replace with your real URL
     // const SOCKET_SERVER_URL = "http://localhost:6001";
     const socket = io(SOCKET_SERVER_URL, {
       auth: { token },
@@ -124,6 +131,7 @@ export default function AdminBiddingDashboard() {
             bowling: currentPlayer.bowlingStyle,
             basePrice: currentPlayer.basePrice,
             avatarUrl: currentPlayer.photo,
+            points: currentPlayer.points,
           },
           currentBid: {
             amount: currentPlayer.basePrice || 0,
@@ -182,6 +190,7 @@ export default function AdminBiddingDashboard() {
             bowling: nextPlayer.bowlingStyle,
             basePrice: nextPlayer.basePrice,
             avatarUrl: nextPlayer.photo,
+            points: nextPlayer.points,
           },
           currentBid: {
             amount: nextPlayer.basePrice || 0,
@@ -207,6 +216,7 @@ export default function AdminBiddingDashboard() {
             bowling: "--/--",
             basePrice: 0,
             avatarUrl: null,
+            points: 0,
           },
           currentBid: {
             amount: 0,
@@ -275,6 +285,7 @@ export default function AdminBiddingDashboard() {
             bowling: "--/--",
             basePrice: 0,
             avatarUrl: null,
+            points: 0,
           },
           currentBid: {
             amount: 0,
@@ -475,6 +486,7 @@ export default function AdminBiddingDashboard() {
             bowling: data.currentPlayer.bowlingStyle,
             basePrice: data.currentPlayer.basePrice,
             avatarUrl: data.currentPlayer.photo,
+            points: data.currentPlayer.points,
           },
         }));
       }
@@ -508,6 +520,7 @@ export default function AdminBiddingDashboard() {
           bowling: response.data.currentPlayer?.bowlingStyle,
           basePrice: response.data.currentPlayer?.basePrice,
           avatarUrl: response.data.currentPlayer?.photo,
+          points: response.data.currentPlayer?.points,
         },
         currentBid: {
           amount: response.data.currentPlayer?.basePrice || 0,
@@ -589,6 +602,7 @@ export default function AdminBiddingDashboard() {
             bowling: response.data.currentPlayer?.bowlingStyle,
             basePrice: response.data.currentPlayer?.basePrice,
             avatarUrl: response.data.currentPlayer?.photo,
+            points: response.data.currentPlayer?.points,
           },
           currentBid: {
             amount: response.data.currentPlayer?.basePrice || 0,
@@ -660,6 +674,8 @@ export default function AdminBiddingDashboard() {
             data.currentPlayerOnBid?.basePrice || prev.currentLot.basePrice,
           playerPic:
             data.currentPlayerOnBid?.playerPic || prev.currentLot.playerPic,
+          points:
+            data.currentPlayerOnBid?.points || prev.currentLot.points,
         },
         currentBid: {
           amount: data.currentBid?.amount || prev.currentBid.amount,
@@ -1008,6 +1024,7 @@ export default function AdminBiddingDashboard() {
             bowling: nextPlayer.bowlingStyle,
             basePrice: nextPlayer.basePrice,
             avatarUrl: nextPlayer.photo,
+            points: nextPlayer.points,
           },
           currentBid: {
             amount: nextPlayer.basePrice || 0,
@@ -1035,6 +1052,7 @@ export default function AdminBiddingDashboard() {
             bowling: "--/--",
             basePrice: 0,
             avatarUrl: null,
+            points: 0,
           },
           currentBid: {
             amount: 0,
@@ -1235,6 +1253,12 @@ export default function AdminBiddingDashboard() {
                 <p className="text-sm">{auctionData.currentLot.bowling}</p>
               </div>
             </div>
+            <div className="mt-3 flex justify-center">
+              <div>
+                <span className="text-xs opacity-75">Points</span>
+                <p className="text-sm">{auctionData.currentLot.points}</p>
+              </div>
+            </div>
             <p className="mt-3 text-base font-semibold bg-blue-900/50 py-1 rounded-lg">
               Base Price: {auctionData.currentLot.basePrice}
             </p>
@@ -1407,6 +1431,9 @@ export default function AdminBiddingDashboard() {
               </p>
               <p className="mt-1 text-xs font-semibold bg-blue-900/30 py-0.5 rounded">
                 Base: {auctionData.currentLot.basePrice}
+              </p>
+              <p className="mt-1 text-xs font-semibold bg-blue-900/30 py-0.5 rounded">
+                Points: {auctionData.currentLot.points}
               </p>
             </div>
 

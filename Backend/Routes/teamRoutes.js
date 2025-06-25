@@ -211,9 +211,26 @@ router.delete('/delete-team/:id', authMiddleware, async (req, res) => {
     const auctions = await Auction.find({ 'selectedTeams.team': team._id });
 
     for (const auction of auctions) {
+      // Remove from selectedTeams
       auction.selectedTeams = auction.selectedTeams.filter(
         (entry) => entry.team.toString() !== team._id.toString()
       );
+
+      // Also remove bidding history related to this team
+      auction.biddingHistory = auction.biddingHistory.filter(
+        (entry) => entry.team.toString() !== team._id.toString()
+      );
+
+      // Also clear pendingRTMRequest if it's from this team or teamId
+      if (
+        auction.pendingRTMRequest &&
+        (auction.pendingRTMRequest.teamId?.toString() === team._id.toString() ||
+         auction.pendingRTMRequest.fromTeam?.toString() === team._id.toString())
+      ) {
+        auction.pendingRTMRequest = undefined;
+      }
+
+      // Save auction updates
       await auction.save();
     }
 
@@ -228,6 +245,7 @@ router.delete('/delete-team/:id', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Server error while deleting team' });
   }
 });
+
 
 
 

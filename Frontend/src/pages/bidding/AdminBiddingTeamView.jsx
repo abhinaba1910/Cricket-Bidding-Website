@@ -18,58 +18,61 @@ export default function AdminBiddingTeamView() {
   const [modalTitle, setModalTitle] = useState("");
   const [showModal, setShowModal] = useState(false);
 
+  const user = JSON.parse(localStorage.getItem("user")); // or your user context/session
+  const isAdmin = user?.role === "admin" || user?.role === "temp-admin";
   useEffect(() => {
     async function loadData() {
       try {
-        // Fetch auction detail (includes selectedTeams with purse/remaining/totalSpent and boughtPlayers)
-        const { data: auction } = await Api.get(`/get-auction/${id}`);
-        console.log(auction)
+        // Use correct endpoint based on role
+        const { data } = await Api.get(
+          isAdmin ? `/get-auction/${id}` : `/get-auction-teams/${id}`
+        );
 
-        const selectedTeam = auction.selectedTeams.find(t => t._id === teamId);
+        
+        const selectedTeams = isAdmin ? data.selectedTeams : data.selectedTeams;
+        const auctionName = isAdmin ? data.auctionName : "Selected Auction";
+
+        const selectedTeam = selectedTeams.find((t) => t._id === teamId);
         if (!selectedTeam) {
           throw new Error("Team not found in this auction");
         }
+        console.log(selectedTeam)
 
-        // Map server-supplied boughtPlayers into the UI format
-        const teamPlayers = selectedTeam.boughtPlayers.map(p => ({
+        const teamPlayers = selectedTeam.boughtPlayers.map((p) => ({
           name: p.playerName,
           role: p.role,
           price: p.price,
           playerDetails: {
-            _id:         p.playerId,
-            name:        p.playerName,
-            image:       p.playerImage,
-            role:        p.role,
-            nationality: p.nationality
-          }
+            _id: p.playerId,
+            name: p.playerName,
+            image: p.playerImage,
+            role: p.role,
+            nationality: p.nationality,
+          },
         }));
 
-        // Destructure purse info from server
-        const { purse, remaining, totalSpent } = selectedTeam;
-
-        setAuctionDetails(auction);
+        setAuctionDetails({ auctionName });
         setTeam({
           ...selectedTeam,
-          players:        teamPlayers,
-          remainingPurse: remaining,
-          totalSpent:     totalSpent,
+          players: teamPlayers,
+          remainingPurse: selectedTeam.remaining,
+          totalSpent: selectedTeam.totalSpent,
           manager: {
-            name:     selectedTeam.managerName || "Team Manager",
-            photoUrl: selectedTeam.managerPhoto || "/manager-placeholder.jpg",
+            name: selectedTeam.manager.name || "Team Manager",
+            photoUrl: selectedTeam.manager.photo || "/manager-placeholder.jpg",
           },
         });
       } catch (err) {
         console.error("Failed to load team data:", err);
         toast.error(
           err.response?.data?.message ||
-          err.message ||
-          "Could not load team data"
+            err.message ||
+            "Could not load team data"
         );
       } finally {
         setLoading(false);
       }
     }
-
     loadData();
   }, [id, teamId]);
 
@@ -98,13 +101,19 @@ export default function AdminBiddingTeamView() {
   }
 
   // Derived stats
-  const totalTaken    = team.players.length;
-  const batsmen       = team.players.filter(p => p.role === "Batsman");
-  const FastAllRounder  = team.players.filter(p => p.role === "Fast all-rounder");
-  const SpinAllRounders   = team.players.filter(p => p.role === "Spin all-rounder");
-  const wicketKeepers = team.players.filter(p => p.role === "Wicket keeper batsman");
-  const spinBowler  = team.players.filter(p => p.role === "Spin bowler");
-  const fastBowler = team.players.filter(p => p.role === "Fast bowler");
+  const totalTaken = team.players.length;
+  const batsmen = team.players.filter((p) => p.role === "Batsman");
+  const FastAllRounder = team.players.filter(
+    (p) => p.role === "Fast all-rounder"
+  );
+  const SpinAllRounders = team.players.filter(
+    (p) => p.role === "Spin all-rounder"
+  );
+  const wicketKeepers = team.players.filter(
+    (p) => p.role === "Wicket keeper batsman"
+  );
+  const spinBowler = team.players.filter((p) => p.role === "Spin bowler");
+  const fastBowler = team.players.filter((p) => p.role === "Fast bowler");
 
   const openModal = (title, list) => {
     setModalTitle(title);
@@ -132,14 +141,14 @@ export default function AdminBiddingTeamView() {
           </h1>
           <p className="text-sm text-gray-600">Team Details</p>
         </div>
-        <motion.button
-          onClick={() => navigate(`/admin/admin-bidding-dashboard/${id}`)}
-          className="px-4 py-2 bg-gradient-to-r from-green-500 to-teal-400 text-white rounded-lg shadow-md hover:from-green-600 hover:to-teal-500"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          Go to Auction
-        </motion.button>
+         <motion.button
+            onClick={() => navigate(isAdmin?(`/admin/admin-bidding-dashboard/${id}`):(`/user-bidding-portal/${id}`))}
+            className="px-4 py-2 bg-gradient-to-r from-green-500 to-teal-400 text-white rounded-lg shadow-md hover:from-green-600 hover:to-teal-500"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            Go to Auction
+          </motion.button>
       </motion.div>
 
       <AnimatePresence>
@@ -179,8 +188,14 @@ export default function AdminBiddingTeamView() {
                 {[
                   ["Short Name", team.shortName],
                   ["Total Purse", `₹${Number(team.purse).toLocaleString()}`],
-                  ["Total Spent", `₹${Number(team.totalSpent).toLocaleString()}`],
-                  ["Remaining Purse", `₹${Number(team.remainingPurse).toLocaleString()}`],
+                  [
+                    "Total Spent",
+                    `₹${Number(team.totalSpent).toLocaleString()}`,
+                  ],
+                  [
+                    "Remaining Purse",
+                    `₹${Number(team.remainingPurse).toLocaleString()}`,
+                  ],
                   ["Players Bought", totalTaken],
                 ].map(([label, val]) => (
                   <div key={label}>
@@ -209,11 +224,36 @@ export default function AdminBiddingTeamView() {
               <div className="grid grid-cols-2 gap-4 mt-4">
                 {[
                   ["Batsmen", batsmen, "bg-blue-100", "text-blue-800"],
-                  ["Fast all-rounder", FastAllRounder, "bg-green-100", "text-green-800"],
-                  ["Spin all-rounder", SpinAllRounders, "bg-yellow-100", "text-yellow-800"],
-                  ["Wicket keeper batsman", wicketKeepers, "bg-purple-100", "text-purple-800"],
-                  ["Spin bowler", spinBowler, "bg-purple-100", "text-purple-800"],
-                  ["Fast bowler", fastBowler, "bg-purple-100", "text-yellow-800"],
+                  [
+                    "Fast all-rounder",
+                    FastAllRounder,
+                    "bg-green-100",
+                    "text-green-800",
+                  ],
+                  [
+                    "Spin all-rounder",
+                    SpinAllRounders,
+                    "bg-yellow-100",
+                    "text-yellow-800",
+                  ],
+                  [
+                    "Wicket keeper batsman",
+                    wicketKeepers,
+                    "bg-purple-100",
+                    "text-purple-800",
+                  ],
+                  [
+                    "Spin bowler",
+                    spinBowler,
+                    "bg-purple-100",
+                    "text-purple-800",
+                  ],
+                  [
+                    "Fast bowler",
+                    fastBowler,
+                    "bg-purple-100",
+                    "text-yellow-800",
+                  ],
                 ].map(([lbl, list, bg, textColor]) => (
                   <motion.div
                     key={lbl}
@@ -315,7 +355,6 @@ export default function AdminBiddingTeamView() {
           </motion.div>
         )}
       </AnimatePresence>
-      
     </div>
   );
 }

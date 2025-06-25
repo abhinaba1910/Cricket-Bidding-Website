@@ -130,6 +130,10 @@ function SmallPlayerCard({ player }) {
           <span className="text-xs bg-blue-600/30 px-2 py-1 rounded-full">
             {currentPlayer.role || "--/--"}
           </span>
+          <span className="text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full shadow-sm">
+            {currentPlayer.points || "--/--"}
+          </span>
+
           <span className="text-xs bg-amber-600/30 px-2 py-1 rounded-full font-semibold">
             {currentPlayer && currentPlayer.basePrice != null
               ? `₹${formatIndianNumber(currentPlayer.basePrice)}`
@@ -403,159 +407,6 @@ export default function UserBiddingDashboardMobile() {
     }
   };
 
-  // ─── Enhanced Socket Setup (with RTM events from desktop) ──────────────────────────
-  // useEffect(() => {
-  //   const token = localStorage.getItem("token");
-  //   if (!token) {
-  //     console.warn("No auth token; skipping socket connect");
-  //     return;
-  //   }
-
-  //   // ⚠️ Specify your backend URL here:
-  //   const socket = io("http://localhost:6001", {
-  //     // const socket = io("https://cricket-bidding-website-backend.onrender.com", {
-  //     auth: { token },
-  //     transports: ["websocket"],
-  //   });
-  //   socketRef.current = socket;
-
-  //   socket.on("connect", () => {
-  //     console.log("Socket connected (user bidding mobile):", socket.id);
-  //     if (id) {
-  //       socket.emit("join-auction", id);
-  //     }
-  //   });
-
-  //   socket.on("disconnect", (reason) => {
-  //     console.log("Socket disconnected:", reason);
-  //   });
-
-  //   // Enhanced player:sold event with emote logic
-  //   socket.on("player:sold", (payload) => {
-  //     console.log("Received player:sold", payload);
-  //     console.log("[MOBILE USER] got player:sold:", payload);
-  //     const winnerId = payload.soldTo;
-  //     const teamId = userTeamIdRef.current;
-  //     if (teamId && winnerId) {
-  //       if (winnerId === teamId) {
-  //         setEmoteToPlay("BidWon");
-  //       } else {
-  //         setEmoteToPlay("LostBid");
-  //       }
-  //       if (emoteTimeoutRef.current) {
-  //         clearTimeout(emoteTimeoutRef.current);
-  //       }
-  //       emoteTimeoutRef.current = setTimeout(() => {
-  //         setEmoteToPlay(null);
-  //         emoteTimeoutRef.current = null;
-  //       }, 3000);
-  //     }
-  //     // Refresh data
-  //     fetchAuctionData();
-  //     if (payload.amount != null) {
-  //       toast.success(`Sold for ₹${formatIndianNumber(payload.amount)}`);
-  //     } else {
-  //       toast.success("Player sold");
-  //     }
-  //   });
-
-  //   // Existing bid events
-  //   socket.on("bid:updated", (payload) => {
-  //     console.log("bid:updated", payload);
-  //     fetchAuctionData();
-  //     toast.success(`New bid ₹${formatIndianNumber(payload.newBid.amount)}`);
-  //   });
-
-  //   socket.on("bid:placed", (payload) => {
-  //     console.log("bid:placed", payload);
-  //     fetchAuctionData();
-  //     toast.success(`New bid ₹${formatIndianNumber(payload.newBid.amount)}`);
-  //   });
-
-  //   // RTM Events (from desktop version)
-  //   socket.on("player:rtm", (payload) => {
-  //     console.log("player:rtm", payload);
-  //     fetchAuctionData();
-  //     toast.success("RTM used");
-  //   });
-
-  //   // NEW: Listen for RTM request confirmations
-  //   socket.on("rtm:request", (payload) => {
-  //     console.log("rtm:request", payload);
-  //     // If this is our team's request, show pending status
-  //     if (payload.teamId === auctionData?.team?.teamId) {
-  //       // setRtmRequestPending(true); // Will be handled by fetchAuctionData
-  //       toast.success("RTM request sent, waiting for admin approval...");
-  //     }
-  //   });
-
-  //   // NEW: Listen for RTM approvals
-  //   socket.on("rtm:approved", (payload) => {
-  //     console.log("rtm:approved", payload);
-  //     if (payload.toTeam === userTeamIdRef.current) {
-  //       setRtmRequestPending(false);
-  //       setRtmCount((prev) => prev - 1);
-  //       toast.success(`RTM approved! ${payload.playerName} added to your team`);
-  //     }
-  //     fetchAuctionData();
-  //   });
-
-  //   // NEW: Listen for RTM rejections
-  //   socket.on("rtm:rejected", (payload) => {
-  //     console.log("rtm:rejected", payload);
-
-  //     const myTeamId = userTeamIdRef.current;
-  //     if (!myTeamId) {
-  //       console.warn("userTeamIdRef.current not ready yet");
-  //       return;
-  //     }
-
-  //     if (payload.teamId === myTeamId) {
-  //       console.log("✅ RTM rejected for my team, clearing state");
-  //       setRtmRequestPending(false);
-  //       toast.error(`RTM rejected for ${payload.playerName}`);
-  //     }
-  //     fetchAuctionData();
-  //   });
-
-  //   // Auction state events
-  //   socket.on("auction:paused", () => {
-  //     console.log("auction:paused");
-  //     toast.success("Auction paused");
-  //   });
-
-  //   socket.on("auction:resumed", () => {
-  //     console.log("auction:resumed");
-  //     toast.success("Auction resumed");
-  //   });
-
-  //   socket.on("auction:ended", () => {
-  //     console.log("auction:ended");
-  //     toast.success("Auction ended");
-  //     navigate("/dashboard")
-  //   });
-
-  //   socket.on("bidding:started", (payload) => {
-  //     console.log("bidding:started", payload);
-  //     fetchAuctionData();
-  //   });
-
-  //   return () => {
-  //     if (socketRef.current) {
-  //       socketRef.current.emit("leave-auction", id);
-  //       socketRef.current.disconnect();
-  //     }
-  //     if (emoteTimeoutRef.current) {
-  //       clearTimeout(emoteTimeoutRef.current);
-  //     }
-  //     // Clean up RTM event listeners
-  //     socket.off("player:rtm");
-  //     socket.off("rtm:request");
-  //     socket.off("rtm:approved");
-  //     socket.off("rtm:rejected");
-  //   };
-  // }, [id, navigate, auctionData?.team?.teamId]);
-
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -564,7 +415,7 @@ export default function UserBiddingDashboardMobile() {
     }
 
     const socket = io("https://cricket-bidding-website-backend.onrender.com", {
-    // const socket = io("http://localhost:6001", {
+      // const socket = io("http://localhost:6001", {
       auth: { token },
       transports: ["websocket"],
     });
@@ -803,35 +654,35 @@ export default function UserBiddingDashboardMobile() {
     <div className={`${containerClasses} md:hidden`} {...handlers}>
       {/* ─── Header ───────────────────────────────────────────── */}
 
-<motion.div
-  className="sm:hidden flex justify-between items-center px-3 py-2 bg-gray-800/70 backdrop-blur-md sticky top-0 z-50"
-  initial={{ y: -50 }}
-  animate={{ y: 0 }}
-  transition={{ type: 'spring', stiffness: 200 }}
->
-  {/* Back Button */}
-  <button
-    onClick={() => navigate('/admin-auction-info')}
-    className="flex items-center space-x-1 text-white bg-indigo-700 hover:bg-indigo-800 px-2 py-1 rounded-md shadow-sm text-xs"
-  >
-    <ArrowLeft size={16} />
-    <span className="font-medium">Back</span>
-  </button>
+      <motion.div
+        className="sm:hidden flex justify-between items-center px-3 py-2 bg-gray-800/70 backdrop-blur-md sticky top-0 z-50"
+        initial={{ y: -50 }}
+        animate={{ y: 0 }}
+        transition={{ type: "spring", stiffness: 200 }}
+      >
+        {/* Back Button */}
+        <button
+          onClick={() => navigate("/admin-auction-info")}
+          className="flex items-center space-x-1 text-white bg-indigo-700 hover:bg-indigo-800 px-2 py-1 rounded-md shadow-sm text-xs"
+        >
+          <ArrowLeft size={16} />
+          <span className="font-medium">Back</span>
+        </button>
 
-  {/* Title */}
-  <h1 className="text-base font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
-    CricBid Auction
-  </h1>
+        {/* Title */}
+        <h1 className="text-base font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
+          CricBid Auction
+        </h1>
 
-  {/* Guidelines Button */}
-  <button
-    onClick={() => navigate(`/user-bidding-portal/${id}/user-guidelines`)}
-    className="flex items-center space-x-1 text-white bg-indigo-700 hover:bg-indigo-800 px-2 py-1 rounded-md shadow-sm text-xs"
-  >
-    <IoIosHelpCircle size={16} />
-    <span className="font-medium">Help</span>
-  </button>
-</motion.div>
+        {/* Guidelines Button */}
+        <button
+          onClick={() => navigate(`/user-bidding-portal/${id}/user-guidelines`)}
+          className="flex items-center space-x-1 text-white bg-indigo-700 hover:bg-indigo-800 px-2 py-1 rounded-md shadow-sm text-xs"
+        >
+          <IoIosHelpCircle size={16} />
+          <span className="font-medium">Help</span>
+        </button>
+      </motion.div>
 
       {/* ─── Mobile Tabs Navigation ──────────────────────────────── */}
       <div className="flex justify-around border-b border-blue-700 bg-gray-800">
@@ -865,44 +716,46 @@ export default function UserBiddingDashboardMobile() {
       <div className="px-4 pt-4 w-full">
         {/* ─── Teams List & Players List Buttons ─────────────── */}
         <motion.div
-          className="flex items-center justify-center space-x-2 w-full mb-1 md:hidden"
+          className="grid grid-cols-3 gap-2 w-full mb-1 md:hidden"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
         >
-          {/* "Teams List" */}
-          {/* <motion.button
-            onClick={() => navigate("/user/teams-list")}
-            className="flex-1 min-w-[60px] py-2 bg-gradient-to-r from-indigo-600 to-blue-500 rounded-xl text-xs sm:text-sm shadow-md text-center"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            Teams
-          </motion.button> */}
-
-          {/* "Players List" */}
           <motion.button
             onClick={() => navigate(`/user-bidding-portal/${id}/players`)}
-            className="flex-1 min-w-[80px] py-2 bg-gradient-to-r from-indigo-600 to-blue-500 rounded-xl text-xs sm:text-sm shadow-md text-center"
+            className="w-full py-2 bg-gradient-to-r from-indigo-600 to-blue-500 rounded-xl text-xs sm:text-sm shadow-md"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
             Players
           </motion.button>
 
-          {/* RTM button + remaining count */}
-          <div className="flex-1 min-w-[80px] flex flex-col items-center">
-            <motion.button
-              onClick={handleUseRTM}
-              disabled={rtmCount <= 0 || rtmRequestPending}
-              className="w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-700 rounded-xl text-xs sm:text-sm text-white font-medium shadow-md"
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-            >
-              {rtmRequestPending ? "RTM Pending..." : `Use RTM (${rtmCount})`}
-            </motion.button>
-          </div>
+          <motion.button
+            onClick={() => navigate(`/admin/bidding-teams-list/${id}`)}
+            className="w-full py-2 bg-gradient-to-r from-indigo-600 to-blue-500 rounded-xl text-xs sm:text-sm shadow-md"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            Teams
+          </motion.button>
+
+          <motion.button
+            onClick={handleUseRTM}
+            disabled={rtmCount <= 0 || rtmRequestPending}
+            className={`w-full py-2 rounded-xl text-xs sm:text-sm text-white font-medium shadow-md ${
+              rtmRequestPending || rtmCount <= 0
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-gradient-to-r from-purple-600 to-indigo-700"
+            }`}
+            whileHover={{
+              scale: rtmRequestPending || rtmCount <= 0 ? 1 : 1.03,
+            }}
+            whileTap={{ scale: rtmRequestPending || rtmCount <= 0 ? 1 : 0.97 }}
+          >
+            {rtmRequestPending ? "RTM Pending..." : `Use RTM (${rtmCount})`}
+          </motion.button>
         </motion.div>
+
         <p className="text-xs pr-8 text-gray-300 text-right mb-4">
           {rtmCount} RTM(s)
         </p>
