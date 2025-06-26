@@ -1,10 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { FiChevronLeft, FiEdit2, FiDollarSign, FiCalendar, FiInfo, FiUsers } from "react-icons/fi";
+import {
+  FiChevronLeft,
+  FiEdit2,
+  FiDollarSign,
+  FiCalendar,
+  FiInfo,
+  FiUsers,
+} from "react-icons/fi";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import MobileStickyNav from "../../components/layout/MobileStickyNav";
 import Api from "../../userManagement/Api";
+import { FaRupeeSign } from "react-icons/fa";
+import { formatIndianNumber } from "../../types/formatIndianNumber";
 
 export default function ViewTeam() {
   const { id } = useParams();
@@ -21,7 +30,8 @@ export default function ViewTeam() {
         setTeam(res.data);
       } catch (err) {
         console.error("Failed to load team:", err);
-        const errorMsg = err.response?.data?.error || "Could not load team data";
+        const errorMsg =
+          err.response?.data?.error || "Could not load team data";
         toast.error(errorMsg);
       } finally {
         setLoading(false);
@@ -61,11 +71,13 @@ export default function ViewTeam() {
   }
 
   const formatAmount = (amount) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(amount).replace('₹', '₹');
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    })
+      .format(amount)
+      .replace("₹", "₹");
   };
 
   return (
@@ -82,10 +94,12 @@ export default function ViewTeam() {
         >
           <FiChevronLeft className="mr-1" /> Back to Teams
         </button>
-        
+
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Team Details</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+              Team Details
+            </h1>
             <p className="text-gray-500">View and manage team information</p>
           </div>
           <button
@@ -107,13 +121,13 @@ export default function ViewTeam() {
       >
         {/* Team Header */}
         <div className="relative">
-          <div 
+          <div
             className="h-48 bg-gradient-to-r from-blue-500 to-blue-600"
             style={{
-              backgroundImage: team.logoUrl ? `url(${team.logoUrl})` : 'none',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundBlendMode: 'overlay'
+              backgroundImage: team.logoUrl ? `url(${team.logoUrl})` : "none",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              backgroundBlendMode: "overlay",
             }}
           >
             <div className="absolute bottom-4 left-4 flex items-end">
@@ -126,7 +140,9 @@ export default function ViewTeam() {
               </div>
               <h2 className="ml-4 text-2xl font-bold text-white drop-shadow-md">
                 {team.teamName}
-                <span className="block text-sm font-normal opacity-90">{team.shortName}</span>
+                <span className="block text-sm font-normal opacity-90">
+                  {team.shortName}
+                </span>
               </h2>
             </div>
           </div>
@@ -139,22 +155,27 @@ export default function ViewTeam() {
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
               <div className="flex items-center">
                 <div className="p-2 bg-blue-100 rounded-full mr-3 text-blue-600">
-                  <FiDollarSign size={18} />
+                  <FaRupeeSign size={18} />
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Total Purse</p>
-                  <p className="text-xl font-semibold">{formatAmount(team.purse)}</p>
+                  <p className="text-xl font-semibold">
+                    ₹{formatIndianNumber(team.purse) || "0"}
+                  </p>
                 </div>
               </div>
             </div>
+
             <div className="bg-green-50 p-4 rounded-lg border border-green-100">
               <div className="flex items-center">
                 <div className="p-2 bg-green-100 rounded-full mr-3 text-green-600">
-                  <FiDollarSign size={18} />
+                  <FaRupeeSign size={18} />
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Remaining</p>
-                  <p className="text-xl font-semibold text-green-600">{formatAmount(team.remaining)}</p>
+                  <p className="text-xl font-semibold text-green-600">
+                    ₹{formatIndianNumber(team.remaining) || "0"}
+                  </p>
                 </div>
               </div>
             </div>
@@ -165,7 +186,9 @@ export default function ViewTeam() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Players Bought</p>
-                  <p className="text-xl font-semibold">{team.players?.length || 0}</p>
+                  <p className="text-xl font-semibold">
+                    {team.players?.length || 0}
+                  </p>
                 </div>
               </div>
             </div>
@@ -193,7 +216,9 @@ export default function ViewTeam() {
               </h3>
               <div className="flex items-center bg-gray-50 p-4 rounded-lg">
                 <div className="bg-white p-3 rounded-lg shadow-sm mr-4">
-                  <p className="text-2xl font-bold text-blue-600">{team.founded}</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {team.founded}
+                  </p>
                 </div>
                 <p className="text-gray-600">Year Founded</p>
               </div>
@@ -207,7 +232,7 @@ export default function ViewTeam() {
                 <FiUsers className="text-blue-500 mr-2" />
                 Squad Players
               </h3>
-              
+
               <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
@@ -227,7 +252,7 @@ export default function ViewTeam() {
                     {team.players
                       .filter((entry) => entry.player !== null)
                       .map((entry, index) => (
-                        <motion.tr 
+                        <motion.tr
                           key={entry.player._id}
                           className="hover:bg-gray-50"
                           whileHover={{ scale: 1.01 }}
@@ -253,7 +278,7 @@ export default function ViewTeam() {
 
       {/* Footer Spacer */}
       <div className="h-16"></div>
-      
+
       <MobileStickyNav />
     </div>
   );

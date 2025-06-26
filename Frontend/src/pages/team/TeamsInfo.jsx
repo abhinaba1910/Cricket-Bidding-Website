@@ -3,6 +3,7 @@ import { FiSearch, FiEye, FiEdit, FiPlus } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
 import MobileStickyNav from "../../components/layout/MobileStickyNav";
 import Api from "../../userManagement/Api";
+import { formatIndianNumber } from "../../types/formatIndianNumber";
 
 export default function TeamsInfo() {
   const [teams, setTeams] = useState([]);
@@ -113,14 +114,14 @@ export default function TeamsInfo() {
                     </p>
                     <p>
                       <strong>Purse:</strong> ₹
-                      {Number(team.purse).toLocaleString()}
+                      {formatIndianNumber(team.purse) || "0"}
                     </p>
                     <p>
                       <strong>Players Bought:</strong> {team.playerCount}
                     </p>
                     <p>
                       <strong>Remaining Purse:</strong> ₹
-                      {Number(team.remaining).toLocaleString()}
+                      {formatIndianNumber(team.remaining) || "0"}
                     </p>
                   </div>
                   <div className="mt-4 flex gap-2">

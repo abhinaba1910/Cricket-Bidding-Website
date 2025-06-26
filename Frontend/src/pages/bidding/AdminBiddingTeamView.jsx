@@ -4,6 +4,7 @@ import { FiChevronLeft, FiX } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import Api from "../../userManagement/Api";
+import { formatIndianNumber } from "../../types/formatIndianNumber";
 
 export default function AdminBiddingTeamView() {
   const { id, teamId } = useParams();
@@ -23,21 +24,18 @@ export default function AdminBiddingTeamView() {
   useEffect(() => {
     async function loadData() {
       try {
-        // Use correct endpoint based on role
         const { data } = await Api.get(
           isAdmin ? `/get-auction/${id}` : `/get-auction-teams/${id}`
         );
-
-        
-        const selectedTeams = isAdmin ? data.selectedTeams : data.selectedTeams;
+  
+        const selectedTeams = data.selectedTeams;
         const auctionName = isAdmin ? data.auctionName : "Selected Auction";
-
+  
         const selectedTeam = selectedTeams.find((t) => t._id === teamId);
         if (!selectedTeam) {
           throw new Error("Team not found in this auction");
         }
-        console.log(selectedTeam)
-
+  
         const teamPlayers = selectedTeam.boughtPlayers.map((p) => ({
           name: p.playerName,
           role: p.role,
@@ -50,7 +48,12 @@ export default function AdminBiddingTeamView() {
             nationality: p.nationality,
           },
         }));
-
+  
+        // 🛡️ Safely handle manager
+        const manager = selectedTeam.manager || {};
+        const managerName = manager.name || "Team Manager";
+        const managerPhoto = manager.photo || "/manager-placeholder.jpg";
+  
         setAuctionDetails({ auctionName });
         setTeam({
           ...selectedTeam,
@@ -58,8 +61,8 @@ export default function AdminBiddingTeamView() {
           remainingPurse: selectedTeam.remaining,
           totalSpent: selectedTeam.totalSpent,
           manager: {
-            name: selectedTeam.manager.name || "Team Manager",
-            photoUrl: selectedTeam.manager.photo || "/manager-placeholder.jpg",
+            name: managerName,
+            photoUrl: managerPhoto,
           },
         });
       } catch (err) {
@@ -73,8 +76,10 @@ export default function AdminBiddingTeamView() {
         setLoading(false);
       }
     }
+  
     loadData();
   }, [id, teamId]);
+  
 
   if (loading) {
     return (
@@ -187,15 +192,9 @@ export default function AdminBiddingTeamView() {
               <div className="grid grid-cols-2 gap-4">
                 {[
                   ["Short Name", team.shortName],
-                  ["Total Purse", `₹${Number(team.purse).toLocaleString()}`],
-                  [
-                    "Total Spent",
-                    `₹${Number(team.totalSpent).toLocaleString()}`,
-                  ],
-                  [
-                    "Remaining Purse",
-                    `₹${Number(team.remainingPurse).toLocaleString()}`,
-                  ],
+                  ["Total Purse", `₹${formatIndianNumber(team.purse) || "0"}`],
+                  ["Total Spent", `₹${formatIndianNumber(team.totalSpent) || "0"}`],
+                  ["Remaining Purse", `₹${formatIndianNumber(team.remainingPurse) || "0"}`],
                   ["Players Bought", totalTaken],
                 ].map(([label, val]) => (
                   <div key={label}>

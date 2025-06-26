@@ -10,7 +10,7 @@ import {
   FiGlobe,
   FiUser,
 } from "react-icons/fi";
-import { FaRunning, FaBaseballBall, FaMedal } from "react-icons/fa";
+import { FaRunning, FaBaseballBall, FaMedal, FaRupeeSign } from "react-icons/fa";
 import MobileStickyNav from "../../components/layout/MobileStickyNav";
 
 const PageWrapper = ({ children }) => (
@@ -85,6 +85,7 @@ export default function UserBiddingPlayerView() {
     name,
     country,
     dob,
+    role,
     grade,
     battingStyle,
     bowlingStyle,
@@ -97,6 +98,16 @@ export default function UserBiddingPlayerView() {
     points,
     highestScore,
   } = player;
+
+  const roleColors = {
+    Batsman: "bg-orange-500",
+    "Fast all-rounder": "bg-purple-600",
+    "Spin all-rounder": "bg-purple-500",
+    "Wicket keeper batsman": "bg-blue-500",
+    "Spin bowler": "bg-green-500",
+    "Fast bowler": "bg-teal-600",
+    default: "bg-gray-500",
+  };
 
   const age = dob
     ? new Date().getFullYear() - new Date(dob).getFullYear()
@@ -139,6 +150,13 @@ export default function UserBiddingPlayerView() {
             </div>
 
             <div className="pt-20 pb-6 px-6 text-center">
+            <div
+                className={`inline-block px-3 py-1 rounded-full text-xs font-semibold text-white mb-3 ${
+                  roleColors[role] || roleColors.default
+                }`}
+              >
+                {role}
+              </div>
               <h1 className="text-3xl font-bold text-gray-800 mb-1">{name}</h1>
               <div className="flex items-center justify-center text-gray-500 mb-4">
                 <FiGlobe className="mr-1.5" />
@@ -149,9 +167,9 @@ export default function UserBiddingPlayerView() {
 
               <div className="grid grid-cols-3 gap-4 mt-6">
                 <StatItem
-                  title="Price"
+                  title="Base Price"
                   value={`₹${formatIndianNumber(basePrice)}`}
-                  icon={<FiDollarSign />}
+                  icon={<FaRupeeSign />}
                 />
                 <StatItem
                   title="Rating"

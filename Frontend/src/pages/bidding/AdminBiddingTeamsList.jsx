@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { FiSearch, FiEye, FiArrowLeft } from "react-icons/fi";
 import { useNavigate, useParams } from "react-router-dom";
 import Api from "../../userManagement/Api";
+import { formatIndianNumber } from "../../types/formatIndianNumber";
 
 export default function AdminBiddingTeamsList() {
   const { id } = useParams(); // This is the auction ID
@@ -30,22 +31,22 @@ export default function AdminBiddingTeamsList() {
   useEffect(() => {
     const fetchTeams = async () => {
       setLoading(true);
-  
+
       try {
         const user = JSON.parse(localStorage.getItem("user")); // or however you're storing logged in user
         const isAdmin = user?.role === "admin" || user?.role === "temp-admin";
-  
+
         const res = await Api.get(
           isAdmin ? `/get-auction/${id}` : `/get-auction-teams/${id}`
         );
-  
+
         if (isAdmin) {
           setAuctionDetails(res.data);
           setTeams(res.data.selectedTeams || []);
         } else {
           setAuctionDetails({ auctionName: "Selected Auction" }); // fallback
           setTeams(res.data.selectedTeams || []);
-          console.log(res.data.selectedTeams)
+          console.log(res.data.selectedTeams);
         }
       } catch (err) {
         console.error("Error fetching teams:", err);
@@ -54,21 +55,20 @@ export default function AdminBiddingTeamsList() {
         setLoading(false);
       }
     };
-  
+
     fetchTeams();
   }, [id]);
-  
 
   // Filter by ID or teamName or shortName
   const filtered = useMemo(() => {
     const term = search.toLowerCase();
-    return teams.filter((t) =>
-      (t._id && t._id.toLowerCase().includes(term)) ||
-      (t.teamName && t.teamName.toLowerCase().includes(term)) ||
-      (t.shortName && t.shortName.toLowerCase().includes(term))
+    return teams.filter(
+      (t) =>
+        (t._id && t._id.toLowerCase().includes(term)) ||
+        (t.teamName && t.teamName.toLowerCase().includes(term)) ||
+        (t.shortName && t.shortName.toLowerCase().includes(term))
     );
   }, [teams, search]);
-  
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
@@ -141,11 +141,11 @@ export default function AdminBiddingTeamsList() {
                   <div className="text-sm text-gray-700 flex-1 space-y-1">
                     <p>
                       <strong>Total Purse:</strong> ₹
-                      {Number(team.purse).toLocaleString()}
+                      {formatIndianNumber(team.purse) || "0"}
                     </p>
                     <p>
                       <strong>Remaining:</strong> ₹
-                      {Number(team.remaining).toLocaleString()}
+                      {formatIndianNumber(team.remaining) || "0"}
                     </p>
                   </div>
                   <button
@@ -188,11 +188,11 @@ export default function AdminBiddingTeamsList() {
                     <div className="text-sm text-gray-700 mt-1">
                       <span>
                         <strong>Total:</strong> ₹
-                        {Number(team.purse).toLocaleString()}
+                        {formatIndianNumber(team.purse) || "0"}
                       </span>
                       <span className="ml-4">
                         <strong>Remaining:</strong> ₹
-                        {Number(team.remaining).toLocaleString()}
+                        {formatIndianNumber(team.remaining) || "0"}
                       </span>
                     </div>
                   </div>

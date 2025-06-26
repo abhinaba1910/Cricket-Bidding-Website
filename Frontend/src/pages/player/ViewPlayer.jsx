@@ -108,11 +108,14 @@ export default function ViewPlayer() {
 
   const roleColors = {
     Batsman: "bg-orange-500",
-    Bowler: "bg-green-500",
-    "All-Rounder": "bg-purple-500",
-    "Wicket-Keeper": "bg-blue-500",
+    "Fast all-rounder": "bg-purple-600",
+    "Spin all-rounder": "bg-purple-500",
+    "Wicket keeper batsman": "bg-blue-500",
+    "Spin bowler": "bg-green-500",
+    "Fast bowler": "bg-teal-600",
     default: "bg-gray-500",
   };
+  
 
   return (
     <PageWrapper>
