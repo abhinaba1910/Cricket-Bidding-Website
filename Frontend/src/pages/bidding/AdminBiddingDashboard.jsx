@@ -5,6 +5,7 @@ import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import Api from "../../userManagement/Api";
 import RTMApprovalPopup from "./RTMApprovalPopup";
+import { formatIndianNumber } from "../../types/formatIndianNumber";
 
 const SAMPLE_AUCTION = {
   lastSold: { name: "--/--", price: "--/--", team: "--/--" },
@@ -1171,28 +1172,25 @@ export default function AdminBiddingDashboard() {
     return value.toString();
   };
 
-  const bidSteps = [
-    10000, // 10k
-    50000, // 50k
-    100000, // 1L
-    1000000, // 10L
-    2500000, // 25L
-    5000000, // 50L
-    10000000, // 1Cr
-    20000000, // 2Cr
-    40000000, // 4Cr
-    60000000, // 6Cr
-    80000000, // 8Cr
-    100000000, // 10Cr
-  ];
+const BASE_STEPS = [
+  10_000,    // 10 K
+  50_000,    // 50 K
+  100_000,   // 1 L
+  1_000_000, // 10 L
+  2_500_000, // 25 L
+  5_000_000, // 50 L
+  10_000_000 // 1 Cr
+];
 
-  const getNextBid = (current) => {
-    const curr = parseInt(current || 0);
-    for (let step of bidSteps) {
-      if (step > curr) return step;
-    }
-    return curr; // Maxed out
-  };
+function getNextBid(current) {
+  const curr = parseInt(current || 0, 10);
+  // 1) if you’re still below 1 Cr, find the next predefined step
+  for (let step of BASE_STEPS) {
+    if (step > curr) return step;
+  }
+  // 2) once you’re at or above 1 Cr, just add 1 Cr every time (unlimited)
+  return curr + 10_000_000;
+}
 
   return (
     <div className={containerClasses + " pt-2 md:pt-4"}>
@@ -1225,7 +1223,7 @@ export default function AdminBiddingDashboard() {
                 </h4>
                 <p className="font-semibold text-sm mt-1">{info.name}</p>
                 <p className="text-xs opacity-80">
-                  {info.price} — {info.team}
+                  ₹{formatIndianNumber(info.price)} — {info.team}
                 </p>
               </motion.div>
             ))}
@@ -1260,7 +1258,7 @@ export default function AdminBiddingDashboard() {
               </div>
             </div>
             <p className="mt-3 text-base font-semibold bg-blue-900/50 py-1 rounded-lg">
-              Base Price: {auctionData.currentLot.basePrice}
+              Base Price: ₹{formatIndianNumber(auctionData.currentLot.basePrice)}
             </p>
           </motion.div>
         </div>
@@ -1409,7 +1407,7 @@ export default function AdminBiddingDashboard() {
               transition={{ delay: 0.3, type: "spring" }}
               className="inline-block rounded-xl bg-gradient-to-r from-amber-500 to-yellow-300 px-6 py-3 font-bold text-xl sm:text-2xl text-black shadow-lg"
             >
-              {bidAmount}
+              ₹{formatIndianNumber(bidAmount)}
             </motion.div>
           </motion.div>
 
@@ -1430,7 +1428,7 @@ export default function AdminBiddingDashboard() {
                 Ball: {auctionData.currentLot.bowling}
               </p>
               <p className="mt-1 text-xs font-semibold bg-blue-900/30 py-0.5 rounded">
-                Base: {auctionData.currentLot.basePrice}
+                Base Price: ₹{formatIndianNumber(auctionData.currentLot.basePrice)}
               </p>
               <p className="mt-1 text-xs font-semibold bg-blue-900/30 py-0.5 rounded">
                 Points: {auctionData.currentLot.points}
@@ -1656,7 +1654,7 @@ export default function AdminBiddingDashboard() {
             <h3 className="text-sm sm:text-base font-semibold mt-1">
               {auctionData.currentBid.team}{" "}
               <p className="text-xs sm:text-sm opacity-75 mt-2">
-                ₹{auctionData.currentBid.amount}
+                ₹{formatIndianNumber(auctionData.currentBid.amount)}
               </p>
             </h3>
           </motion.div>
@@ -1765,7 +1763,8 @@ export default function AdminBiddingDashboard() {
             <h3 className="text-sm font-semibold mt-1">
               {auctionData.currentBid?.team || "--"}
               <p className="text-xs opacity-75 mt-1">
-                ₹{auctionData.currentBid?.amount?.toLocaleString() || "--"}
+                {/* ₹{auctionData.currentBid?.amount?.toLocaleString() || "--"} */}
+                ₹{formatIndianNumber(auctionData.currentBid?.amount?.toLocaleString() || "--")}
               </p>
             </h3>
           </motion.div>
