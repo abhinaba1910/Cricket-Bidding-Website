@@ -83,3 +83,34 @@
 .animate-bid-pulse {
   animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+@keyframes typewriter-loop {
+  0% {
+    width: 0;
+  }
+  25% {
+    width: 7ch; /* Typing phase */
+  }
+  60% {
+    width: 7ch; /* Hold phase */
+  }
+  100% {
+    width: 0;   /* Deleting phase */
+  }
+}
+
+@keyframes blink-loop {
+  50% {
+    border-color: transparent;
+  }
+}
+
+.typewriter-loop {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 3px solid #3b82f6;
+  animation:
+    typewriter-loop 6s steps(8, end) infinite,
+    blink-loop 0.75s step-end infinite;
+}
+

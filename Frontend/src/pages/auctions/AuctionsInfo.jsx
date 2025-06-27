@@ -4,6 +4,7 @@ import { FiPlus, FiEye, FiEdit, FiSearch } from "react-icons/fi";
 import MobileStickyNav from "../../components/layout/MobileStickyNav";
 import { useNavigate } from "react-router-dom";
 import Api from "../../userManagement/Api";
+import toast from "react-hot-toast";
 
 const TABS = [
   { key: "upcoming", label: "Upcoming" },
@@ -81,27 +82,34 @@ export default function AuctionsInfo() {
 
   const handleJoinSubmit = async () => {
     try {
+      // STEP 1: Validate with GET route first
+      const teamRes = await Api.get(`/join-auction/${selectedAuctionId}/teams`);
+  
+      // If user is the host or any other error, it will throw and go to catch block
+  
+      // STEP 2: If valid, proceed to POST join
       const res = await Api.post(`/join-auction/${selectedAuctionId}`, {
         joinCode,
       });
   
-      if (res.status === 200) {
-        setShowJoinModal(false);
-        if (res.data.alreadyJoined) {
-          // User has already selected team/avatar
-          navigate(`/user-bidding-portal/${selectedAuctionId}`);
-        } else {
-          // First time joining – go to char selection
-          navigate(`/user-char-selection/${selectedAuctionId}`);
-        }
+      setShowJoinModal(false);
+  
+      if (res.data.alreadyJoined) {
+        toast.success("Already joined. Redirecting...");
+        navigate(`/user-bidding-portal/${selectedAuctionId}`);
+      } else {
+        toast.success("Redirecting...");
+        navigate(`/user-char-selection/${selectedAuctionId}`);
       }
     } catch (err) {
-      console.error(err);
-      setJoinError(
-        err.response?.data?.message || "Failed to join the auction."
-      );
+      // Extract the backend message and show in toast
+      const errorMessage =
+        err.response?.data?.message || "Failed to join the auction.";
+      toast.error(errorMessage);
+      setJoinError(errorMessage); // Optional: can be shown in modal as well
     }
   };
+  
   
 
   return (

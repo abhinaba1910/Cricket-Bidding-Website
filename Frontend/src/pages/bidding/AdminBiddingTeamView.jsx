@@ -339,7 +339,7 @@ export default function AdminBiddingTeamView() {
                           </span>
                         </div>
                         <span className="font-semibold text-green-600">
-                          ₹{Number(player.price).toLocaleString()}
+                          ₹{formatIndianNumber(player.price) || 0}
                         </span>
                       </li>
                     ))}

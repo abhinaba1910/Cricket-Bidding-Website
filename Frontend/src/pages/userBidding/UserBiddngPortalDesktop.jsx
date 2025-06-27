@@ -388,6 +388,40 @@ export default function UserBiddingDashboardDesktop() {
         toast.success("Player sold");
       }
     });
+    socket.on("player:unsold", (payload) => {
+      console.log("[USER] Received player:unsold", payload);
+      const {
+        nextPlayer,
+        currentQueuePosition: newPos,
+        totalQueueLength,
+        isPaused: pausedFlag,
+      } = payload;
+    
+      // setIsPaused(pausedFlag);
+    
+      if (nextPlayer) {
+        fetchAuctionData(); // Refresh to show new player
+      } else {
+        setAuctionData((prev) => ({
+          ...prev,
+          currentPlayer: null,
+          currentBid: {
+            amount: 0,
+            team: null,
+            teamLogo: null,
+          },
+        }));
+        toast.info("No more players in the queue.");
+      }
+    
+      setCurrentQueuePosition(newPos);
+      setQueueDisplay({
+        current: newPos + 1,
+        total: totalQueueLength,
+      });
+      fetchAuctionData();
+    });
+    
 
     // Bid events
     socket.on("bid:updated", (payload) => {
@@ -757,7 +791,7 @@ export default function UserBiddingDashboardDesktop() {
           </div>
           <div className="mt-3 flex justify-center">
             <div>
-              <span className="text-xs opacity-75">Points</span>
+              <span className="text-xs opacity-75">Rating</span>
               <p className="text-sm">
                 {auctionData.currentPlayer?.points ?? "--/--"}
               </p>

@@ -28,6 +28,9 @@ export default function AdminBiddingTeamsList() {
   //     .finally(() => setLoading(false));
   // }, [id]);
 
+  const user = JSON.parse(localStorage.getItem("user")); // or your user context/session
+  const isAdmin = user?.role === "admin" || user?.role === "temp-admin";
+  
   useEffect(() => {
     const fetchTeams = async () => {
       setLoading(true);
@@ -75,7 +78,7 @@ export default function AdminBiddingTeamsList() {
       {/* Back + Title */}
       <div className="flex items-center justify-between mb-6">
         <button
-          onClick={() => navigate(`/admin/admin-bidding-dashboard/${id}`)}
+          onClick={() => navigate(isAdmin?(`/admin/admin-bidding-dashboard/${id}`):(`/user-bidding-portal/${id}`))}
           className="flex items-center px-3 py-2 bg-gray-200 rounded-full hover:bg-gray-300"
         >
           <FiArrowLeft className="mr-2 text-gray-700" />

@@ -1281,6 +1281,9 @@ router.get("/join-auction/:auctionId/teams", auth, async (req, res) => {
     const auction = await Auction.findById(auctionId).populate(
       "selectedTeams.team"
     );
+    if (auction.createdBy.toString() === userId) {
+      return res.status(403).json({ message: "Access denied: Already the Host." });
+    }
 
     if (!auction) {
       return res.status(404).json({ message: "Auction not found." });
@@ -1326,6 +1329,9 @@ router.get("/bidding-portal/:auctionId", auth, async (req, res) => {
 
     if (!auction) {
       return res.status(404).json({ message: "Auction not found" });
+    }
+    if (auction.createdBy.toString() === userId.toString()) {
+      return res.status(403).json({ message: "Access denied: Already the Host" });
     }
 
     // Find the user's team entry
@@ -1525,144 +1531,6 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
       .json({ error: "Internal server error", details: err.message });
   }
 });
-
-// Updated RTM route - now creates a request instead of immediate execution
-// router.post("/use-rtm/:auctionId", auth, async (req, res) => {
-//   try {
-//     const { auctionId } = req.params;
-//     const { teamId } = req.body;
-//     const userId = req.user.id;
-
-//     console.log("RTM Request Debug:");
-//     console.log("- Auction ID:", auctionId);
-//     console.log("- Team ID:", teamId);
-//     console.log("- User ID:", userId);
-
-//     const auction = await Auction.findById(auctionId)
-//       .populate("biddingHistory.player")
-//       .populate("biddingHistory.team")
-//       .populate("selectedTeams.team")
-//       .populate("selectedTeams.manager");
-
-//     if (!auction) {
-//       console.log("❌ Auction not found");
-//       return res.status(404).json({ message: "Auction not found" });
-//     }
-
-//     if (auction.status === "completed") {
-//       console.log("❌ Auction completed");
-//       return res.status(404).json({ message: "Auction completed" });
-//     }
-
-//     console.log("✅ Auction found:", auction.auctionName);
-//     console.log("- Auction status:", auction.status);
-//     console.log("- Bidding history length:", auction.biddingHistory.length);
-//     console.log("- Selected teams:", auction.selectedTeams.length);
-
-//     // Find the selected team & manager
-//     const selectedTeam = auction.selectedTeams.find(
-//       (entry) =>
-//         entry.team._id.toString() === teamId &&
-//         entry.manager?._id.toString() === userId
-//     );
-
-//     if (!selectedTeam) {
-//       console.log("❌ Team not found or unauthorized");
-//       console.log(
-//         "- Available teams for user:",
-//         auction.selectedTeams
-//           .filter((entry) => entry.manager?._id.toString() === userId)
-//           .map((entry) => ({
-//             teamId: entry.team._id.toString(),
-//             teamName: entry.team.name,
-//             managerId: entry.manager?._id.toString(),
-//           }))
-//       );
-//       return res
-//         .status(403)
-//         .json({ message: "Unauthorized or team not found" });
-//     }
-
-//     console.log("✅ Team found:", selectedTeam.team.shortName);
-//     console.log("- RTM count:", selectedTeam.rtmCount);
-
-//     if (selectedTeam.rtmCount <= 0) {
-//       console.log("❌ No RTMs left");
-//       return res.status(400).json({ message: "No RTMs left" });
-//     }
-
-//     // Find the last sold player from bidding history
-//     const lastBid =
-//       auction.biddingHistory.length > 0
-//         ? auction.biddingHistory[auction.biddingHistory.length - 1]
-//         : null;
-
-//     if (!lastBid) {
-//       console.log("❌ No bidding history found");
-//       return res.status(404).json({ message: "Player not found in history" });
-//     }
-
-//     console.log("✅ Last bid found:");
-//     console.log("- Player:", lastBid.player.name);
-//     console.log("- Team:", lastBid.team.shortName);
-//     console.log("- Bid amount:", lastBid.bidAmount);
-//     console.log("- Player isRTM:", lastBid.player.isRTM);
-
-//     const { bidAmount, team: previousTeam, player: previousPlayer } = lastBid;
-
-//     // Prevent RTM if original team is same
-//     if (previousTeam._id.toString() === teamId) {
-//       console.log("❌ Player already in requesting team");
-//       return res.status(400).json({ message: "Player already in your team" });
-//     }
-
-//     if (previousPlayer.isRTM) {
-//       console.log("❌ Player has already been RTM'd");
-//       return res.status(400).json({ message: "Player has been RTM once" });
-//     }
-
-//     console.log("✅ All validations passed, creating RTM request");
-
-//     // Create pending RTM request instead of executing immediately
-//     auction.pendingRTMRequest = {
-//       teamId: teamId,
-//       playerId: previousPlayer._id,
-//       playerName: previousPlayer.name,
-//       bidAmount: bidAmount,
-//       fromTeam: previousTeam._id,
-//       fromTeamName: previousTeam.shortName, // Previous team name
-//       teamName: selectedTeam.team.shortName, // Requesting team name (FIXED)
-//       requestedAt: new Date(),
-//     };
-
-//     await auction.save();
-
-//     console.log("✅ RTM request saved to database");
-
-//     // Emit RTM request to admin for approval
-//     const io = req.app.get("io");
-//     io.to(auctionId).emit("rtm:request", {
-//       message: "RTM request pending approval",
-//       teamId: teamId,
-//       teamName: selectedTeam.team.shortName, // Requesting team name
-//       playerId: previousPlayer._id,
-//       playerName: previousPlayer.name,
-//       bidAmount: bidAmount,
-//       fromTeam: previousTeam._id,
-//       fromTeamName: previousTeam.shortName, // Previous team name
-//     });
-
-//     console.log("✅ RTM request emitted via socket");
-
-//     res.status(200).json({
-//       message: "RTM request sent for approval",
-//       status: "pending",
-//     });
-//   } catch (error) {
-//     console.error("RTM error:", error);
-//     res.status(500).json({ message: "Internal server error" });
-//   }
-// });
 
 router.post("/use-rtm/:auctionId", auth, async (req, res) => {
   try {

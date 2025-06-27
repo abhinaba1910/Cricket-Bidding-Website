@@ -459,6 +459,40 @@ export default function UserBiddingDashboardMobile() {
       }
     });
 
+    socket.on("player:unsold", (payload) => {
+      console.log("[USER] Received player:unsold", payload);
+      const {
+        nextPlayer,
+        currentQueuePosition: newPos,
+        totalQueueLength,
+        isPaused: pausedFlag,
+      } = payload;
+    
+      // setIsPaused(pausedFlag);
+    
+      if (nextPlayer) {
+        fetchAuctionData(); // Refresh to show new player
+      } else {
+        setAuctionData((prev) => ({
+          ...prev,
+          currentPlayer: null,
+          currentBid: {
+            amount: 0,
+            team: null,
+            teamLogo: null,
+          },
+        }));
+        toast.info("No more players in the queue.");
+      }
+    
+      setCurrentQueuePosition(newPos);
+      setQueueDisplay({
+        current: newPos + 1,
+        total: totalQueueLength,
+      });
+      fetchAuctionData();
+    });
+
     // Existing bid events
     socket.on("bid:updated", (payload) => {
       console.log("bid:updated", payload);

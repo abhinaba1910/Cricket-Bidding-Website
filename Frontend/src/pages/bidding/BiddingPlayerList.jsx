@@ -291,7 +291,11 @@ export default function BiddingPlayerList() {
                 className="w-12 h-12 rounded-full mr-4"
               />
               <div className="flex-1">
-                <h3 className="font-medium text-gray-900">{p.name}</h3>
+                <h3 className="font-medium text-gray-900">{p.name}{p.points && (
+                      <span className="text-sm text-gray-500 ml-1">
+                        ({p.points})
+                      </span>
+                    )}</h3>
                 <div className="text-sm text-gray-600">
                   {p.role}
                   <div className="flex items-center gap-1">
