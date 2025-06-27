@@ -164,6 +164,21 @@ export default function UserBiddingDashboardMobile() {
   const emoteTimeoutRef = useRef(null);
   const userTeamIdRef = useRef(null); // Added userTeamIdRef
 
+  useEffect(() => {
+    const keepWarm = () => {
+      fetch(
+        "https://cricket-bidding-website-backend.onrender.com/health"
+      ).catch((err) => console.log("Ping failed:", err));
+    };
+
+    // Ping immediately on load
+    keepWarm();
+
+    // Ping every 10 minutes
+    const interval = setInterval(keepWarm, 10 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, []);
   // Sync userTeamIdRef with userTeamId state
   useEffect(() => {
     userTeamIdRef.current = userTeamId;
@@ -418,6 +433,11 @@ export default function UserBiddingDashboardMobile() {
       // const socket = io("http://localhost:6001", {
       auth: { token },
       transports: ["websocket"],
+      timeout: 5000,
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
+      maxReconnectionAttempts: 5,
     });
     socketRef.current = socket;
 
@@ -427,6 +447,16 @@ export default function UserBiddingDashboardMobile() {
         socket.emit("join-auction", id);
       }
     });
+    socket.on("connect_error", (error) => {
+      console.error("Socket connection error:", error);
+      toast.error("Connection issues detected. Retrying...");
+    });
+
+    socket.on("reconnect", (attemptNumber) => {
+      console.log("Socket reconnected after", attemptNumber, "attempts");
+      toast.success("Connection restored!");
+    });
+
 
     socket.on("disconnect", (reason) => {
       console.log("Socket disconnected:", reason);
@@ -467,9 +497,9 @@ export default function UserBiddingDashboardMobile() {
         totalQueueLength,
         isPaused: pausedFlag,
       } = payload;
-    
+
       // setIsPaused(pausedFlag);
-    
+
       if (nextPlayer) {
         fetchAuctionData(); // Refresh to show new player
       } else {
@@ -484,7 +514,7 @@ export default function UserBiddingDashboardMobile() {
         }));
         toast.info("No more players in the queue.");
       }
-    
+
       setCurrentQueuePosition(newPos);
       setQueueDisplay({
         current: newPos + 1,

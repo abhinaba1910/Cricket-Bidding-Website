@@ -17,7 +17,7 @@ const SAMPLE_AUCTION = {
     batting: "--/--",
     bowling: "--/--",
     basePrice: "--/--",
-    avatarUrl: null,
+    playerPic: null,
   },
   currentBid: {
     amount: "--/--",
@@ -63,9 +63,24 @@ export default function AdminBiddingDashboard() {
   const user = JSON.parse(localStorage.getItem("user")); // or your user context/session
   const isAdmin = user?.role === "admin" || user?.role === "temp-admin";
 
-  if(!isAdmin){
-    navigate(-1)
+  if (!isAdmin) {
+    navigate(-1);
   }
+  useEffect(() => {
+    const keepWarm = () => {
+      fetch(
+        "https://cricket-bidding-website-backend.onrender.com/health"
+      ).catch((err) => console.log("Ping failed:", err));
+    };
+
+    // Ping immediately on load
+    keepWarm();
+
+    // Ping every 10 minutes
+    const interval = setInterval(keepWarm, 10 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, []);
   // -------------------------------
   // SOCKET.IO: connect, join room, listeners
   // -------------------------------
@@ -80,7 +95,12 @@ export default function AdminBiddingDashboard() {
     // const SOCKET_SERVER_URL = "http://localhost:6001";
     const socket = io(SOCKET_SERVER_URL, {
       auth: { token },
-      transports: ["websocket"], // enforce WS transport for reliability
+      transports: ["websocket"],
+      timeout: 5000,
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
+      maxReconnectionAttempts: 5,
     });
 
     socketRef.current = socket;
@@ -91,6 +111,15 @@ export default function AdminBiddingDashboard() {
         socket.emit("join-auction", id);
         console.log(`Joined auction room ${id}`);
       }
+    });
+    socket.on("connect_error", (error) => {
+      console.error("Socket connection error:", error);
+      toast.error("Connection issues detected. Retrying...");
+    });
+
+    socket.on("reconnect", (attemptNumber) => {
+      console.log("Socket reconnected after", attemptNumber, "attempts");
+      toast.success("Connection restored!");
     });
 
     socket.on("disconnect", (reason) => {
@@ -131,7 +160,7 @@ export default function AdminBiddingDashboard() {
             batting: currentPlayer.battingStyle,
             bowling: currentPlayer.bowlingStyle,
             basePrice: currentPlayer.basePrice,
-            avatarUrl: currentPlayer.photo,
+            playerPic: currentPlayer.playerPic,
             points: currentPlayer.points,
           },
           currentBid: {
@@ -140,6 +169,9 @@ export default function AdminBiddingDashboard() {
             teamLogo: null,
           },
         }));
+        if (currentPlayer.playerPic) {
+          setPlayerPic(currentPlayer.playerPic);
+        }
         setBidAmount(currentPlayer.basePrice || 0);
         setBiddingStarted(true);
       }
@@ -189,7 +221,7 @@ export default function AdminBiddingDashboard() {
             batting: nextPlayer.battingStyle,
             bowling: nextPlayer.bowlingStyle,
             basePrice: nextPlayer.basePrice,
-            avatarUrl: nextPlayer.photo,
+            playerPic: nextPlayer.playerPic,
             points: nextPlayer.points,
           },
           currentBid: {
@@ -198,6 +230,9 @@ export default function AdminBiddingDashboard() {
             teamLogo: null,
           },
         }));
+        if (nextPlayer.playerPic) {
+          setPlayerPic(nextPlayer.playerPic);
+        }
         setBidAmount(nextPlayer.basePrice || 0);
         setCurrentQueuePosition(newPos);
         setQueueDisplay({
@@ -215,7 +250,7 @@ export default function AdminBiddingDashboard() {
             batting: "--/--",
             bowling: "--/--",
             basePrice: 0,
-            avatarUrl: null,
+            playerPic: null,
             points: 0,
           },
           currentBid: {
@@ -283,7 +318,7 @@ export default function AdminBiddingDashboard() {
             batting: "--/--",
             bowling: "--/--",
             basePrice: 0,
-            avatarUrl: null,
+            playerPic: null,
             points: 0,
           },
           currentBid: {
@@ -482,10 +517,13 @@ export default function AdminBiddingDashboard() {
             batting: data.currentPlayer.battingStyle,
             bowling: data.currentPlayer.bowlingStyle,
             basePrice: data.currentPlayer.basePrice,
-            avatarUrl: data.currentPlayer.photo,
+            playerPic: data.currentPlayer.playerPic,
             points: data.currentPlayer.points,
           },
         }));
+        if (data.currentPlayer.playerPic) {
+          setPlayerPic(data.currentPlayer.playerPic);
+        }
       }
 
       console.log("Queue Status Summary:", {
@@ -516,7 +554,7 @@ export default function AdminBiddingDashboard() {
           batting: response.data.currentPlayer?.battingStyle,
           bowling: response.data.currentPlayer?.bowlingStyle,
           basePrice: response.data.currentPlayer?.basePrice,
-          avatarUrl: response.data.currentPlayer?.photo,
+          playerPic: response.data.currentPlayer?.playerPic,
           points: response.data.currentPlayer?.points,
         },
         currentBid: {
@@ -525,6 +563,9 @@ export default function AdminBiddingDashboard() {
           teamLogo: null,
         },
       }));
+      if (response.data.currentPlayer.playerPic) {
+        setPlayerPic(response.data.currentPlayer.playerPic);
+      }
       setBiddingStarted(true);
       setBidAmount(response.data.currentPlayer?.basePrice || 0);
       await fetchQueueStatus();
@@ -598,7 +639,7 @@ export default function AdminBiddingDashboard() {
             batting: response.data.currentPlayer?.battingStyle,
             bowling: response.data.currentPlayer?.bowlingStyle,
             basePrice: response.data.currentPlayer?.basePrice,
-            avatarUrl: response.data.currentPlayer?.photo,
+            playerPic: response.data.currentPlayer?.playerPic,
             points: response.data.currentPlayer?.points,
           },
           currentBid: {
@@ -607,6 +648,9 @@ export default function AdminBiddingDashboard() {
             teamLogo: null,
           },
         }));
+        if (response.data.currentPlayer.playerPic) {
+          setPlayerPic(response.data.currentPlayer.playerPic);
+        }
         setBiddingStarted(true);
         setBidAmount(response.data.currentPlayer?.basePrice || 0);
         setCanChangeMode(false);
@@ -671,8 +715,7 @@ export default function AdminBiddingDashboard() {
             data.currentPlayerOnBid?.basePrice || prev.currentLot.basePrice,
           playerPic:
             data.currentPlayerOnBid?.playerPic || prev.currentLot.playerPic,
-          points:
-            data.currentPlayerOnBid?.points || prev.currentLot.points,
+          points: data.currentPlayerOnBid?.points || prev.currentLot.points,
         },
         currentBid: {
           amount: data.currentBid?.amount || prev.currentBid.amount,
@@ -822,7 +865,7 @@ export default function AdminBiddingDashboard() {
             batting: nextPlayer.battingStyle,
             bowling: nextPlayer.bowlingStyle,
             basePrice: nextPlayer.basePrice,
-            avatarUrl: nextPlayer.photo,
+            playerPic: nextPlayer.playerPic,
           },
           currentBid: {
             amount: nextPlayer.basePrice || 0,
@@ -838,6 +881,9 @@ export default function AdminBiddingDashboard() {
             total: prev.total,
           }));
         }
+        if (nextPlayer.playerPic) {
+          setPlayerPic(nextPlayer.playerPic);
+        }
       } else {
         setAuctionData((prev) => ({
           ...prev,
@@ -848,7 +894,7 @@ export default function AdminBiddingDashboard() {
             batting: "--/--",
             bowling: "--/--",
             basePrice: 0,
-            avatarUrl: null,
+            playerPic: null,
           },
           currentBid: {
             amount: 0,
@@ -947,7 +993,7 @@ export default function AdminBiddingDashboard() {
             batting: response.data.nextPlayer.battingStyle,
             bowling: response.data.nextPlayer.bowlingStyle,
             basePrice: response.data.nextPlayer.basePrice,
-            avatarUrl: response.data.nextPlayer.photo,
+            playerPic: response.data.nextPlayer.playerPic,
           },
         }));
       }
@@ -1003,7 +1049,7 @@ export default function AdminBiddingDashboard() {
             batting: nextPlayer.battingStyle,
             bowling: nextPlayer.bowlingStyle,
             basePrice: nextPlayer.basePrice,
-            avatarUrl: nextPlayer.photo,
+            playerPic: nextPlayer.playerPic,
             points: nextPlayer.points,
           },
           currentBid: {
@@ -1021,6 +1067,9 @@ export default function AdminBiddingDashboard() {
             total: totalQueueLength,
           }));
         }
+        if (nextPlayer.playerPic) {
+          setPlayerPic(nextPlayer.playerPic);
+        }
       } else {
         setAuctionData((prev) => ({
           ...prev,
@@ -1031,7 +1080,7 @@ export default function AdminBiddingDashboard() {
             batting: "--/--",
             bowling: "--/--",
             basePrice: 0,
-            avatarUrl: null,
+            playerPic: null,
             points: 0,
           },
           currentBid: {
@@ -1150,25 +1199,25 @@ export default function AdminBiddingDashboard() {
     return value.toString();
   };
 
-const BASE_STEPS = [
-  10_000,    // 10 K
-  50_000,    // 50 K
-  100_000,   // 1 L
-  1_000_000, // 10 L
-  2_500_000, // 25 L
-  5_000_000, // 50 L
-  10_000_000 // 1 Cr
-];
+  const BASE_STEPS = [
+    10_000, // 10 K
+    50_000, // 50 K
+    100_000, // 1 L
+    1_000_000, // 10 L
+    2_500_000, // 25 L
+    5_000_000, // 50 L
+    10_000_000, // 1 Cr
+  ];
 
-function getNextBid(current) {
-  const curr = parseInt(current || 0, 10);
-  // 1) if you’re still below 1 Cr, find the next predefined step
-  for (let step of BASE_STEPS) {
-    if (step > curr) return step;
+  function getNextBid(current) {
+    const curr = parseInt(current || 0, 10);
+    // 1) if you’re still below 1 Cr, find the next predefined step
+    for (let step of BASE_STEPS) {
+      if (step > curr) return step;
+    }
+    // 2) once you’re at or above 1 Cr, just add 1 Cr every time (unlimited)
+    return curr + 10_000_000;
   }
-  // 2) once you’re at or above 1 Cr, just add 1 Cr every time (unlimited)
-  return curr + 10_000_000;
-}
 
   return (
     <div className={containerClasses + " pt-2 md:pt-4"}>
@@ -1236,7 +1285,8 @@ function getNextBid(current) {
               </div>
             </div>
             <p className="mt-3 text-base font-semibold bg-blue-900/50 py-1 rounded-lg">
-              Base Price: ₹{formatIndianNumber(auctionData.currentLot.basePrice)}
+              Base Price: ₹
+              {formatIndianNumber(auctionData.currentLot.basePrice)}
             </p>
           </motion.div>
         </div>
@@ -1406,7 +1456,8 @@ function getNextBid(current) {
                 Ball: {auctionData.currentLot.bowling}
               </p>
               <p className="mt-1 text-xs font-semibold bg-blue-900/30 py-0.5 rounded">
-                Base Price: ₹{formatIndianNumber(auctionData.currentLot.basePrice)}
+                Base Price: ₹
+                {formatIndianNumber(auctionData.currentLot.basePrice)}
               </p>
               <p className="mt-1 text-xs font-semibold bg-blue-900/30 py-0.5 rounded">
                 Rating: {auctionData.currentLot.points}
@@ -1742,7 +1793,10 @@ function getNextBid(current) {
               {auctionData.currentBid?.team || "--"}
               <p className="text-xs opacity-75 mt-1">
                 {/* ₹{auctionData.currentBid?.amount?.toLocaleString() || "--"} */}
-                ₹{formatIndianNumber(auctionData.currentBid?.amount?.toLocaleString() || "--")}
+                ₹
+                {formatIndianNumber(
+                  auctionData.currentBid?.amount?.toLocaleString() || "--"
+                )}
               </p>
             </h3>
           </motion.div>
