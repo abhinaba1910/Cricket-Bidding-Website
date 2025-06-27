@@ -12,7 +12,7 @@ import {
   FiCalendar,
   FiUser,
 } from "react-icons/fi";
-import { FaRunning, FaBaseballBall, FaMedal } from "react-icons/fa";
+import { FaRunning, FaBaseballBall, FaMedal, FaRupeeSign } from "react-icons/fa";
 
 const PageWrapper = ({ children }) => (
   <motion.div
@@ -176,9 +176,9 @@ export default function ViewPlayer() {
               {/* Stats */}
               <div className="grid grid-cols-3 gap-4 mt-6">
                 <StatItem
-                  title="Price"
+                  title="Base Price"
                   value={`₹${formatIndianNumber(basePrice)}`}
-                  icon={<FiDollarSign />}
+                  icon={<FaRupeeSign />}
                 />
                 <StatItem title="Rating" value={points} icon={<FiAward />} />
                 <StatItem title="Age" value={age} icon={<FiCalendar />} />
