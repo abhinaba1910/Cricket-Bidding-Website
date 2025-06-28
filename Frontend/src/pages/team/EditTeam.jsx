@@ -5,6 +5,7 @@ import { FiChevronLeft } from "react-icons/fi";
 import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import Api from "../../userManagement/Api";
+import { formatIndianNumber } from "../../types/formatIndianNumber";
 
 export default function EditTeam() {
   const { id } = useParams();
@@ -244,7 +245,7 @@ export default function EditTeam() {
                     <div className="flex flex-col">
                       <span className="font-medium">{player.name}</span>
                       <span className="text-sm text-gray-500">
-                        Current: ₹{price}
+                        Current: ₹{formatIndianNumber(price)}
                       </span>
                     </div>
 

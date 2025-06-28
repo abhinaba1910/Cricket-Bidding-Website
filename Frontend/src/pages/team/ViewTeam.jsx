@@ -264,7 +264,7 @@ export default function ViewTeam() {
                             {entry.player.name}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                            {formatAmount(entry.price)}
+                          ₹{formatIndianNumber(entry.price)}
                           </td>
                         </motion.tr>
                       ))}
