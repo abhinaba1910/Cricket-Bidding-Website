@@ -3,7 +3,7 @@ import { FiSearch, FiArrowLeft } from "react-icons/fi";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Api from "../../userManagement/Api";
 import { IoMdAirplane } from "react-icons/io";
-
+import { formatIndianNumber } from "../../types/formatIndianNumber";
 
 const allRoles = [
   "Batsman",
@@ -35,16 +35,13 @@ export default function ManualPlayerSelection() {
   const [selectedPlayers, setSelectedPlayers] = useState([]);
   const [queuedIds, setQueuedIds] = useState(new Set());
 
-
-
   useEffect(() => {
     if (!id) return;
-    Api
-      .get(`/get-auction/${id}`)
+    Api.get(`/get-auction/${id}`)
       .then((res) => {
         const { savailablePlayers, manualPlayerQueue } = res.data;
         setPlayers(savailablePlayers || []);
-  
+
         // Extract already queued player IDs
         const queuedPlayerIds = new Set(
           (manualPlayerQueue || []).map((entry) => entry.player._id)
@@ -54,10 +51,10 @@ export default function ManualPlayerSelection() {
       })
       .catch((err) => console.error("Failed to fetch auction data", err));
   }, [id]);
-  
+
   const togglePlayerSelection = (player) => {
     if (queuedIds.has(player._id)) return; // Ignore already queued
-  
+
     setSelectedPlayers((prev) => {
       const isSelected = prev.some((p) => p._id === player._id);
       if (isSelected) {
@@ -71,7 +68,7 @@ export default function ManualPlayerSelection() {
       }
     });
   };
-  
+
   const filtered = useMemo(() => {
     const term = search.toLowerCase();
     return players.filter((p) => {
@@ -85,15 +82,15 @@ export default function ManualPlayerSelection() {
       return okSearch && okRole && okBat && okBowl && okRank;
     });
   }, [players, search, roleFilter, battingFilter, bowlingFilter, rankFilter]);
-  
+
   const handleBack = () => navigate(`/admin/admin-bidding-dashboard/${id}`);
-  
+
   const handleStartBidding = async () => {
     if (selectedPlayers.length === 0) {
       alert("Please select at least one player");
       return;
     }
-  
+
     try {
       // Create fresh queue with selected players
       const playerQueue = selectedPlayers.map((player, index) => ({
@@ -101,14 +98,14 @@ export default function ManualPlayerSelection() {
         position: index + 1,
         playerData: player,
       }));
-  
+
       const response = await Api.post(`/set-manual-queue/${id}`, {
         playerQueue: playerQueue,
       });
-  
+
       if (response.data.message) {
         alert(`${selectedPlayers.length} players added to queue successfully!`);
-        
+
         // Navigate back to dashboard
         navigate(`/admin/admin-bidding-dashboard/${id}`, {
           state: {
@@ -175,20 +172,19 @@ export default function ManualPlayerSelection() {
               </span>
             </div>
             <div className="text-sm text-gray-600">
-                              {p.role}      
-                              <div className="flex items-center gap-1">
-                              {p.country}
-                              {p.country.toLowerCase() !== "india" && (
-                                <IoMdAirplane
-                                className="text-blue-500"
-                                title="Overseas Player"
-                                />
-                              )}
-                              </div>          
-            
-                            </div>
+              {p.role}
+              <div className="flex items-center gap-1">
+                {p.country}
+                {p.country.toLowerCase() !== "india" && (
+                  <IoMdAirplane
+                    className="text-blue-500"
+                    title="Overseas Player"
+                  />
+                )}
+              </div>
+            </div>
             <p className="text-sm font-medium mt-1">
-              ₹{p.basePrice?.toLocaleString() || 0}
+              ₹{formatIndianNumber(p.basePrice) || 0}
             </p>
           </div>
         </div>
@@ -217,15 +213,12 @@ export default function ManualPlayerSelection() {
         <td className="px-4 py-2">{p.grade || "—"}</td>
         <td className="px-4 py-2">{p.role}</td>
         <td className="px-4 py-6 flex items-center gap-1">
-                                            {p.country}
-                                            {p.country.toLowerCase() !== "india" && (
-                                              <IoMdAirplane
-                                                className="text-blue-500"
-                                                title="Overseas Player"
-                                              />
-                                            )}
-                                          </td>
-        <td className="px-4 py-2">₹{p.basePrice?.toLocaleString() || 0}</td>
+          {p.country}
+          {p.country.toLowerCase() !== "india" && (
+            <IoMdAirplane className="text-blue-500" title="Overseas Player" />
+          )}
+        </td>
+        <td className="px-4 py-2">₹{formatIndianNumber(p.basePrice) || 0}</td>
       </tr>
     );
   };
