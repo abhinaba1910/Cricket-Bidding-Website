@@ -364,7 +364,7 @@ export default function ManualPlayerSelection() {
         </div>
 
         {/* Action Buttons */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 flex justify-between shadow-lg  z-20">
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-2 flex justify-between shadow-lg  z-20">
           <button
             onClick={handleBack}
             className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
