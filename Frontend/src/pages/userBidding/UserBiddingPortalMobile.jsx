@@ -429,7 +429,7 @@ export default function UserBiddingDashboardMobile() {
       return;
     }
 
-    const socket = io("https://cricket-bidding-website-backend.onrender.com", {
+    const socket = io("https://cricket-bidding-website-production.up.railway.app", {
       // const socket = io("http://localhost:6001", {
       auth: { token },
       transports: ["websocket"],

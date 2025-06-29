@@ -91,7 +91,7 @@ export default function AdminBiddingDashboard() {
       return;
     }
     const SOCKET_SERVER_URL =
-      "https://cricket-bidding-website-backend.onrender.com"; // ← replace with your real URL
+      "https://cricket-bidding-website-production.up.railway.app"; // ← replace with your real URL
     // const SOCKET_SERVER_URL = "http://localhost:6001";
     const socket = io(SOCKET_SERVER_URL, {
       auth: { token },
