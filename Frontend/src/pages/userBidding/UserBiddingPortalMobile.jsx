@@ -433,11 +433,11 @@ export default function UserBiddingDashboardMobile() {
       // const socket = io("http://localhost:6001", {
       auth: { token },
       transports: ["websocket"],
-      timeout: 5000,
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 5,
-      maxReconnectionAttempts: 5,
+      // timeout: 5000,
+      // reconnection: true,
+      // reconnectionDelay: 1000,
+      // reconnectionAttempts: 5,
+      // maxReconnectionAttempts: 5,
     });
     socketRef.current = socket;
 
