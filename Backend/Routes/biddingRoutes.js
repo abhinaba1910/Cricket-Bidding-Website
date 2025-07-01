@@ -1404,50 +1404,212 @@ router.get("/bidding-portal/:auctionId", auth, async (req, res) => {
   }
 });
 
-// PATCH /update-bid/:auctionId
-router.patch("/update-bid/:auctionId", auth, async (req, res) => {
+router.get('/auto-bid-settings/:auctionId', async (req, res) => {
+  try {
+    const { auctionId } = req.params;
+    
+    const auction = await Auction.findById(auctionId);
+    if (!auction) {
+      return res.status(404).json({ error: 'Auction not found' });
+    }
+    
+    res.json({
+      isEnabled: auction.autoBidEnabled || false,
+      range: auction.autoBidRange || 10000
+    });
+  } catch (error) {
+    console.error('Error fetching auto bid settings:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 2. Update auto bid settings
+router.post('/auto-bid-settings/:auctionId', async (req, res) => {
+  try {
+    const { auctionId } = req.params;
+    const { isEnabled, range } = req.body;
+    
+    const auction = await Auction.findById(auctionId);
+    if (!auction) {
+      return res.status(404).json({ error: 'Auction not found' });
+    }
+    
+    // Update auction with auto bid settings
+    auction.autoBidEnabled = isEnabled;
+    auction.autoBidRange = range;
+    await auction.save();
+    
+    // Get io instance from app
+    const io = req.app.get('io');
+    
+    // Emit to all connected clients about the auto bid settings change
+    io.to(`auction-${auctionId}`).emit('auto-bid:settings-updated', {
+      isEnabled,
+      range
+    });
+    
+    res.json({ 
+      success: true, 
+      message: 'Auto bid settings updated successfully',
+      settings: { isEnabled, range }
+    });
+    
+  } catch (error) {
+    console.error('Error updating auto bid settings:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+router.patch('/update-bid/:auctionId', async (req, res) => {
   try {
     const { auctionId } = req.params;
     const { amount } = req.body;
 
-    const auction = await Auction.findById(auctionId);
-
-    if (!auction || !auction.currentPlayerOnBid) {
-      return res
-        .status(404)
-        .json({ error: "Auction or current player not found." });
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ error: 'Invalid bid amount' });
     }
 
-    // ✅ Only update bidAmount, NOT currentBid
-    auction.bidAmount = {
-      player: auction.currentPlayerOnBid,
-      amount: amount,
-    };
+    const auction = await Auction.findById(auctionId)
+      .populate('currentPlayerOnBid')
+      .populate('currentBid.team');
 
+    if (!auction) {
+      return res.status(404).json({ error: 'Auction not found' });
+    }
+
+    if (!auction.currentPlayerOnBid) {
+      return res.status(400).json({ error: 'No player currently on bid' });
+    }
+
+    // Update bid amount
+    auction.bidAmount = { amount };
     await auction.save();
 
-    // Emit updated bid to all participants
-    {
-      const io = req.app.get("io");
-      io.to(auctionId).emit("bid:updated", {
-        currentPlayerOnBid: auction.currentPlayerOnBid,
-        newBidAmount: amount,
-      });
-    }
+    const io = req.app.get('io');
 
-    res.json({ message: "Bid updated successfully", bidAmount: amount });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    // ✅ Correct room name formatting
+    io.to(`${auctionId}`).emit('bid:updated', {
+      auctionId,
+      playerId: auction.currentPlayerOnBid._id,
+      newBid: {
+        amount,
+        team: auction.currentBid?.team?.teamName || null,
+        teamLogo: auction.currentBid?.team?.logoUrl || null,
+      },
+      timestamp: new Date(),
+      systemGenerated: true,
+    });
+
+    res.json({
+      message: 'Bid updated successfully',
+      newBidAmount: amount,
+      auctionId,
+    });
+  } catch (error) {
+    console.error('Error updating bid:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
+
 // Place bid: add emit after saving new bid
+// router.post("/place-bid/:auctionId", auth, async (req, res) => {
+//   try {
+//     const { playerId, teamId, bidAmount } = req.body;
+//     const { auctionId } = req.params;
+
+//     const auction = await Auction.findById(auctionId);
+//     if (!auction) {
+//       return res.status(404).json({ error: "Auction not found" });
+//     }
+
+//     if (auction.isPaused || auction.status !== "live") {
+//       return res.status(400).json({ error: "Auction is not active" });
+//     }
+
+//     if (
+//       auction.currentPlayerOnBid &&
+//       auction.currentPlayerOnBid.toString() !== playerId.toString()
+//     ) {
+//       return res.status(400).json({
+//         error: "Player on bid does not match the current bidding player.",
+//       });
+//     }
+
+//     const isSameAmount =
+//       Number(auction.currentBid?.amount) === Number(bidAmount);
+//     const isSameTeam =
+//       auction.currentBid?.team?.toString() === teamId.toString();
+
+//     if (isSameAmount) {
+//       if (isSameTeam) {
+//         return res.status(400).json({
+//           error: "You cannot place the same bid twice.",
+//         });
+//       } else {
+//         // Fetch team name of the currentBid team
+//         const existingTeam = await Team.findById(auction.currentBid.team);
+//         const teamName = existingTeam?.shortName || "Another team";
+
+//         return res.status(400).json({
+//           error: `${teamName} already placed this bid. Wait for the amount to change.`,
+//         });
+//       }
+//     } else {
+//       if (isSameTeam) {
+//         return res.status(400).json({
+//           error:
+//             "You already placed bid for the previous amount!! Give other team chance",
+//         });
+//       }
+//     }
+
+//     // Get bidding team data
+//     const team = await Team.findById(teamId);
+//     if (!team) return res.status(404).json({ error: "Team not found" });
+
+//     if (team.remaining < bidAmount) {
+//       return res.status(400).json({
+//         error: "Insufficient balance to place this bid.",
+//       });
+//     }
+//     // Place the bid
+//     auction.currentBid = {
+//       team: teamId,
+//       amount: bidAmount,
+//     };
+
+//     await auction.save();
+
+//     // Emit the new bid to all clients in room
+//     {
+//       const io = req.app.get("io");
+//       io.to(auctionId).emit("bid:placed", {
+//         currentPlayerOnBid: auction.currentPlayerOnBid,
+//         newBid: {
+//           team: team.shortName,
+//           teamLogo: team.logoUrl,
+//           amount: bidAmount,
+//         },
+//       });
+//     }
+
+//     res.status(200).json({ message: "Bid placed successfully" });
+//   } catch (err) {
+//     console.error("Place bid error:", err);
+//     res
+//       .status(500)
+//       .json({ error: "Internal server error", details: err.message });
+//   }
+// });
+
 router.post("/place-bid/:auctionId", auth, async (req, res) => {
   try {
     const { playerId, teamId, bidAmount } = req.body;
     const { auctionId } = req.params;
 
-    const auction = await Auction.findById(auctionId);
+    const auction = await Auction.findById(auctionId).populate("currentBid.team");
     if (!auction) {
       return res.status(404).json({ error: "Auction not found" });
     }
@@ -1465,10 +1627,9 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
       });
     }
 
-    const isSameAmount =
-      Number(auction.currentBid?.amount) === Number(bidAmount);
+    const isSameAmount = Number(auction.currentBid?.amount) === Number(bidAmount);
     const isSameTeam =
-      auction.currentBid?.team?.toString() === teamId.toString();
+      auction.currentBid?.team?._id?.toString() === teamId.toString();
 
     if (isSameAmount) {
       if (isSameTeam) {
@@ -1476,61 +1637,68 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
           error: "You cannot place the same bid twice.",
         });
       } else {
-        // Fetch team name of the currentBid team
-        const existingTeam = await Team.findById(auction.currentBid.team);
-        const teamName = existingTeam?.shortName || "Another team";
-
         return res.status(400).json({
-          error: `${teamName} already placed this bid. Wait for the amount to change.`,
+          error: `${auction.currentBid?.team?.shortName || "Another team"} already placed this bid. Wait for the amount to change.`,
         });
       }
     } else {
       if (isSameTeam) {
         return res.status(400).json({
-          error:
-            "You already placed bid for the previous amount!! Give other team chance",
+          error: "You already placed bid for the previous amount!! Give other team chance",
         });
       }
     }
 
-    // Get bidding team data
     const team = await Team.findById(teamId);
     if (!team) return res.status(404).json({ error: "Team not found" });
 
     if (team.remaining < bidAmount) {
-      return res.status(400).json({
-        error: "Insufficient balance to place this bid.",
-      });
+      return res.status(400).json({ error: "Insufficient balance to place this bid." });
     }
-    // Place the bid
-    auction.currentBid = {
-      team: teamId,
-      amount: bidAmount,
-    };
 
-    await auction.save();
-
-    // Emit the new bid to all clients in room
-    {
-      const io = req.app.get("io");
-      io.to(auctionId).emit("bid:placed", {
-        currentPlayerOnBid: auction.currentPlayerOnBid,
-        newBid: {
-          team: team.shortName,
-          teamLogo: team.logoUrl,
-          amount: bidAmount,
+    // Atomic update (only if everything above passes)
+    const updatedAuction = await Auction.findOneAndUpdate(
+      {
+        _id: auctionId,
+        currentPlayerOnBid: playerId,
+        isPaused: false,
+        status: "live",
+      },
+      {
+        $set: {
+          "currentBid.amount": bidAmount,
+          "currentBid.team": teamId,
         },
-      });
-    }
+        $push: {
+          biddingHistory: {
+            player: playerId,
+            team: teamId,
+            bidAmount,
+            time: new Date(),
+          },
+        },
+      },
+      { new: true }
+    ).populate("currentPlayerOnBid");
 
-    res.status(200).json({ message: "Bid placed successfully" });
+    const io = req.app.get("io");
+    io.to(auctionId).emit("bid:placed", {
+      currentPlayerOnBid: updatedAuction.currentPlayerOnBid,
+      newBid: {
+        team: team.shortName,
+        teamLogo: team.logoUrl,
+        amount: bidAmount,
+      },
+    });
+
+    return res.status(200).json({ message: "Bid placed successfully" });
   } catch (err) {
     console.error("Place bid error:", err);
-    res
-      .status(500)
-      .json({ error: "Internal server error", details: err.message });
+    res.status(500).json({ error: "Internal server error", details: err.message });
   }
 });
+
+
 
 router.post("/use-rtm/:auctionId", auth, async (req, res) => {
   try {

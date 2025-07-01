@@ -45,6 +45,15 @@ const auctionSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    autoBidEnabled: {
+      type: Boolean,
+      default: false
+    },
+    autoBidRange: {
+      type: Number,
+      default: 10000 // Default 10K increment
+    },
+    
     pauseAfterCurrentPlayer: {
       type: Boolean,
       default: false,

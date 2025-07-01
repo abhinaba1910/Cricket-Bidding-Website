@@ -366,6 +366,8 @@ router.get("/get-auction/:id", AuthMiddleWare, async (req, res) => {
       currentQueuePosition: auction.currentQueuePosition,
       bidAmount: auction.bidAmount,
       pendingRTMRequest: auction.pendingRTMRequest || null,
+      autoBidEnabled: auction.autoBidEnabled || false,
+  autoBidRange: auction.autoBidRange || 10000,
     });
   } catch (error) {
     console.error("Error fetching auction:", error);

@@ -47,8 +47,7 @@ export default function AdminBiddingDashboard() {
   const [currentQueuePosition, setCurrentQueuePosition] = useState(0);
   const [canChangeMode, setCanChangeMode] = useState(true);
   const [isSelling, setIsSelling] = useState(false);
-const [isUnselling, setIsUnselling] = useState(false);
-
+  const [isUnselling, setIsUnselling] = useState(false);
 
   const [playerPic, setPlayerPic] = useState(null);
   const [currentPlayerId, setCurrentPlayerId] = useState(null);
@@ -63,6 +62,9 @@ const [isUnselling, setIsUnselling] = useState(false);
   const [pendingRTMRequest, setPendingRTMRequest] = useState(null);
   const [isProcessingRTM, setIsProcessingRTM] = useState(false);
   const [isSavingSelection, setIsSavingSelection] = useState(false);
+  const [isAutoBidEnabled, setIsAutoBidEnabled] = useState(false);
+  const [autoBidRange, setAutoBidRange] = useState(10000); // Default 10K increment
+  const [showAutoBidModal, setShowAutoBidModal] = useState(false);
 
   const user = JSON.parse(localStorage.getItem("user")); // or your user context/session
   const isAdmin = user?.role === "admin" || user?.role === "temp-admin";
@@ -86,6 +88,24 @@ const [isUnselling, setIsUnselling] = useState(false);
 
     return () => clearInterval(interval);
   }, []);
+  useEffect(() => {
+    const fetchAutoBidSettings = async () => {
+      try {
+        const response = await Api.get(`/auto-bid-settings/${id}`);
+        if (response.data.isEnabled) {
+          setIsAutoBidEnabled(response.data.isEnabled);
+          setAutoBidRange(response.data.range);
+        }
+      } catch (error) {
+        console.error("Error fetching auto bid settings:", error);
+      }
+    };
+
+    if (id) {
+      fetchAutoBidSettings();
+    }
+  }, [id]);
+
   // -------------------------------
   // SOCKET.IO: connect, join room, listeners
   // -------------------------------
@@ -132,19 +152,22 @@ const [isUnselling, setIsUnselling] = useState(false);
     });
 
     // ── CATCH THE OTHER BID EVENT (some routes emit “bid:updated”) ──
+
     socket.on("bid:updated", (payload) => {
       console.log("Received bid:updated", payload);
-      // update your current bid amount
+      const { newBid } = payload;
+
       setAuctionData((prev) => ({
         ...prev,
         currentBid: {
-          amount: prev.newBidAmount,
-          team: prev.currentBid.team,
-          teamLogo: prev.currentBid.teamLogo,
+          amount: newBid.amount,
+          team: newBid.team,
+          teamLogo: newBid.teamLogo,
         },
       }));
-      setBidAmount(payload.newBidAmount);
-      toast.success(`Bid updated: ₹${payload.newBidAmount.toLocaleString()}`);
+
+      setBidAmount(newBid.amount);
+      toast.success(`Bid updated: ₹${formatIndianNumber(newBid.amount)}`);
     });
 
     // 1. Bidding started
@@ -186,6 +209,24 @@ const [isUnselling, setIsUnselling] = useState(false);
     });
 
     // 2. Bid placed
+    // socket.on("bid:placed", (data) => {
+    //   console.log("Received bid:placed", data);
+    //   const { newBid } = data;
+    //   if (newBid) {
+    //     setAuctionData((prev) => ({
+    //       ...prev,
+    //       currentBid: {
+    //         amount: newBid.amount,
+    //         team: newBid.team,
+    //         teamLogo: newBid.teamLogo,
+    //       },
+    //     }));
+    //     setShowEdit(true);
+    //     setBidAmount(newBid.amount);
+    //     toast.success(`New bid: ₹${newBid.amount.toLocaleString()}`);
+    //   }
+    // });
+
     socket.on("bid:placed", (data) => {
       console.log("Received bid:placed", data);
       const { newBid } = data;
@@ -198,13 +239,19 @@ const [isUnselling, setIsUnselling] = useState(false);
             teamLogo: newBid.teamLogo,
           },
         }));
-        setShowEdit(true);
+
+        // Only show manual edit if auto bid is NOT enabled
+        if (!isAutoBidEnabled) {
+          setShowEdit(true);
+        } else {
+          // Auto increment the bid
+          handleAutoBidIncrement(newBid.amount);
+        }
+
         setBidAmount(newBid.amount);
         toast.success(`New bid: ₹${newBid.amount.toLocaleString()}`);
       }
     });
-    
-    
 
     // 3. Player sold
     socket.on("player:sold", (payload) => {
@@ -420,7 +467,89 @@ const [isUnselling, setIsUnselling] = useState(false);
       socket.off("rtm:approved");
       socket.off("rtm:rejected");
     };
-  }, [id]);
+  }, [id, isAutoBidEnabled, autoBidRange]);
+
+  const handleAutoBidIncrement = async (currentBidAmount) => {
+    try {
+      const newBidAmount = currentBidAmount + autoBidRange;
+
+      // Auto increment after 1 second delay
+      setTimeout(async () => {
+        try {
+          await Api.patch(`/update-bid/${id}`, { amount: newBidAmount });
+          setBidAmount(newBidAmount);
+
+          // Update auction data
+          setAuctionData((prev) => ({
+            ...prev,
+            currentBid: {
+              amount: newBidAmount,
+              team: prev.currentBid.team,
+              teamLogo: prev.currentBid.teamLogo,
+            },
+          }));
+
+          toast.success(`Auto bid updated: ₹${newBidAmount.toLocaleString()}`);
+        } catch (error) {
+          console.error("Error in auto bid increment:", error);
+          toast.error("Failed to auto increment bid");
+        }
+      }, 1000);
+    } catch (error) {
+      console.error("Error calculating auto bid increment:", error);
+    }
+  };
+
+  // Handle enable auto bid
+  const handleEnableAutoBid = () => {
+    setShowAutoBidModal(true);
+  };
+
+  // Handle auto bid settings save
+  const handleSaveAutoBidSettings = async () => {
+    try {
+      await Api.post(`/auto-bid-settings/${id}`, {
+        isEnabled: true,
+        range: autoBidRange,
+      });
+
+      setIsAutoBidEnabled(true);
+      setShowAutoBidModal(false);
+      toast.success(
+        `Auto bid enabled with ₹${autoBidRange.toLocaleString()} increment`
+      );
+    } catch (error) {
+      console.error("Error saving auto bid settings:", error);
+      toast.error("Failed to enable auto bid");
+    }
+  };
+
+  // Handle disable auto bid
+  const handleDisableAutoBid = async () => {
+    try {
+      await Api.post(`/auto-bid-settings/${id}`, {
+        isEnabled: false,
+        range: 0,
+      });
+
+      setIsAutoBidEnabled(false);
+      toast.success("Auto bid disabled");
+    } catch (error) {
+      console.error("Error disabling auto bid:", error);
+      toast.error("Failed to disable auto bid");
+    }
+  };
+
+  // Auto bid range options
+  const autoBidRangeOptions = [
+    { value: 5000000, label: "₹50,00,000 (50 Lakh)" },
+    { value: 10000000, label: "₹1,00,00,000 (1 Cr)" },
+    { value: 20000000, label: "₹2,00,00,000 (2 Cr)" },
+    { value: 50000000, label: "₹5,00,00,000 (5 Cr)" },
+    { value: 100000000, label: "₹10,00,00,000 (10 Cr)" },
+    { value: 250000000, label: "₹25,00,00,000 (25 Cr)" },
+    { value: 500000000, label: "₹50,00,00,000 (50 Cr)" },
+  ];
 
   // Initial fetch once
   useEffect(() => {
@@ -675,8 +804,7 @@ const [isUnselling, setIsUnselling] = useState(false);
         error.response?.data?.error ||
           "An error occurred while starting bidding."
       );
-    }
-    finally {
+    } finally {
       setIsSavingSelection(false); // 🔴 Stop loading
       setShowStartPopup(false);
     }
@@ -929,8 +1057,7 @@ const [isUnselling, setIsUnselling] = useState(false);
         error.response?.data?.error ||
           "Failed to sell player. Please try again."
       );
-    }
-    finally {
+    } finally {
       setIsSelling(false); // ✅ enable button again
     }
   };
@@ -1117,8 +1244,7 @@ const [isUnselling, setIsUnselling] = useState(false);
     } catch (error) {
       console.error("Error marking unsold:", error);
       toast.error("Failed to mark player as Unsold.");
-    }
-    finally {
+    } finally {
       setIsUnselling(false); // ✅ enable unsell button again
     }
   };
@@ -1521,36 +1647,57 @@ const [isUnselling, setIsUnselling] = useState(false);
             </motion.button>
           </div> */}
 
-<div className="flex gap-4 mt-4">
-  <motion.button
-    onClick={handleManualSell}
-    disabled={isSelling}
-    className={`w-32 px-4 py-2 rounded-xl text-sm shadow-lg transition-colors ${
-      isSelling
-        ? "bg-gray-500 cursor-not-allowed"
-        : "bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600"
-    }`}
-    whileHover={{ scale: isSelling ? 1 : 1.05 }}
-    whileTap={{ scale: isSelling ? 1 : 0.95 }}
-  >
-    {isSelling ? "Processing..." : "Sell"}
-  </motion.button>
+          <div className="flex gap-4 mt-4">
+            <motion.button
+              onClick={handleManualSell}
+              disabled={isSelling}
+              className={`w-32 px-4 py-2 rounded-xl text-sm shadow-lg transition-colors ${
+                isSelling
+                  ? "bg-gray-500 cursor-not-allowed"
+                  : "bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600"
+              }`}
+              whileHover={{ scale: isSelling ? 1 : 1.05 }}
+              whileTap={{ scale: isSelling ? 1 : 0.95 }}
+            >
+              {isSelling ? "Processing..." : "Sell"}
+            </motion.button>
 
-  <motion.button
-    onClick={onMoveToUnsell}
-    disabled={isUnselling}
-    className={`md:hidden px-4 py-2 rounded-xl text-sm shadow-lg transition-colors ${
-      isUnselling
-        ? "bg-gray-500 cursor-not-allowed"
-        : "bg-gradient-to-r from-red-600 to-orange-500 hover:from-orange-700 hover:to-red-600"
-    }`}
-    whileHover={{ scale: isUnselling ? 1 : 1.02 }}
-    whileTap={{ scale: isUnselling ? 1 : 0.98 }}
-  >
-    {isUnselling ? "Processing..." : "Move to Unsell"}
-  </motion.button>
+            <motion.button
+              onClick={onMoveToUnsell}
+              disabled={isUnselling}
+              className={`md:hidden px-4 py-2 rounded-xl text-sm shadow-lg transition-colors ${
+                isUnselling
+                  ? "bg-gray-500 cursor-not-allowed"
+                  : "bg-gradient-to-r from-red-600 to-orange-500 hover:from-orange-700 hover:to-red-600"
+              }`}
+              whileHover={{ scale: isUnselling ? 1 : 1.02 }}
+              whileTap={{ scale: isUnselling ? 1 : 0.98 }}
+            >
+              {isUnselling ? "Processing..." : "Move to Unsell"}
+            </motion.button>
+          </div>
+          <div className="mb-6">
+  {!isAutoBidEnabled ? (
+    <button
+      onClick={handleEnableAutoBid}
+      className="bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600 text-white px-5 py-2 rounded-xl shadow-md transition-all text-sm font-semibold"
+    >
+      Enable Auto Bid
+    </button>
+  ) : (
+    <div className="flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-lg">
+      <span className="text-sm sm:text-base text-green-300 font-semibold">
+        Auto Bid Enabled: + ₹{formatIndianNumber(autoBidRange)}
+      </span>
+      <button
+        onClick={handleDisableAutoBid}
+        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+      >
+        Disable
+      </button>
+    </div>
+  )}
 </div>
-
 
         </div>
 
@@ -1676,19 +1823,18 @@ const [isUnselling, setIsUnselling] = useState(false);
 
             {/* Move to Unsell */}
             <motion.button
-  onClick={onMoveToUnsell}
-  disabled={isUnselling}
-  className={`w-full px-4 py-2 rounded-xl text-sm shadow-lg transition-colors ${
-    isUnselling
-      ? "bg-gray-500 cursor-not-allowed"
-      : "bg-gradient-to-r from-purple-600 to-indigo-500 hover:from-purple-700 hover:to-indigo-600"
-  }`}
-  whileHover={{ scale: isUnselling ? 1 : 1.02 }}
-  whileTap={{ scale: isUnselling ? 1 : 0.98 }}
->
-  {isUnselling ? "Processing..." : "Move to Unsell"}
-</motion.button>
-
+              onClick={onMoveToUnsell}
+              disabled={isUnselling}
+              className={`w-full px-4 py-2 rounded-xl text-sm shadow-lg transition-colors ${
+                isUnselling
+                  ? "bg-gray-500 cursor-not-allowed"
+                  : "bg-gradient-to-r from-purple-600 to-indigo-500 hover:from-purple-700 hover:to-indigo-600"
+              }`}
+              whileHover={{ scale: isUnselling ? 1 : 1.02 }}
+              whileTap={{ scale: isUnselling ? 1 : 0.98 }}
+            >
+              {isUnselling ? "Processing..." : "Move to Unsell"}
+            </motion.button>
 
             {/* Desktop Pause button */}
             <motion.button
@@ -1792,19 +1938,18 @@ const [isUnselling, setIsUnselling] = useState(false);
 
           {/* Move to Unsell */}
           <motion.button
-  onClick={onMoveToUnsell}
-  disabled={isUnselling}
-  className={`w-full px-4 py-2 rounded-xl text-sm shadow-lg transition-colors ${
-    isUnselling
-      ? "bg-gray-500 cursor-not-allowed"
-      : "bg-gradient-to-r from-purple-600 to-indigo-500 hover:from-purple-700 hover:to-indigo-600"
-  }`}
-  whileHover={{ scale: isUnselling ? 1 : 1.02 }}
-  whileTap={{ scale: isUnselling ? 1 : 0.98 }}
->
-  {isUnselling ? "Processing..." : "Move to Unsell"}
-</motion.button>
-
+            onClick={onMoveToUnsell}
+            disabled={isUnselling}
+            className={`w-full px-4 py-2 rounded-xl text-sm shadow-lg transition-colors ${
+              isUnselling
+                ? "bg-gray-500 cursor-not-allowed"
+                : "bg-gradient-to-r from-purple-600 to-indigo-500 hover:from-purple-700 hover:to-indigo-600"
+            }`}
+            whileHover={{ scale: isUnselling ? 1 : 1.02 }}
+            whileTap={{ scale: isUnselling ? 1 : 0.98 }}
+          >
+            {isUnselling ? "Processing..." : "Move to Unsell"}
+          </motion.button>
 
           {/* Pause Auction */}
           <motion.button
@@ -1930,20 +2075,19 @@ const [isUnselling, setIsUnselling] = useState(false);
                 Save
               </motion.button> */}
 
-<motion.button
-  onClick={handleSaveStartSelection}
-  disabled={isSavingSelection}
-  className={`flex-1 rounded-xl px-4 py-2 text-sm font-medium shadow-md transition ${
-    isSavingSelection
-      ? "bg-gray-500 cursor-not-allowed"
-      : "bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600"
-  }`}
-  whileHover={!isSavingSelection ? { scale: 1.05 } : {}}
-  whileTap={!isSavingSelection ? { scale: 0.95 } : {}}
->
-  {isSavingSelection ? "Saving..." : "Save"}
-</motion.button>
-
+              <motion.button
+                onClick={handleSaveStartSelection}
+                disabled={isSavingSelection}
+                className={`flex-1 rounded-xl px-4 py-2 text-sm font-medium shadow-md transition ${
+                  isSavingSelection
+                    ? "bg-gray-500 cursor-not-allowed"
+                    : "bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600"
+                }`}
+                whileHover={!isSavingSelection ? { scale: 1.05 } : {}}
+                whileTap={!isSavingSelection ? { scale: 0.95 } : {}}
+              >
+                {isSavingSelection ? "Saving..." : "Save"}
+              </motion.button>
 
               <motion.button
                 onClick={() => setShowStartPopup(false)}
@@ -2025,6 +2169,52 @@ const [isUnselling, setIsUnselling] = useState(false);
           </motion.div>
         </motion.div>
       )}
+
+      {showAutoBidModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96 max-w-lg">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">
+              Enable Auto Bid Increment
+            </h3>
+            <p className="text-gray-600 mb-4">
+              Select the amount to automatically increment the bid when a new
+              bid is placed.
+            </p>
+
+            <div className="mb-4">
+              <label className="block text-gray-700 text-sm font-bold mb-2">
+                Auto Increment Range:
+              </label>
+              <select
+                value={autoBidRange}
+                onChange={(e) => setAutoBidRange(parseInt(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+              >
+                {autoBidRangeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowAutoBidModal(false)}
+                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveAutoBidSettings}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Enable Auto Bid
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2065,7 +2255,8 @@ const [isUnselling, setIsUnselling] = useState(false);
                   Auto
                 </button> */
 }
-{/* <motion.button
+{
+  /* <motion.button
                 onClick={() => setPopupSelection("automatic")}
                 className={`px-4 py-2 rounded-xl transition ${
                   popupSelection === "automatic"
@@ -2075,7 +2266,8 @@ const [isUnselling, setIsUnselling] = useState(false);
                 whileHover={{ scale: 1.05 }}
               >
                 Automatic
-              </motion.button> */}
+              </motion.button> */
+}
 {
   /* {selectionMode === "automatic" && (
             <motion.div
@@ -2106,9 +2298,11 @@ const [isUnselling, setIsUnselling] = useState(false);
           )} */
 }
 
-
- {/* Role selector if automatic */}
-            {/* {popupSelection === "automatic" && (
+{
+  /* Role selector if automatic */
+}
+{
+  /* {popupSelection === "automatic" && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
@@ -2134,11 +2328,14 @@ const [isUnselling, setIsUnselling] = useState(false);
                   <option value="Fast bowler">Fast Bowler</option>
                 </select>
               </motion.div>
-            )} */}
-            {/* {popupSelection === "manual" && incoming.length === 0 && (
+            )} */
+}
+{
+  /* {popupSelection === "manual" && incoming.length === 0 && (
               <div className="text-center p-3 bg-amber-900/30 rounded-lg">
                 <p className="text-xs text-amber-300 mb-2">
                   No players selected for manual mode
                 </p>
               </div>
-            )} */}
+            )} */
+}
