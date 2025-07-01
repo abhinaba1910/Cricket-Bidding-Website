@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { FiPlus, FiEye, FiEdit, FiSearch } from "react-icons/fi";
 import MobileStickyNav from "../../components/layout/MobileStickyNav";
@@ -32,6 +31,7 @@ export default function AuctionsInfo() {
   const [selectedAuctionId, setSelectedAuctionId] = useState(null);
   const [joinCode, setJoinCode] = useState("");
   const [joinError, setJoinError] = useState("");
+  const [isJoining, setIsJoining] = useState(false); // ✅ Added
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -67,12 +67,6 @@ export default function AuctionsInfo() {
       a.id.toLowerCase().includes(search.toLowerCase())
   );
 
-  const formatCountdown = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}m ${secs}s`;
-  };
-
   const handleJoinClick = (auctionId) => {
     setSelectedAuctionId(auctionId);
     setShowJoinModal(true);
@@ -81,36 +75,34 @@ export default function AuctionsInfo() {
   };
 
   const handleJoinSubmit = async () => {
+    setIsJoining(true); // ✅ Start loading
     try {
-      // STEP 1: Validate with GET route first
       const teamRes = await Api.get(`/join-auction/${selectedAuctionId}/teams`);
-  
-      // If user is the host or any other error, it will throw and go to catch block
-  
-      // STEP 2: If valid, proceed to POST join
       const res = await Api.post(`/join-auction/${selectedAuctionId}`, {
         joinCode,
       });
-  
+
       setShowJoinModal(false);
-  
       if (res.data.alreadyJoined) {
         toast.success("Already joined. Redirecting...");
-        navigate(`/user-bidding-portal/${selectedAuctionId}`);
+        setTimeout(() => {
+          navigate(`/user-bidding-portal/${selectedAuctionId}`);
+        }, 1000); // waits 2 seconds
       } else {
         toast.success("Redirecting...");
-        navigate(`/user-char-selection/${selectedAuctionId}`);
+        setTimeout(() => {
+          navigate(`/user-char-selection/${selectedAuctionId}`);
+        }, 1000);
       }
     } catch (err) {
-      // Extract the backend message and show in toast
       const errorMessage =
         err.response?.data?.message || "Failed to join the auction.";
       toast.error(errorMessage);
-      setJoinError(errorMessage); // Optional: can be shown in modal as well
+      setJoinError(errorMessage);
+    } finally {
+      setIsJoining(false); // ✅ Stop loading
     }
   };
-  
-  
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8 max-md:pb-14">
@@ -234,7 +226,6 @@ export default function AuctionsInfo() {
         <p className="text-gray-500">No {activeTab} auctions found.</p>
       )}
 
-      {/* Join Code Modal */}
       {showJoinModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-xl">
@@ -245,21 +236,27 @@ export default function AuctionsInfo() {
               onChange={(e) => setJoinCode(e.target.value)}
               placeholder="Join Code"
               className="w-full px-4 py-2 border rounded mb-3"
+              disabled={isJoining} // ✅ Prevent input during loading
             />
             {joinError && <p className="text-red-500 mb-2">{joinError}</p>}
             <div className="flex justify-end space-x-2">
               <button
                 onClick={() => setShowJoinModal(false)}
                 className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
+                disabled={isJoining} // ✅ Prevent cancel during loading
               >
                 Cancel
               </button>
               <button
                 onClick={handleJoinSubmit}
-                
-                className="px-4 py-2 rounded bg-teal-600 text-white hover:bg-teal-700"
+                disabled={isJoining}
+                className={`px-4 py-2 rounded text-white ${
+                  isJoining
+                    ? "bg-teal-400 cursor-not-allowed"
+                    : "bg-teal-600 hover:bg-teal-700"
+                }`}
               >
-                Join
+                {isJoining ? "Joining..." : "Join"}
               </button>
             </div>
           </div>

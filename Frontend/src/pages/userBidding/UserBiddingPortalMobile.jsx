@@ -167,7 +167,9 @@ export default function UserBiddingDashboardMobile() {
   useEffect(() => {
     const keepWarm = () => {
       fetch(
-        "https://cricket-bidding-website-backend.onrender.com/health"
+        "https://cricket-bidding-website-production.up.railway.app/health"
+        // "http://localhost:6001/health"
+
       ).catch((err) => console.log("Ping failed:", err));
     };
 
@@ -447,15 +449,15 @@ export default function UserBiddingDashboardMobile() {
         socket.emit("join-auction", id);
       }
     });
-    socket.on("connect_error", (error) => {
-      console.error("Socket connection error:", error);
-      toast.error("Connection issues detected. Retrying...");
-    });
+    // socket.on("connect_error", (error) => {
+    //   console.error("Socket connection error:", error);
+    //   toast.error("Connection issues detected. Retrying...");
+    // });
 
-    socket.on("reconnect", (attemptNumber) => {
-      console.log("Socket reconnected after", attemptNumber, "attempts");
-      toast.success("Connection restored!");
-    });
+    // socket.on("reconnect", (attemptNumber) => {
+    //   console.log("Socket reconnected after", attemptNumber, "attempts");
+    //   toast.success("Connection restored!");
+    // });
 
 
     socket.on("disconnect", (reason) => {

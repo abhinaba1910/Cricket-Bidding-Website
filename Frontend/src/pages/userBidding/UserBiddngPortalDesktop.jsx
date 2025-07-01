@@ -118,7 +118,8 @@ export default function UserBiddingDashboardDesktop() {
   useEffect(() => {
     const keepWarm = () => {
       fetch(
-        "https://cricket-bidding-website-backend.onrender.com/health"
+        "https://cricket-bidding-website-production.up.railway.app/health"
+        // "http://localhost:6001/health"
       ).catch((err) => console.log("Ping failed:", err));
     };
 
@@ -339,8 +340,6 @@ export default function UserBiddingDashboardDesktop() {
       setIsBidding(true);
       await Api.post(`/place-bid/${id}`, payload);
       toast.success("Bid Placed Successfully");
-      // After placing bid, we rely on socket event to refresh data,
-      // but we can also fetch immediately:
       fetchAuctionData();
       setEmoteToPlay("HandRaise");
       setTimeout(() => setEmoteToPlay(null), 2000);
@@ -378,15 +377,15 @@ export default function UserBiddingDashboardDesktop() {
         socket.emit("join-auction", id);
       }
     });
-    socket.on("connect_error", (error) => {
-      console.error("Socket connection error:", error);
-      toast.error("Connection issues detected. Retrying...");
-    });
+    // socket.on("connect_error", (error) => {
+    //   console.error("Socket connection error:", error);
+    //   toast.error("Connection issues detected. Retrying...");
+    // });
   
-    socket.on("reconnect", (attemptNumber) => {
-      console.log("Socket reconnected after", attemptNumber, "attempts");
-      toast.success("Connection restored!");
-    });
+    // socket.on("reconnect", (attemptNumber) => {
+    //   console.log("Socket reconnected after", attemptNumber, "attempts");
+    //   toast.success("Connection restored!");
+    // });
 
     socket.on("disconnect", (reason) => {
       console.log("Socket disconnected:", reason);

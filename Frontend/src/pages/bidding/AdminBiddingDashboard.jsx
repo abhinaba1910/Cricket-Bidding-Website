@@ -46,6 +46,9 @@ export default function AdminBiddingDashboard() {
   const [manualPlayerQueue, setManualPlayerQueue] = useState([]);
   const [currentQueuePosition, setCurrentQueuePosition] = useState(0);
   const [canChangeMode, setCanChangeMode] = useState(true);
+  const [isSelling, setIsSelling] = useState(false);
+const [isUnselling, setIsUnselling] = useState(false);
+
 
   const [playerPic, setPlayerPic] = useState(null);
   const [currentPlayerId, setCurrentPlayerId] = useState(null);
@@ -59,6 +62,7 @@ export default function AdminBiddingDashboard() {
   const [showRTMPopup, setShowRTMPopup] = useState(false);
   const [pendingRTMRequest, setPendingRTMRequest] = useState(null);
   const [isProcessingRTM, setIsProcessingRTM] = useState(false);
+  const [isSavingSelection, setIsSavingSelection] = useState(false);
 
   const user = JSON.parse(localStorage.getItem("user")); // or your user context/session
   const isAdmin = user?.role === "admin" || user?.role === "temp-admin";
@@ -69,7 +73,8 @@ export default function AdminBiddingDashboard() {
   useEffect(() => {
     const keepWarm = () => {
       fetch(
-        "https://cricket-bidding-website-backend.onrender.com/health"
+        "https://cricket-bidding-website-production.up.railway.app/health"
+        // "http://localhost:6001/health"
       ).catch((err) => console.log("Ping failed:", err));
     };
 
@@ -91,7 +96,7 @@ export default function AdminBiddingDashboard() {
       return;
     }
     const SOCKET_SERVER_URL =
-      "https://cricket-bidding-website-production.up.railway.app"; // ← replace with your real URL
+      "https://cricket-bidding-website-production.up.railway.app";
     // const SOCKET_SERVER_URL = "http://localhost:6001";
     const socket = io(SOCKET_SERVER_URL, {
       auth: { token },
@@ -112,15 +117,15 @@ export default function AdminBiddingDashboard() {
         console.log(`Joined auction room ${id}`);
       }
     });
-    socket.on("connect_error", (error) => {
-      console.error("Socket connection error:", error);
-      toast.error("Connection issues detected. Retrying...");
-    });
+    // socket.on("connect_error", (error) => {
+    //   console.error("Socket connection error:", error);
+    //   toast.error("Connection issues detected. Retrying...");
+    // });
 
-    socket.on("reconnect", (attemptNumber) => {
-      console.log("Socket reconnected after", attemptNumber, "attempts");
-      toast.success("Connection restored!");
-    });
+    // socket.on("reconnect", (attemptNumber) => {
+    //   console.log("Socket reconnected after", attemptNumber, "attempts");
+    //   toast.success("Connection restored!");
+    // });
 
     socket.on("disconnect", (reason) => {
       console.log("Socket disconnected:", reason);
@@ -198,6 +203,8 @@ export default function AdminBiddingDashboard() {
         toast.success(`New bid: ₹${newBid.amount.toLocaleString()}`);
       }
     });
+    
+    
 
     // 3. Player sold
     socket.on("player:sold", (payload) => {
@@ -601,6 +608,7 @@ export default function AdminBiddingDashboard() {
   };
 
   const handleSaveStartSelection = async () => {
+    setIsSavingSelection(true);
     try {
       const filterToUse = popupSelection === "automatic" ? role : "All";
       await updateSelectionMode(popupSelection, filterToUse);
@@ -668,7 +676,11 @@ export default function AdminBiddingDashboard() {
           "An error occurred while starting bidding."
       );
     }
-    setShowStartPopup(false);
+    finally {
+      setIsSavingSelection(false); // 🔴 Stop loading
+      setShowStartPopup(false);
+    }
+    // setShowStartPopup(false);
   };
 
   const fetchAuctionData = async () => {
@@ -833,6 +845,7 @@ export default function AdminBiddingDashboard() {
       alert("No player currently on bid");
       return;
     }
+    setIsSelling(true);
     try {
       const response = await Api.post(
         `/manual-sell/${id}/${auctionData.currentLot.id}`
@@ -916,6 +929,9 @@ export default function AdminBiddingDashboard() {
         error.response?.data?.error ||
           "Failed to sell player. Please try again."
       );
+    }
+    finally {
+      setIsSelling(false); // ✅ enable button again
     }
   };
 
@@ -1020,6 +1036,7 @@ export default function AdminBiddingDashboard() {
   const onSell = () => setStatus("selling");
 
   const onMoveToUnsell = async () => {
+    setIsUnselling(true);
     try {
       const response = await Api.patch(`/unsold/${id}`);
       const {
@@ -1100,6 +1117,9 @@ export default function AdminBiddingDashboard() {
     } catch (error) {
       console.error("Error marking unsold:", error);
       toast.error("Failed to mark player as Unsold.");
+    }
+    finally {
+      setIsUnselling(false); // ✅ enable unsell button again
     }
   };
 
@@ -1482,7 +1502,7 @@ export default function AdminBiddingDashboard() {
             </div>
           </div>
 
-          <div className="flex gap-4 mt-4">
+          {/* <div className="flex gap-4 mt-4">
             <motion.button
               onClick={handleManualSell}
               className="w-32 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-500 rounded-xl hover:from-green-700 hover:to-emerald-600 text-sm sm:text-sm shadow-lg"
@@ -1499,7 +1519,39 @@ export default function AdminBiddingDashboard() {
             >
               Move to Unsell
             </motion.button>
-          </div>
+          </div> */}
+
+<div className="flex gap-4 mt-4">
+  <motion.button
+    onClick={handleManualSell}
+    disabled={isSelling}
+    className={`w-32 px-4 py-2 rounded-xl text-sm shadow-lg transition-colors ${
+      isSelling
+        ? "bg-gray-500 cursor-not-allowed"
+        : "bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600"
+    }`}
+    whileHover={{ scale: isSelling ? 1 : 1.05 }}
+    whileTap={{ scale: isSelling ? 1 : 0.95 }}
+  >
+    {isSelling ? "Processing..." : "Sell"}
+  </motion.button>
+
+  <motion.button
+    onClick={onMoveToUnsell}
+    disabled={isUnselling}
+    className={`md:hidden px-4 py-2 rounded-xl text-sm shadow-lg transition-colors ${
+      isUnselling
+        ? "bg-gray-500 cursor-not-allowed"
+        : "bg-gradient-to-r from-red-600 to-orange-500 hover:from-orange-700 hover:to-red-600"
+    }`}
+    whileHover={{ scale: isUnselling ? 1 : 1.02 }}
+    whileTap={{ scale: isUnselling ? 1 : 0.98 }}
+  >
+    {isUnselling ? "Processing..." : "Move to Unsell"}
+  </motion.button>
+</div>
+
+
         </div>
 
         {/* Right Sidebar (desktop only) */}
@@ -1624,13 +1676,19 @@ export default function AdminBiddingDashboard() {
 
             {/* Move to Unsell */}
             <motion.button
-              onClick={onMoveToUnsell}
-              className="w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-500 rounded-xl hover:from-purple-700 hover:to-indigo-600 text-sm shadow-lg"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              Move to Unsell
-            </motion.button>
+  onClick={onMoveToUnsell}
+  disabled={isUnselling}
+  className={`w-full px-4 py-2 rounded-xl text-sm shadow-lg transition-colors ${
+    isUnselling
+      ? "bg-gray-500 cursor-not-allowed"
+      : "bg-gradient-to-r from-purple-600 to-indigo-500 hover:from-purple-700 hover:to-indigo-600"
+  }`}
+  whileHover={{ scale: isUnselling ? 1 : 1.02 }}
+  whileTap={{ scale: isUnselling ? 1 : 0.98 }}
+>
+  {isUnselling ? "Processing..." : "Move to Unsell"}
+</motion.button>
+
 
             {/* Desktop Pause button */}
             <motion.button
@@ -1734,13 +1792,19 @@ export default function AdminBiddingDashboard() {
 
           {/* Move to Unsell */}
           <motion.button
-            onClick={onMoveToUnsell}
-            className="w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-500 rounded-xl hover:from-purple-700 hover:to-indigo-600 text-sm shadow-lg"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            Move to Unsell
-          </motion.button>
+  onClick={onMoveToUnsell}
+  disabled={isUnselling}
+  className={`w-full px-4 py-2 rounded-xl text-sm shadow-lg transition-colors ${
+    isUnselling
+      ? "bg-gray-500 cursor-not-allowed"
+      : "bg-gradient-to-r from-purple-600 to-indigo-500 hover:from-purple-700 hover:to-indigo-600"
+  }`}
+  whileHover={{ scale: isUnselling ? 1 : 1.02 }}
+  whileTap={{ scale: isUnselling ? 1 : 0.98 }}
+>
+  {isUnselling ? "Processing..." : "Move to Unsell"}
+</motion.button>
+
 
           {/* Pause Auction */}
           <motion.button
@@ -1854,65 +1918,32 @@ export default function AdminBiddingDashboard() {
               >
                 Manual
               </motion.button>
-
-              {/* <motion.button
-                onClick={() => setPopupSelection("automatic")}
-                className={`px-4 py-2 rounded-xl transition ${
-                  popupSelection === "automatic"
-                    ? "bg-gradient-to-r from-emerald-500 to-cyan-400 text-white"
-                    : "bg-gray-700 hover:bg-gray-600"
-                }`}
-                whileHover={{ scale: 1.05 }}
-              >
-                Automatic
-              </motion.button> */}
             </div>
 
-            {/* Role selector if automatic */}
-            {/* {popupSelection === "automatic" && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                transition={{ duration: 0.3 }}
-                className="mt-3"
-              >
-                <label className="text-xs block mb-2 opacity-80">
-                  Select Role Filter:
-                </label>
-                <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  className="w-full rounded-lg bg-gray-700 border border-gray-600 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="All">All</option>
-                  <option value="Batsman">Batsman</option>
-                  <option value="Fast all-rounder">Fast-All-Rounder</option>
-                  <option value="Spin all-rounder">Spin-All-Rounder</option>
-                  <option value="Wicket keeper batsman">
-                    Wicket-keeper-batsman
-                  </option>
-                  <option value="Spin bowler">Spin Bowler</option>
-                  <option value="Fast bowler">Fast Bowler</option>
-                </select>
-              </motion.div>
-            )} */}
-            {/* {popupSelection === "manual" && incoming.length === 0 && (
-              <div className="text-center p-3 bg-amber-900/30 rounded-lg">
-                <p className="text-xs text-amber-300 mb-2">
-                  No players selected for manual mode
-                </p>
-              </div>
-            )} */}
-
             <div className="flex gap-3">
-              <motion.button
+              {/* <motion.button
                 onClick={handleSaveStartSelection}
                 className="flex-1 rounded-xl bg-gradient-to-r from-green-600 to-emerald-500 px-4 py-2 hover:from-green-700 hover:to-emerald-600 text-sm font-medium shadow-md"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
                 Save
-              </motion.button>
+              </motion.button> */}
+
+<motion.button
+  onClick={handleSaveStartSelection}
+  disabled={isSavingSelection}
+  className={`flex-1 rounded-xl px-4 py-2 text-sm font-medium shadow-md transition ${
+    isSavingSelection
+      ? "bg-gray-500 cursor-not-allowed"
+      : "bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600"
+  }`}
+  whileHover={!isSavingSelection ? { scale: 1.05 } : {}}
+  whileTap={!isSavingSelection ? { scale: 0.95 } : {}}
+>
+  {isSavingSelection ? "Saving..." : "Save"}
+</motion.button>
+
 
               <motion.button
                 onClick={() => setShowStartPopup(false)}
@@ -2034,6 +2065,17 @@ export default function AdminBiddingDashboard() {
                   Auto
                 </button> */
 }
+{/* <motion.button
+                onClick={() => setPopupSelection("automatic")}
+                className={`px-4 py-2 rounded-xl transition ${
+                  popupSelection === "automatic"
+                    ? "bg-gradient-to-r from-emerald-500 to-cyan-400 text-white"
+                    : "bg-gray-700 hover:bg-gray-600"
+                }`}
+                whileHover={{ scale: 1.05 }}
+              >
+                Automatic
+              </motion.button> */}
 {
   /* {selectionMode === "automatic" && (
             <motion.div
@@ -2063,3 +2105,40 @@ export default function AdminBiddingDashboard() {
             </motion.div>
           )} */
 }
+
+
+ {/* Role selector if automatic */}
+            {/* {popupSelection === "automatic" && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                transition={{ duration: 0.3 }}
+                className="mt-3"
+              >
+                <label className="text-xs block mb-2 opacity-80">
+                  Select Role Filter:
+                </label>
+                <select
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  className="w-full rounded-lg bg-gray-700 border border-gray-600 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="All">All</option>
+                  <option value="Batsman">Batsman</option>
+                  <option value="Fast all-rounder">Fast-All-Rounder</option>
+                  <option value="Spin all-rounder">Spin-All-Rounder</option>
+                  <option value="Wicket keeper batsman">
+                    Wicket-keeper-batsman
+                  </option>
+                  <option value="Spin bowler">Spin Bowler</option>
+                  <option value="Fast bowler">Fast Bowler</option>
+                </select>
+              </motion.div>
+            )} */}
+            {/* {popupSelection === "manual" && incoming.length === 0 && (
+              <div className="text-center p-3 bg-amber-900/30 rounded-lg">
+                <p className="text-xs text-amber-300 mb-2">
+                  No players selected for manual mode
+                </p>
+              </div>
+            )} */}
