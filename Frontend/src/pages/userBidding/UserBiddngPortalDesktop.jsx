@@ -173,6 +173,28 @@ export default function UserBiddingDashboardDesktop() {
     currentPlayer: null,
     bidAmount: null,
   };
+  const [isBanned, setIsBanned] = useState(false);
+  const [banInfo, setBanInfo] = useState(null);
+
+  // Function to check ban status
+  const checkBanStatus = async () => {
+    try {
+      const teamId = auctionData?.team?.teamId;
+      if (!teamId || !id) return;
+
+      const response = await Api.get(`/ban-status/${id}/${teamId}`);
+
+      if (response.data.isBanned) {
+        setIsBanned(true);
+        setBanInfo(response.data);
+      } else {
+        setIsBanned(false);
+        setBanInfo(null);
+      }
+    } catch (error) {
+      console.error("Error checking ban status:", error);
+    }
+  };
 
   const [showModal, setShowModal] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
@@ -331,11 +353,18 @@ export default function UserBiddingDashboardDesktop() {
   //     toast.error("Invalid bid amount.");
   //     return;
   //   }
+
+  //   // Prevent multiple simultaneous clicks
+  //   if (isBidding) {
+  //     return;
+  //   }
+
   //   const payload = {
   //     playerId,
   //     teamId,
   //     bidAmount: visibleBid,
   //   };
+
   //   try {
   //     setIsBidding(true);
   //     await Api.post(`/place-bid/${id}`, payload);
@@ -345,7 +374,16 @@ export default function UserBiddingDashboardDesktop() {
   //     setTimeout(() => setEmoteToPlay(null), 2000);
   //   } catch (error) {
   //     console.error("Failed to place bid:", error);
-  //     toast.error(error.response?.data?.error || "Failed to place bid");
+  //     const errorMessage = error.response?.data?.error || "Failed to place bid";
+
+  //     // Handle the race condition case specifically
+  //     if (error.response?.status === 409) {
+  //       toast.warning("Someone else just placed a bid. Refreshing...");
+  //       // Automatically refresh the auction data
+  //       fetchAuctionData();
+  //     } else {
+  //       toast.error(errorMessage);
+  //     }
   //   } finally {
   //     setIsBidding(false);
   //   }
@@ -355,7 +393,7 @@ export default function UserBiddingDashboardDesktop() {
     const playerId = auctionData?.currentPlayer?._id;
     const teamId = auctionData?.team?.teamId;
     const visibleBid = auctionData?.bidAmount;
-  
+
     if (!playerId || !teamId) {
       toast.error("Missing team or player information.");
       return;
@@ -364,18 +402,28 @@ export default function UserBiddingDashboardDesktop() {
       toast.error("Invalid bid amount.");
       return;
     }
-  
+
+    // Check if team is banned
+    if (isBanned) {
+      toast.error(
+        `Your team is banned from bidding. Please wait ${
+          banInfo?.remainingMinutes || 0
+        } minutes.`
+      );
+      return;
+    }
+
     // Prevent multiple simultaneous clicks
     if (isBidding) {
       return;
     }
-  
+
     const payload = {
       playerId,
       teamId,
       bidAmount: visibleBid,
     };
-  
+
     try {
       setIsBidding(true);
       await Api.post(`/place-bid/${id}`, payload);
@@ -386,11 +434,22 @@ export default function UserBiddingDashboardDesktop() {
     } catch (error) {
       console.error("Failed to place bid:", error);
       const errorMessage = error.response?.data?.error || "Failed to place bid";
-      
-      // Handle the race condition case specifically
-      if (error.response?.status === 409) {
+
+      // Handle different error types
+      if (error.response?.status === 429) {
+        // Team is banned
+        const banData = error.response.data;
+        setIsBanned(true);
+        setBanInfo({
+          remainingMinutes: Math.ceil(
+            (banData.bannedUntil - Date.now()) / 60000
+          ),
+          bannedUntil: banData.bannedUntil,
+        });
+        toast.error(errorMessage, { duration: 5000 });
+      } else if (error.response?.status === 409) {
+        // Race condition
         toast.warning("Someone else just placed a bid. Refreshing...");
-        // Automatically refresh the auction data
         fetchAuctionData();
       } else {
         toast.error(errorMessage);
@@ -430,7 +489,7 @@ export default function UserBiddingDashboardDesktop() {
     //   console.error("Socket connection error:", error);
     //   toast.error("Connection issues detected. Retrying...");
     // });
-  
+
     // socket.on("reconnect", (attemptNumber) => {
     //   console.log("Socket reconnected after", attemptNumber, "attempts");
     //   toast.success("Connection restored!");
@@ -504,24 +563,34 @@ export default function UserBiddingDashboardDesktop() {
     socket.on("bid:updated", (payload) => {
       console.log("bid:updated", payload);
       fetchAuctionData();
-      toast.success(`New bid ₹${formatIndianNumber(payload.newBid.amount)}`);
+      toast.success(
+        `Bid Amount Updated To₹${formatIndianNumber(
+          payload.newBid.amount
+        )} You can Bid Now`
+      );
     });
 
     // socket.on("bid:placed", (payload) => {
     //   console.log("bid:placed", payload);
-    //   fetchAuctionData();
+
+    //   // Debounce the fetchAuctionData call to avoid multiple rapid calls
+    //   clearTimeout(window.auctionDataTimeout);
+    //   window.auctionDataTimeout = setTimeout(() => {
+    //     fetchAuctionData();
+    //   }, 100);
+
     //   toast.success(`New bid ₹${formatIndianNumber(payload.newBid.amount)}`);
     // });
 
     socket.on("bid:placed", (payload) => {
       console.log("bid:placed", payload);
-      
+
       // Debounce the fetchAuctionData call to avoid multiple rapid calls
       clearTimeout(window.auctionDataTimeout);
       window.auctionDataTimeout = setTimeout(() => {
         fetchAuctionData();
       }, 100);
-      
+
       toast.success(`New bid ₹${formatIndianNumber(payload.newBid.amount)}`);
     });
 
@@ -708,6 +777,38 @@ export default function UserBiddingDashboardDesktop() {
   useEffect(() => {
     fetchAuctionData();
   }, [id]);
+
+  useEffect(() => {
+    let banCheckInterval;
+
+    if (isBanned && banInfo) {
+      banCheckInterval = setInterval(() => {
+        const now = Date.now();
+        if (now > banInfo.bannedUntil) {
+          setIsBanned(false);
+          setBanInfo(null);
+          toast.success("Your team can now place bids again!");
+        } else {
+          // Update remaining time
+          setBanInfo((prev) => ({
+            ...prev,
+            remainingMinutes: Math.ceil((prev.bannedUntil - now) / 60000),
+          }));
+        }
+      }, 60000); // Check every minute
+    }
+
+    return () => {
+      if (banCheckInterval) {
+        clearInterval(banCheckInterval);
+      }
+    };
+  }, [isBanned, banInfo]);
+
+  // Add this useEffect to check ban status when component mounts or auction data changes
+  useEffect(() => {
+    checkBanStatus();
+  }, [auctionData?.team?.teamId, id]);
 
   // ENHANCED: RTM Handler with better error handling
   const handleUseRTM = async () => {
@@ -933,7 +1034,7 @@ export default function UserBiddingDashboardDesktop() {
         </motion.div>
 
         {/* Bid Now */}
-        <motion.div
+        {/* <motion.div
           className="bg-gradient-to-r from-indigo-900/50 to-blue-800/50 rounded-xl p-4 shadow-lg w-full max-w-md text-center"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -946,6 +1047,52 @@ export default function UserBiddingDashboardDesktop() {
               ? `₹${formatIndianNumber(nextBidAmount)}`
               : "--/--"}
           </p>
+        </motion.div> */}
+
+        <motion.div
+          className="bg-gradient-to-r from-indigo-900/50 to-blue-800/50 rounded-xl p-4 shadow-lg w-full max-w-md text-center"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <h3 className="text-xs font-medium mb-1">Bid Now</h3>
+
+          {isBanned ? (
+            <div className="text-center">
+              <div className="bg-red-500/20 border border-red-400 rounded-lg p-3 mb-2">
+                <p className="text-red-400 text-sm font-medium">
+                  🚫 Temporarily Banned
+                </p>
+                <p className="text-red-300 text-xs mt-1">
+                  Your team is banned from bidding for{" "}
+                  {banInfo?.remainingMinutes || 0} more minutes
+                </p>
+                <p className="text-red-200 text-xs mt-1 opacity-75">
+                  Reason: Excessive bid attempts
+                </p>
+              </div>
+              <button
+                className="bg-gray-500 text-gray-300 px-4 py-2 rounded-lg cursor-not-allowed opacity-50"
+                disabled
+              >
+                Bidding Disabled
+              </button>
+            </div>
+          ) : (
+            <BidButton onClick={handleBid} disabled={isBidding || isBanned} />
+          )}
+
+          <p className="mt-1 text-xs opacity-75">
+            Next Updated Price:{" "}
+            {nextBidAmount != null
+              ? `₹${formatIndianNumber(nextBidAmount)}`
+              : "--/--"}
+          </p>
+
+          {isBanned && (
+            <p className="mt-2 text-xs text-red-400">
+              You can still watch the auction but cannot place bids
+            </p>
+          )}
         </motion.div>
 
         {/* Current Highest Bid */}

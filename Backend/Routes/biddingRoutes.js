@@ -1519,7 +1519,8 @@ router.patch('/update-bid/:auctionId', async (req, res) => {
 //     const { playerId, teamId, bidAmount } = req.body;
 //     const { auctionId } = req.params;
 
-//     const auction = await Auction.findById(auctionId);
+//     // First, get the current auction state
+//     const auction = await Auction.findById(auctionId).populate("currentBid.team");
 //     if (!auction) {
 //       return res.status(404).json({ error: "Auction not found" });
 //     }
@@ -1537,10 +1538,13 @@ router.patch('/update-bid/:auctionId', async (req, res) => {
 //       });
 //     }
 
-//     const isSameAmount =
-//       Number(auction.currentBid?.amount) === Number(bidAmount);
-//     const isSameTeam =
-//       auction.currentBid?.team?.toString() === teamId.toString();
+//     const currentBidAmount = Number(auction.currentBid?.amount) || 0;
+//     const newBidAmount = Number(bidAmount);
+//     const currentBidTeam = auction.currentBid?.team?._id?.toString();
+
+//     // Validation checks
+//     const isSameAmount = currentBidAmount === newBidAmount;
+//     const isSameTeam = currentBidTeam === teamId.toString();
 
 //     if (isSameAmount) {
 //       if (isSameTeam) {
@@ -1548,74 +1552,217 @@ router.patch('/update-bid/:auctionId', async (req, res) => {
 //           error: "You cannot place the same bid twice.",
 //         });
 //       } else {
-//         // Fetch team name of the currentBid team
-//         const existingTeam = await Team.findById(auction.currentBid.team);
-//         const teamName = existingTeam?.shortName || "Another team";
-
 //         return res.status(400).json({
-//           error: `${teamName} already placed this bid. Wait for the amount to change.`,
+//           error: `${auction.currentBid?.team?.shortName || "Another team"} already placed this bid. Wait for the amount to change.`,
 //         });
 //       }
 //     } else {
 //       if (isSameTeam) {
 //         return res.status(400).json({
-//           error:
-//             "You already placed bid for the previous amount!! Give other team chance",
+//           error: "You already placed bid for the previous amount!! Give other team chance",
 //         });
 //       }
 //     }
 
-//     // Get bidding team data
 //     const team = await Team.findById(teamId);
 //     if (!team) return res.status(404).json({ error: "Team not found" });
 
-//     if (team.remaining < bidAmount) {
-//       return res.status(400).json({
-//         error: "Insufficient balance to place this bid.",
-//       });
+//     if (team.remaining < newBidAmount) {
+//       return res.status(400).json({ error: "Insufficient balance to place this bid." });
 //     }
-//     // Place the bid
-//     auction.currentBid = {
-//       team: teamId,
-//       amount: bidAmount,
+
+//     // CRITICAL FIX: Include current bid amount in the update condition
+//     // This ensures only one update succeeds when multiple requests have the same initial state
+//     const updateCondition = {
+//       _id: auctionId,
+//       currentPlayerOnBid: playerId,
+//       isPaused: false,
+//       status: "live",
+//       // This is the key addition - check that the current bid amount hasn't changed
+//       "currentBid.amount": currentBidAmount
 //     };
 
-//     await auction.save();
+//     // If there's no current bid, we need to handle that case
+//     if (currentBidAmount === 0) {
+//       // For the first bid, we can check if currentBid doesn't exist or amount is 0
+//       delete updateCondition["currentBid.amount"];
+//       updateCondition.$or = [
+//         { "currentBid.amount": { $exists: false } },
+//         { "currentBid.amount": 0 },
+//         { "currentBid.amount": null }
+//       ];
+//     }
 
-//     // Emit the new bid to all clients in room
-//     {
-//       const io = req.app.get("io");
-//       io.to(auctionId).emit("bid:placed", {
-//         currentPlayerOnBid: auction.currentPlayerOnBid,
-//         newBid: {
-//           team: team.shortName,
-//           teamLogo: team.logoUrl,
-//           amount: bidAmount,
+//     // Atomic update with race condition protection
+//     const updatedAuction = await Auction.findOneAndUpdate(
+//       updateCondition,
+//       {
+//         $set: {
+//           "currentBid.amount": newBidAmount,
+//           "currentBid.team": teamId,
 //         },
+//         $push: {
+//           biddingHistory: {
+//             player: playerId,
+//             team: teamId,
+//             bidAmount: newBidAmount,
+//             time: new Date(),
+//           },
+//         },
+//       },
+//       { new: true }
+//     ).populate("currentPlayerOnBid");
+
+//     // If updatedAuction is null, it means the condition wasn't met
+//     // (someone else updated the bid in the meantime)
+//     if (!updatedAuction) {
+//       return res.status(409).json({ 
+//         error: "Bid was already updated by another user. Please refresh and try again." 
 //       });
 //     }
 
-//     res.status(200).json({ message: "Bid placed successfully" });
+//     const io = req.app.get("io");
+//     io.to(auctionId).emit("bid:placed", {
+//       currentPlayerOnBid: updatedAuction.currentPlayerOnBid,
+//       newBid: {
+//         team: team.shortName,
+//         teamLogo: team.logoUrl,
+//         amount: newBidAmount,
+//       },
+//     });
+
+//     return res.status(200).json({ message: "Bid placed successfully" });
 //   } catch (err) {
 //     console.error("Place bid error:", err);
-//     res
-//       .status(500)
-//       .json({ error: "Internal server error", details: err.message });
+//     res.status(500).json({ error: "Internal server error", details: err.message });
 //   }
 // });
+
+// Add this at the top of your file or in a separate middleware file
+const spamTracker = new Map(); // In-memory store for tracking spam attempts
+const bannedTeams = new Map(); // Store for banned teams
+
+// Spam detection configuration
+const SPAM_CONFIG = {
+  MAX_FAILED_ATTEMPTS: 5, // Max failed attempts in time window
+  TIME_WINDOW: 30000, // 30 seconds
+  BAN_DURATION: 10 * 60 * 1000, // 10 minutes
+  RESET_WINDOW: 60000 // Reset counter after 1 minute of no activity
+};
+
+// Function to check if team is banned
+const isTeamBanned = (teamId, auctionId) => {
+  const key = `${auctionId}-${teamId}`;
+  const banInfo = bannedTeams.get(key);
+  
+  if (!banInfo) return false;
+  
+  if (Date.now() > banInfo.bannedUntil) {
+    bannedTeams.delete(key);
+    return false;
+  }
+  
+  return true;
+};
+
+// Function to track spam attempts
+const trackSpamAttempt = (teamId, auctionId, isSuccess = false) => {
+  const key = `${auctionId}-${teamId}`;
+  const now = Date.now();
+  
+  if (!spamTracker.has(key)) {
+    spamTracker.set(key, {
+      attempts: [],
+      lastActivity: now
+    });
+  }
+  
+  const tracker = spamTracker.get(key);
+  
+  // Remove old attempts outside time window
+  tracker.attempts = tracker.attempts.filter(
+    attempt => now - attempt.timestamp < SPAM_CONFIG.TIME_WINDOW
+  );
+  
+  // If successful bid, reset the counter
+  if (isSuccess) {
+    tracker.attempts = [];
+    tracker.lastActivity = now;
+    return false;
+  }
+  
+  // Add failed attempt
+  tracker.attempts.push({
+    timestamp: now,
+    type: 'failed_bid'
+  });
+  
+  tracker.lastActivity = now;
+  
+  // Check if spam threshold exceeded
+  if (tracker.attempts.length >= SPAM_CONFIG.MAX_FAILED_ATTEMPTS) {
+    // Ban the team
+    bannedTeams.set(key, {
+      bannedAt: now,
+      bannedUntil: now + SPAM_CONFIG.BAN_DURATION,
+      reason: 'Excessive failed bid attempts'
+    });
+    
+    // Clear spam tracker for this team
+    spamTracker.delete(key);
+    
+    return true; // Team is now banned
+  }
+  
+  return false;
+};
+
+// Cleanup old entries periodically
+setInterval(() => {
+  const now = Date.now();
+  
+  // Clean spam tracker
+  for (const [key, tracker] of spamTracker.entries()) {
+    if (now - tracker.lastActivity > SPAM_CONFIG.RESET_WINDOW) {
+      spamTracker.delete(key);
+    }
+  }
+  
+  // Clean banned teams
+  for (const [key, banInfo] of bannedTeams.entries()) {
+    if (now > banInfo.bannedUntil) {
+      bannedTeams.delete(key);
+    }
+  }
+}, 60000); // Run cleanup every minute
 
 router.post("/place-bid/:auctionId", auth, async (req, res) => {
   try {
     const { playerId, teamId, bidAmount } = req.body;
     const { auctionId } = req.params;
 
+    // Check if team is banned from bidding
+    if (isTeamBanned(teamId, auctionId)) {
+      const key = `${auctionId}-${teamId}`;
+      const banInfo = bannedTeams.get(key);
+      const remainingTime = Math.ceil((banInfo.bannedUntil - Date.now()) / 60000);
+      
+      return res.status(429).json({ 
+        error: `Your team is temporarily banned from bidding due to excessive spam attempts. Please wait ${remainingTime} minutes.`,
+        isBanned: true,
+        bannedUntil: banInfo.bannedUntil
+      });
+    }
+
     // First, get the current auction state
     const auction = await Auction.findById(auctionId).populate("currentBid.team");
     if (!auction) {
+      trackSpamAttempt(teamId, auctionId, false);
       return res.status(404).json({ error: "Auction not found" });
     }
 
     if (auction.isPaused || auction.status !== "live") {
+      trackSpamAttempt(teamId, auctionId, false);
       return res.status(400).json({ error: "Auction is not active" });
     }
 
@@ -1623,6 +1770,7 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
       auction.currentPlayerOnBid &&
       auction.currentPlayerOnBid.toString() !== playerId.toString()
     ) {
+      trackSpamAttempt(teamId, auctionId, false);
       return res.status(400).json({
         error: "Player on bid does not match the current bidding player.",
       });
@@ -1638,16 +1786,19 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
 
     if (isSameAmount) {
       if (isSameTeam) {
+        trackSpamAttempt(teamId, auctionId, false);
         return res.status(400).json({
           error: "You cannot place the same bid twice.",
         });
       } else {
+        trackSpamAttempt(teamId, auctionId, false);
         return res.status(400).json({
           error: `${auction.currentBid?.team?.shortName || "Another team"} already placed this bid. Wait for the amount to change.`,
         });
       }
     } else {
       if (isSameTeam) {
+        trackSpamAttempt(teamId, auctionId, false);
         return res.status(400).json({
           error: "You already placed bid for the previous amount!! Give other team chance",
         });
@@ -1655,26 +1806,27 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
     }
 
     const team = await Team.findById(teamId);
-    if (!team) return res.status(404).json({ error: "Team not found" });
+    if (!team) {
+      trackSpamAttempt(teamId, auctionId, false);
+      return res.status(404).json({ error: "Team not found" });
+    }
 
     if (team.remaining < newBidAmount) {
+      trackSpamAttempt(teamId, auctionId, false);
       return res.status(400).json({ error: "Insufficient balance to place this bid." });
     }
 
     // CRITICAL FIX: Include current bid amount in the update condition
-    // This ensures only one update succeeds when multiple requests have the same initial state
     const updateCondition = {
       _id: auctionId,
       currentPlayerOnBid: playerId,
       isPaused: false,
       status: "live",
-      // This is the key addition - check that the current bid amount hasn't changed
       "currentBid.amount": currentBidAmount
     };
 
     // If there's no current bid, we need to handle that case
     if (currentBidAmount === 0) {
-      // For the first bid, we can check if currentBid doesn't exist or amount is 0
       delete updateCondition["currentBid.amount"];
       updateCondition.$or = [
         { "currentBid.amount": { $exists: false } },
@@ -1704,12 +1856,15 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
     ).populate("currentPlayerOnBid");
 
     // If updatedAuction is null, it means the condition wasn't met
-    // (someone else updated the bid in the meantime)
     if (!updatedAuction) {
+      trackSpamAttempt(teamId, auctionId, false);
       return res.status(409).json({ 
         error: "Bid was already updated by another user. Please refresh and try again." 
       });
     }
+
+    // Successful bid - reset spam counter for this team
+    trackSpamAttempt(teamId, auctionId, true);
 
     const io = req.app.get("io");
     io.to(auctionId).emit("bid:placed", {
@@ -1723,8 +1878,58 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
 
     return res.status(200).json({ message: "Bid placed successfully" });
   } catch (err) {
+    // Track as failed attempt for any server errors too
+    const { teamId, auctionId } = req.body ? { teamId: req.body.teamId, auctionId: req.params.auctionId } : {};
+    if (teamId && auctionId) {
+      const isBanned = trackSpamAttempt(teamId, auctionId, false);
+      if (isBanned) {
+        console.log(`Team ${teamId} has been banned for spamming in auction ${auctionId}`);
+      }
+    }
+    
     console.error("Place bid error:", err);
     res.status(500).json({ error: "Internal server error", details: err.message });
+  }
+});
+
+// Optional: Add endpoint to check ban status
+router.get("/ban-status/:auctionId/:teamId", auth, async (req, res) => {
+  try {
+    const { auctionId, teamId } = req.params;
+    
+    if (isTeamBanned(teamId, auctionId)) {
+      const key = `${auctionId}-${teamId}`;
+      const banInfo = bannedTeams.get(key);
+      const remainingTime = Math.ceil((banInfo.bannedUntil - Date.now()) / 60000);
+      
+      return res.json({
+        isBanned: true,
+        remainingMinutes: remainingTime,
+        bannedUntil: banInfo.bannedUntil
+      });
+    }
+    
+    return res.json({ isBanned: false });
+  } catch (err) {
+    console.error("Ban status check error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Optional: Admin endpoint to unban a team (for admins only)
+router.post("/unban-team/:auctionId/:teamId", auth, async (req, res) => {
+  try {
+    // Add admin check here if needed
+    const { auctionId, teamId } = req.params;
+    const key = `${auctionId}-${teamId}`;
+    
+    bannedTeams.delete(key);
+    spamTracker.delete(key);
+    
+    return res.json({ message: "Team unbanned successfully" });
+  } catch (err) {
+    console.error("Unban team error:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
