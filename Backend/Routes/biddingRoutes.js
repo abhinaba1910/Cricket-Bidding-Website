@@ -1499,6 +1499,7 @@ router.patch('/update-bid/:auctionId', async (req, res) => {
       },
       timestamp: new Date(),
       systemGenerated: true,
+      isAmountUpdateOnly: true, // ✅ Add this flag
     });
 
     res.json({
@@ -1513,130 +1514,6 @@ router.patch('/update-bid/:auctionId', async (req, res) => {
 });
 
 
-// Place bid: add emit after saving new bid
-// router.post("/place-bid/:auctionId", auth, async (req, res) => {
-//   try {
-//     const { playerId, teamId, bidAmount } = req.body;
-//     const { auctionId } = req.params;
-
-//     // First, get the current auction state
-//     const auction = await Auction.findById(auctionId).populate("currentBid.team");
-//     if (!auction) {
-//       return res.status(404).json({ error: "Auction not found" });
-//     }
-
-//     if (auction.isPaused || auction.status !== "live") {
-//       return res.status(400).json({ error: "Auction is not active" });
-//     }
-
-//     if (
-//       auction.currentPlayerOnBid &&
-//       auction.currentPlayerOnBid.toString() !== playerId.toString()
-//     ) {
-//       return res.status(400).json({
-//         error: "Player on bid does not match the current bidding player.",
-//       });
-//     }
-
-//     const currentBidAmount = Number(auction.currentBid?.amount) || 0;
-//     const newBidAmount = Number(bidAmount);
-//     const currentBidTeam = auction.currentBid?.team?._id?.toString();
-
-//     // Validation checks
-//     const isSameAmount = currentBidAmount === newBidAmount;
-//     const isSameTeam = currentBidTeam === teamId.toString();
-
-//     if (isSameAmount) {
-//       if (isSameTeam) {
-//         return res.status(400).json({
-//           error: "You cannot place the same bid twice.",
-//         });
-//       } else {
-//         return res.status(400).json({
-//           error: `${auction.currentBid?.team?.shortName || "Another team"} already placed this bid. Wait for the amount to change.`,
-//         });
-//       }
-//     } else {
-//       if (isSameTeam) {
-//         return res.status(400).json({
-//           error: "You already placed bid for the previous amount!! Give other team chance",
-//         });
-//       }
-//     }
-
-//     const team = await Team.findById(teamId);
-//     if (!team) return res.status(404).json({ error: "Team not found" });
-
-//     if (team.remaining < newBidAmount) {
-//       return res.status(400).json({ error: "Insufficient balance to place this bid." });
-//     }
-
-//     // CRITICAL FIX: Include current bid amount in the update condition
-//     // This ensures only one update succeeds when multiple requests have the same initial state
-//     const updateCondition = {
-//       _id: auctionId,
-//       currentPlayerOnBid: playerId,
-//       isPaused: false,
-//       status: "live",
-//       // This is the key addition - check that the current bid amount hasn't changed
-//       "currentBid.amount": currentBidAmount
-//     };
-
-//     // If there's no current bid, we need to handle that case
-//     if (currentBidAmount === 0) {
-//       // For the first bid, we can check if currentBid doesn't exist or amount is 0
-//       delete updateCondition["currentBid.amount"];
-//       updateCondition.$or = [
-//         { "currentBid.amount": { $exists: false } },
-//         { "currentBid.amount": 0 },
-//         { "currentBid.amount": null }
-//       ];
-//     }
-
-//     // Atomic update with race condition protection
-//     const updatedAuction = await Auction.findOneAndUpdate(
-//       updateCondition,
-//       {
-//         $set: {
-//           "currentBid.amount": newBidAmount,
-//           "currentBid.team": teamId,
-//         },
-//         $push: {
-//           biddingHistory: {
-//             player: playerId,
-//             team: teamId,
-//             bidAmount: newBidAmount,
-//             time: new Date(),
-//           },
-//         },
-//       },
-//       { new: true }
-//     ).populate("currentPlayerOnBid");
-
-//     // If updatedAuction is null, it means the condition wasn't met
-//     // (someone else updated the bid in the meantime)
-//     if (!updatedAuction) {
-//       return res.status(409).json({ 
-//         error: "Bid was already updated by another user. Please refresh and try again." 
-//       });
-//     }
-
-//     const io = req.app.get("io");
-//     io.to(auctionId).emit("bid:placed", {
-//       currentPlayerOnBid: updatedAuction.currentPlayerOnBid,
-//       newBid: {
-//         team: team.shortName,
-//         teamLogo: team.logoUrl,
-//         amount: newBidAmount,
-//       },
-//     });
-
-//     return res.status(200).json({ message: "Bid placed successfully" });
-//   } catch (err) {
-//     console.error("Place bid error:", err);
-//     res.status(500).json({ error: "Internal server error", details: err.message });
-//   }
-// });
 
 // Add this at the top of your file or in a separate middleware file
 const spamTracker = new Map(); // In-memory store for tracking spam attempts

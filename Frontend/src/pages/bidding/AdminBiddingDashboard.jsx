@@ -153,21 +153,45 @@ export default function AdminBiddingDashboard() {
 
     // ── CATCH THE OTHER BID EVENT (some routes emit “bid:updated”) ──
 
+    // socket.on("bid:updated", (payload) => {
+    //   console.log("Received bid:updated", payload);
+    //   const { newBid } = payload;
+
+    //   setAuctionData((prev) => ({
+    //     ...prev,
+    //     currentBid: {
+    //       amount: newBid.amount,
+    //       team: newBid.team,
+    //       teamLogo: newBid.teamLogo,
+    //     },
+    //   }));
+
+    //   setBidAmount(newBid.amount);
+    //   toast.success(`Bid updated: ₹${formatIndianNumber(newBid.amount)}`);
+    // });
+
     socket.on("bid:updated", (payload) => {
       console.log("Received bid:updated", payload);
-      const { newBid } = payload;
-
-      setAuctionData((prev) => ({
-        ...prev,
-        currentBid: {
-          amount: newBid.amount,
-          team: newBid.team,
-          teamLogo: newBid.teamLogo,
-        },
-      }));
-
-      setBidAmount(newBid.amount);
-      toast.success(`Bid updated: ₹${formatIndianNumber(newBid.amount)}`);
+      const { newBid, isAmountUpdateOnly } = payload;
+    
+      if (isAmountUpdateOnly) {
+        // Only update bid amount, don't update currentBid team info
+        setBidAmount(newBid.amount);
+        toast.info(`Bid amount updated to: ₹${formatIndianNumber(newBid.amount)}`);
+      } else {
+        // Full bid update from actual team bid
+        setAuctionData((prev) => ({
+          ...prev,
+          currentBid: {
+            amount: newBid.amount,
+            team: newBid.team,
+            teamLogo: newBid.teamLogo,
+          },
+        }));
+    
+        setBidAmount(newBid.amount);
+        toast.success(`Bid updated: ₹${formatIndianNumber(newBid.amount)}`);
+      }
     });
 
     // 1. Bidding started
@@ -209,24 +233,6 @@ export default function AdminBiddingDashboard() {
     });
 
     // 2. Bid placed
-    // socket.on("bid:placed", (data) => {
-    //   console.log("Received bid:placed", data);
-    //   const { newBid } = data;
-    //   if (newBid) {
-    //     setAuctionData((prev) => ({
-    //       ...prev,
-    //       currentBid: {
-    //         amount: newBid.amount,
-    //         team: newBid.team,
-    //         teamLogo: newBid.teamLogo,
-    //       },
-    //     }));
-    //     setShowEdit(true);
-    //     setBidAmount(newBid.amount);
-    //     toast.success(`New bid: ₹${newBid.amount.toLocaleString()}`);
-    //   }
-    // });
-
     socket.on("bid:placed", (data) => {
       console.log("Received bid:placed", data);
       const { newBid } = data;
@@ -478,16 +484,6 @@ export default function AdminBiddingDashboard() {
         try {
           await Api.patch(`/update-bid/${id}`, { amount: newBidAmount });
           setBidAmount(newBidAmount);
-
-          // Update auction data
-          setAuctionData((prev) => ({
-            ...prev,
-            currentBid: {
-              amount: newBidAmount,
-              team: prev.currentBid.team,
-              teamLogo: prev.currentBid.teamLogo,
-            },
-          }));
 
           toast.success(`Auto bid updated: ₹${newBidAmount.toLocaleString()}`);
         } catch (error) {
