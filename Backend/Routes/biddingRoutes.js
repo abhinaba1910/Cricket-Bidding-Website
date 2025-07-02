@@ -1609,6 +1609,7 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
     const { playerId, teamId, bidAmount } = req.body;
     const { auctionId } = req.params;
 
+    // First, get the current auction state
     const auction = await Auction.findById(auctionId).populate("currentBid.team");
     if (!auction) {
       return res.status(404).json({ error: "Auction not found" });
@@ -1627,9 +1628,13 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
       });
     }
 
-    const isSameAmount = Number(auction.currentBid?.amount) === Number(bidAmount);
-    const isSameTeam =
-      auction.currentBid?.team?._id?.toString() === teamId.toString();
+    const currentBidAmount = Number(auction.currentBid?.amount) || 0;
+    const newBidAmount = Number(bidAmount);
+    const currentBidTeam = auction.currentBid?.team?._id?.toString();
+
+    // Validation checks
+    const isSameAmount = currentBidAmount === newBidAmount;
+    const isSameTeam = currentBidTeam === teamId.toString();
 
     if (isSameAmount) {
       if (isSameTeam) {
@@ -1652,28 +1657,45 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
     const team = await Team.findById(teamId);
     if (!team) return res.status(404).json({ error: "Team not found" });
 
-    if (team.remaining < bidAmount) {
+    if (team.remaining < newBidAmount) {
       return res.status(400).json({ error: "Insufficient balance to place this bid." });
     }
 
-    // Atomic update (only if everything above passes)
+    // CRITICAL FIX: Include current bid amount in the update condition
+    // This ensures only one update succeeds when multiple requests have the same initial state
+    const updateCondition = {
+      _id: auctionId,
+      currentPlayerOnBid: playerId,
+      isPaused: false,
+      status: "live",
+      // This is the key addition - check that the current bid amount hasn't changed
+      "currentBid.amount": currentBidAmount
+    };
+
+    // If there's no current bid, we need to handle that case
+    if (currentBidAmount === 0) {
+      // For the first bid, we can check if currentBid doesn't exist or amount is 0
+      delete updateCondition["currentBid.amount"];
+      updateCondition.$or = [
+        { "currentBid.amount": { $exists: false } },
+        { "currentBid.amount": 0 },
+        { "currentBid.amount": null }
+      ];
+    }
+
+    // Atomic update with race condition protection
     const updatedAuction = await Auction.findOneAndUpdate(
-      {
-        _id: auctionId,
-        currentPlayerOnBid: playerId,
-        isPaused: false,
-        status: "live",
-      },
+      updateCondition,
       {
         $set: {
-          "currentBid.amount": bidAmount,
+          "currentBid.amount": newBidAmount,
           "currentBid.team": teamId,
         },
         $push: {
           biddingHistory: {
             player: playerId,
             team: teamId,
-            bidAmount,
+            bidAmount: newBidAmount,
             time: new Date(),
           },
         },
@@ -1681,13 +1703,21 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
       { new: true }
     ).populate("currentPlayerOnBid");
 
+    // If updatedAuction is null, it means the condition wasn't met
+    // (someone else updated the bid in the meantime)
+    if (!updatedAuction) {
+      return res.status(409).json({ 
+        error: "Bid was already updated by another user. Please refresh and try again." 
+      });
+    }
+
     const io = req.app.get("io");
     io.to(auctionId).emit("bid:placed", {
       currentPlayerOnBid: updatedAuction.currentPlayerOnBid,
       newBid: {
         team: team.shortName,
         teamLogo: team.logoUrl,
-        amount: bidAmount,
+        amount: newBidAmount,
       },
     });
 

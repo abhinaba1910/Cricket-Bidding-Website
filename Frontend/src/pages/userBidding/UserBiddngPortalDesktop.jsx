@@ -318,11 +318,44 @@ export default function UserBiddingDashboardDesktop() {
   };
 
   // Handle placing a bid
+  // const handleBid = async () => {
+  //   const playerId = auctionData?.currentPlayer?._id;
+  //   const teamId = auctionData?.team?.teamId;
+  //   const visibleBid = auctionData?.bidAmount;
+
+  //   if (!playerId || !teamId) {
+  //     toast.error("Missing team or player information.");
+  //     return;
+  //   }
+  //   if (!visibleBid || visibleBid <= 0) {
+  //     toast.error("Invalid bid amount.");
+  //     return;
+  //   }
+  //   const payload = {
+  //     playerId,
+  //     teamId,
+  //     bidAmount: visibleBid,
+  //   };
+  //   try {
+  //     setIsBidding(true);
+  //     await Api.post(`/place-bid/${id}`, payload);
+  //     toast.success("Bid Placed Successfully");
+  //     fetchAuctionData();
+  //     setEmoteToPlay("HandRaise");
+  //     setTimeout(() => setEmoteToPlay(null), 2000);
+  //   } catch (error) {
+  //     console.error("Failed to place bid:", error);
+  //     toast.error(error.response?.data?.error || "Failed to place bid");
+  //   } finally {
+  //     setIsBidding(false);
+  //   }
+  // };
+
   const handleBid = async () => {
     const playerId = auctionData?.currentPlayer?._id;
     const teamId = auctionData?.team?.teamId;
     const visibleBid = auctionData?.bidAmount;
-
+  
     if (!playerId || !teamId) {
       toast.error("Missing team or player information.");
       return;
@@ -331,11 +364,18 @@ export default function UserBiddingDashboardDesktop() {
       toast.error("Invalid bid amount.");
       return;
     }
+  
+    // Prevent multiple simultaneous clicks
+    if (isBidding) {
+      return;
+    }
+  
     const payload = {
       playerId,
       teamId,
       bidAmount: visibleBid,
     };
+  
     try {
       setIsBidding(true);
       await Api.post(`/place-bid/${id}`, payload);
@@ -345,7 +385,16 @@ export default function UserBiddingDashboardDesktop() {
       setTimeout(() => setEmoteToPlay(null), 2000);
     } catch (error) {
       console.error("Failed to place bid:", error);
-      toast.error(error.response?.data?.error || "Failed to place bid");
+      const errorMessage = error.response?.data?.error || "Failed to place bid";
+      
+      // Handle the race condition case specifically
+      if (error.response?.status === 409) {
+        toast.warning("Someone else just placed a bid. Refreshing...");
+        // Automatically refresh the auction data
+        fetchAuctionData();
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setIsBidding(false);
     }
@@ -458,9 +507,21 @@ export default function UserBiddingDashboardDesktop() {
       toast.success(`New bid ₹${formatIndianNumber(payload.newBid.amount)}`);
     });
 
+    // socket.on("bid:placed", (payload) => {
+    //   console.log("bid:placed", payload);
+    //   fetchAuctionData();
+    //   toast.success(`New bid ₹${formatIndianNumber(payload.newBid.amount)}`);
+    // });
+
     socket.on("bid:placed", (payload) => {
       console.log("bid:placed", payload);
-      fetchAuctionData();
+      
+      // Debounce the fetchAuctionData call to avoid multiple rapid calls
+      clearTimeout(window.auctionDataTimeout);
+      window.auctionDataTimeout = setTimeout(() => {
+        fetchAuctionData();
+      }, 100);
+      
       toast.success(`New bid ₹${formatIndianNumber(payload.newBid.amount)}`);
     });
 
