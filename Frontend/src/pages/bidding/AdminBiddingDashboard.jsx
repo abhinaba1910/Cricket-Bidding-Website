@@ -538,7 +538,7 @@ export default function AdminBiddingDashboard() {
 
   // Auto bid range options
   const autoBidRangeOptions = [
-    { value: 5000000, label: "₹20,00,000 (20 Lakh)" },
+    { value: 2000000, label: "₹20,00,000 (20 Lakh)" },
     { value: 5000000, label: "₹50,00,000 (50 Lakh)" },
     { value: 10000000, label: "₹1,00,00,000 (1 Cr)" },
     { value: 20000000, label: "₹2,00,00,000 (2 Cr)" },
