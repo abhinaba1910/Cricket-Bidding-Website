@@ -542,7 +542,7 @@ export default function AdminBiddingDashboard() {
     { value: 5000000, label: "₹50,00,000 (50 Lakh)" },
     { value: 10000000, label: "₹1,00,00,000 (1 Cr)" },
     { value: 20000000, label: "₹2,00,00,000 (2 Cr)" },
-    { value: 20000000, label: "₹4,00,00,000 (4 Cr)" },
+    { value: 40000000, label: "₹4,00,00,000 (4 Cr)" },
     { value: 50000000, label: "₹5,00,00,000 (5 Cr)" },
     { value: 100000000, label: "₹10,00,00,000 (10 Cr)" },
   ];
