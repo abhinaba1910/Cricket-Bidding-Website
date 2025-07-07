@@ -23,6 +23,109 @@ router.post("/start-timer/:playerId", auth, async (req, res) => {
   }
 });
 
+// router.post("/start-bidding/:auctionId", auth, async (req, res) => {
+//   try {
+//     const { selectionMode, automaticFilter } = req.body;
+//     const auction = await Auction.findById(req.params.auctionId)
+//       .populate("selectedPlayers")
+//       .populate("manualPlayerQueue.player");
+
+//     if (!auction) {
+//       return res.status(404).json({ error: "Auction not found" });
+//     }
+
+//     // Check if bidding is already started
+//     if (auction.biddingStarted) {
+//       return res.status(400).json({ error: "Bidding has already started" });
+//     }
+
+//     let nextPlayer = null;
+//     let updateData = {
+//       selectionMode: selectionMode || auction.selectionMode,
+//       automaticFilter: automaticFilter || auction.automaticFilter || "All",
+//       biddingStarted: true,
+//       currentQueuePosition: 0,
+//     };
+
+//     if (
+//       selectionMode === "automatic" ||
+//       (!selectionMode && auction.selectionMode === "automatic")
+//     ) {
+//       // Automatic mode - get first available player based on filter
+//       const filterQuery =
+//         updateData.automaticFilter === "All"
+//           ? { availability: "Available" }
+//           : {
+//               availability: "Available",
+//               role:
+//                 updateData.automaticFilter === "Wicket keeper batsman"
+//                   ? "Wicket keeper batsman"
+//                   : updateData.automaticFilter,
+//             };
+
+//       nextPlayer = await Player.findOne({
+//         ...filterQuery,
+//         _id: { $in: auction.selectedPlayers },
+//       });
+//     } else {
+//       // Manual mode - get first player from queue (position 0)
+//       if (auction.manualPlayerQueue.length > 0) {
+//         // Sort queue by position to ensure correct order
+//         const sortedQueue = auction.manualPlayerQueue.sort(
+//           (a, b) => a.position - b.position
+//         );
+//         nextPlayer = await Player.findById(sortedQueue[0].player);
+//         updateData.currentQueuePosition = 0;
+//       }
+//     }
+
+//     if (!nextPlayer) {
+//       return res.status(400).json({
+//         error:
+//           selectionMode === "automatic" ||
+//           (!selectionMode && auction.selectionMode === "automatic")
+//             ? "No players available matching the selected filter"
+//             : "No players selected in manual queue",
+//       });
+//     }
+//     updateData.currentPlayerOnBid = nextPlayer._id;
+//     updateData.bidAmount = {
+//       player: nextPlayer._id,
+//       amount: nextPlayer.basePrice || 10000,
+//     };
+
+//     updateData.currentBid = { team: null, amount: 0 };
+
+//     const updatedAuction = await Auction.findByIdAndUpdate(
+//       req.params.auctionId,
+//       updateData,
+//       { new: true }
+//     )
+//       .populate("currentPlayerOnBid")
+//       .populate("manualPlayerQueue.player");
+
+//     // Emit via WebSocket that bidding has started, with current player info
+//     {
+//       const io = req.app.get("io");
+//       io.to(req.params.auctionId).emit("bidding:started", {
+//         auction: updatedAuction,
+//         currentPlayer: nextPlayer,
+//         selectionMode: updateData.selectionMode,
+//       });
+//     }
+
+//     res.json({
+//       message: "Bidding started successfully",
+//       auction: updatedAuction,
+//       currentPlayer: nextPlayer,
+//       selectionMode: updateData.selectionMode,
+//     });
+//   } catch (err) {
+//     console.error("Start bidding error:", err);
+//     res.status(500).json({ error: err.message });
+//   }
+// });
+
 router.post("/start-bidding/:auctionId", auth, async (req, res) => {
   try {
     const { selectionMode, automaticFilter } = req.body;
@@ -45,6 +148,7 @@ router.post("/start-bidding/:auctionId", auth, async (req, res) => {
       automaticFilter: automaticFilter || auction.automaticFilter || "All",
       biddingStarted: true,
       currentQueuePosition: 0,
+      isPaused: false, // Ensure auction is not paused when starting bidding
     };
 
     if (
@@ -88,13 +192,20 @@ router.post("/start-bidding/:auctionId", auth, async (req, res) => {
             : "No players selected in manual queue",
       });
     }
+    
+    // Set current player and bid details
     updateData.currentPlayerOnBid = nextPlayer._id;
     updateData.bidAmount = {
       player: nextPlayer._id,
       amount: nextPlayer.basePrice || 10000,
     };
-
     updateData.currentBid = { team: null, amount: 0 };
+
+    // Reset timer for the new player (this handles both fresh start and resumed auction)
+    const now = new Date();
+    updateData.timerStartedAt = now;
+    updateData.timerExpiredAt = new Date(now.getTime() + auction.timerDuration);
+    updateData.isTimerActive = true;
 
     const updatedAuction = await Auction.findByIdAndUpdate(
       req.params.auctionId,
@@ -105,14 +216,24 @@ router.post("/start-bidding/:auctionId", auth, async (req, res) => {
       .populate("manualPlayerQueue.player");
 
     // Emit via WebSocket that bidding has started, with current player info
-    {
-      const io = req.app.get("io");
-      io.to(req.params.auctionId).emit("bidding:started", {
-        auction: updatedAuction,
-        currentPlayer: nextPlayer,
-        selectionMode: updateData.selectionMode,
-      });
-    }
+    const io = req.app.get("io");
+    
+    // Emit timer update for the new player
+    io.to(req.params.auctionId).emit('timer:update', {
+      auctionId: req.params.auctionId,
+      timerStartedAt: now,
+      timerExpiredAt: new Date(now.getTime() + auction.timerDuration),
+      isTimerActive: true,
+      duration: auction.timerDuration,
+      resetTimer: true,
+    });
+
+    // Emit bidding started event
+    io.to(req.params.auctionId).emit("bidding:started", {
+      auction: updatedAuction,
+      currentPlayer: nextPlayer,
+      selectionMode: updateData.selectionMode,
+    });
 
     res.json({
       message: "Bidding started successfully",
@@ -241,6 +362,20 @@ router.post("/manual-sell/:auctionId/:playerId", auth, async (req, res) => {
 
     if (nextPlayer) {
       auction.currentPlayerOnBid = nextPlayer._id;
+      if (nextPlayer) {
+        // Reset timer for the new player
+        const now = new Date();
+        auction.timerStartedAt = now;
+        auction.timerExpiredAt = new Date(
+          now.getTime() + auction.timerDuration
+        );
+        auction.isTimerActive = true;
+      } else {
+        // Clear timer if no next player
+        auction.timerStartedAt = null;
+        auction.timerExpiredAt = null;
+        auction.isTimerActive = false;
+      }
       auction.currentBid = { team: null, amount: 0 };
       auction.currentQueuePosition = newQueuePosition;
       auction.bidAmount = {
@@ -304,6 +439,17 @@ router.post("/manual-sell/:auctionId/:playerId", auth, async (req, res) => {
         payload.isPaused = false;
       }
       io.to(req.params.auctionId).emit("player:sold", payload);
+    }
+    const io = req.app.get("io");
+    if (nextPlayer) {
+      io.to(req.params.auctionId).emit("timer:update", {
+        auctionId: req.params.auctionId,
+        timerStartedAt: auction.timerStartedAt,
+        timerExpiredAt: auction.timerExpiredAt,
+        isTimerActive: auction.isTimerActive,
+        duration: auction.timerDuration,
+        resetTimer: true,
+      });
     }
 
     return res.status(200).json({
@@ -435,121 +581,6 @@ router.post("/set-manual-queue/:auctionId", auth, async (req, res) => {
   }
 });
 
-// router.post("/set-manual-queue/:auctionId", auth, async (req, res) => {
-//   try {
-//     const { playerQueue, newPlayers, existingQueue } = req.body;
-//     const auction = await Auction.findById(req.params.auctionId);
-
-//     if (!auction) {
-//       return res.status(404).json({ error: "Auction not found" });
-//     }
-
-//     let finalQueue = [];
-//     let updateData = {};
-
-//     // Utility: Ensure no duplicate player entries — override older ones with latest position
-//     const mergeAndDeduplicateQueue = (baseQueue, addedPlayers) => {
-//       const playerMap = new Map();
-
-//       // First add existing queue
-//       for (const item of baseQueue) {
-//         playerMap.set(String(item.player), { ...item });
-//       }
-
-//       // Then add new players — overwrite if already exists
-//       for (const item of addedPlayers) {
-//         playerMap.set(String(item.player), { ...item }); // Update to new position
-//       }
-
-//       // Convert map back to array
-//       return Array.from(playerMap.values()).sort(
-//         (a, b) => a.position - b.position
-//       );
-//     };
-
-//     // CASE 1: Adding more players to existing queue
-//     if (newPlayers && existingQueue) {
-//       console.log("Adding to existing queue");
-
-//       // Merge and deduplicate by player ID
-//       finalQueue = mergeAndDeduplicateQueue(existingQueue, newPlayers);
-
-//       updateData = {
-//         manualPlayerQueue: finalQueue,
-//       };
-
-//       // CASE 2: Replacing entire queue
-//     } else if (playerQueue) {
-//       console.log("Creating new queue");
-
-//       // Ensure no duplicates within the new queue itself
-//       finalQueue = mergeAndDeduplicateQueue([], playerQueue);
-
-//       updateData = {
-//         manualPlayerQueue: finalQueue,
-//       };
-
-//       if (!auction.biddingStarted) {
-//         updateData.currentQueuePosition = 0;
-//       } else if (
-//         auction.selectionMode === "automatic" &&
-//         finalQueue.length > 0
-//       ) {
-//         updateData.currentQueuePosition = -1;
-//       }
-//     } else {
-//       return res.status(400).json({ error: "Invalid request data" });
-//     }
-
-//     // Save the updated auction
-//     const updatedAuction = await Auction.findByIdAndUpdate(
-//       req.params.auctionId,
-//       updateData,
-//       { new: true }
-//     ).populate("manualPlayerQueue.player");
-
-//     // Emit queue update
-//     {
-//       const io = req.app.get("io");
-//       io.to(req.params.auctionId).emit("queue:updated", {
-//         manualPlayerQueue: updatedAuction.manualPlayerQueue,
-//         currentQueuePosition: updatedAuction.currentQueuePosition,
-//       });
-//     }
-
-//     // Trigger next player if needed
-//     let nextPlayerInfo = null;
-//     if (
-//       auction.biddingStarted &&
-//       auction.selectionMode === "manual" &&
-//       !auction.currentPlayerOnBid
-//     ) {
-//       const currentPos = updatedAuction.currentQueuePosition;
-//       if (finalQueue.length > currentPos + 1) {
-//         const nextPlayerData = finalQueue[currentPos + 1];
-//         const nextPlayer = await Player.findById(nextPlayerData.player);
-//         nextPlayerInfo = {
-//           nextPlayer: nextPlayer,
-//           shouldStartNext: true,
-//         };
-//       }
-//     }
-
-//     res.json({
-//       message: newPlayers
-//         ? "Players added to queue successfully"
-//         : "Manual queue updated successfully",
-//       auction: updatedAuction,
-//       totalQueueLength: finalQueue.length,
-//       currentPosition: updatedAuction.currentQueuePosition,
-//       ...nextPlayerInfo,
-//     });
-//   } catch (err) {
-//     console.error("Set manual queue error:", err);
-//     res.status(500).json({ error: err.message });
-//   }
-// });
-
 router.get("/queue-status/:auctionId", auth, async (req, res) => {
   try {
     const auction = await Auction.findById(req.params.auctionId)
@@ -578,6 +609,9 @@ router.get("/queue-status/:auctionId", auth, async (req, res) => {
           manualPlayerQueue: [],
           currentQueuePosition: 0,
           isPaused: true,
+          timerStartedAt: null,
+          timerExpiredAt: null,
+          isTimerActive: false,
         });
 
         const io = req.app.get("io");
@@ -588,6 +622,13 @@ router.get("/queue-status/:auctionId", auth, async (req, res) => {
           remainingCount: 0,
           selectionMode: auction.selectionMode,
           auctionPaused: true,
+        });
+        io.to(req.params.auctionId).emit('timer:update', {
+          auctionId: req.params.auctionId,
+          timerStartedAt: null,
+          timerExpiredAt: null,
+          isTimerActive: false,
+          message: "Timer reset due to queue completion"
         });
 
         return res.json({
@@ -854,7 +895,18 @@ router.patch("/pause-auction/:id", auth, async (req, res) => {
       auction.currentPlayerOnBid
     ) {
       auction.pauseAfterCurrentPlayer = true;
+      auction.timerStartedAt = null;
+      auction.timerExpiredAt = null;
+      auction.isTimerActive = false;
       await auction.save();
+
+      io.to(auctionId).emit('timer:update', {
+        auctionId,
+        timerStartedAt: null,
+        timerExpiredAt: null,
+        isTimerActive: false,
+        message: "Timer reset due to auction pause"
+      });
 
       // Emit that a pending pause will happen after current player
       io.to(auctionId).emit("auction:pause-pending", {
@@ -895,7 +947,18 @@ router.patch("/pause-auction/:id", auth, async (req, res) => {
     if (isPaused === false) {
       auction.isPaused = false;
       auction.pauseAfterCurrentPlayer = false; // cancel any pending pause
+      auction.timerStartedAt = null;
+      auction.timerExpiredAt = null;
+      auction.isTimerActive = false;
       await auction.save();
+
+      io.to(auctionId).emit('timer:update', {
+        auctionId,
+        timerStartedAt: null,
+        timerExpiredAt: null,
+        isTimerActive: false,
+        message: "Timer reset due to auction resume"
+      });
 
       // Emit resume event
       io.to(auctionId).emit("auction:resumed", {
@@ -998,6 +1061,20 @@ router.patch("/unsold/:auctionId", auth, async (req, res) => {
     // Step 4: Update auction state
     if (nextPlayer) {
       auction.currentPlayerOnBid = nextPlayer._id;
+      if (nextPlayer) {
+        // Reset timer for the new player
+        const now = new Date();
+        auction.timerStartedAt = now;
+        auction.timerExpiredAt = new Date(
+          now.getTime() + auction.timerDuration
+        );
+        auction.isTimerActive = true;
+      } else {
+        // Clear timer if no next player
+        auction.timerStartedAt = null;
+        auction.timerExpiredAt = null;
+        auction.isTimerActive = false;
+      }
       auction.currentBid = { team: null, amount: 0 };
       auction.bidAmount = {
         player: nextPlayer._id,
@@ -1033,6 +1110,16 @@ router.patch("/unsold/:auctionId", auth, async (req, res) => {
         remainingPlayers,
         // isPaused: auction.isPaused,
       });
+      if (nextPlayer) {
+        io.to(auctionId).emit("timer:update", {
+          auctionId,
+          timerStartedAt: auction.timerStartedAt,
+          timerExpiredAt: auction.timerExpiredAt,
+          isTimerActive: auction.isTimerActive,
+          duration: auction.timerDuration,
+          resetTimer: true,
+        });
+      }
     }
 
     return res.status(200).json({
@@ -1059,10 +1146,11 @@ router.patch("/end-auction/:auctionId", auth, async (req, res) => {
     if (!auction) {
       return res.status(404).json({ message: "Auction not found." });
     }
+
     if (auction.isPaused === false) {
-      return res
-        .status(404)
-        .json({ message: "Sell or Unsold the Player first then End Auction" });
+      return res.status(400).json({
+        message: "Sell or Unsold the player first, then end the auction.",
+      });
     }
 
     // Finalize auction
@@ -1072,31 +1160,22 @@ router.patch("/end-auction/:auctionId", auth, async (req, res) => {
     auction.bidAmount = { player: null, amount: 0 };
     auction.isPaused = true;
 
-    // For each selected team, return remaining purse to purse and zero out remaining
-    for (const teamEntry of auction.selectedTeams) {
-      const team = await Team.findById(teamEntry.team);
-      if (team) {
-        const remainingAmount = team.remaining || 0;
-        team.purse = remainingAmount;
-        // team.remaining = remainingAmount;
-        await team.save();
-      }
-    }
+    // ❌ Do not reset purse or remaining
+    // Optional: If you want to log or snapshot something here, you can.
 
     await auction.save();
 
-    // Emit auction ended event
-    {
-      const io = req.app.get("io");
-      io.to(auctionId).emit("auction:ended", {
-        message: "Auction ended successfully",
-        auctionId,
-      });
-    }
+    // Emit event
+    const io = req.app.get("io");
+    io.to(auctionId).emit("auction:ended", {
+      message: "Auction ended successfully",
+      auctionId,
+    });
 
-    return res
-      .status(200)
-      .json({ message: "Auction ended successfully. Teams updated.", auction });
+    return res.status(200).json({
+      message: "Auction ended successfully. Teams untouched.",
+      auction,
+    });
   } catch (err) {
     console.error("End Auction Error:", err);
     return res.status(500).json({ message: "Server error." });
@@ -1133,68 +1212,6 @@ router.get("/get-bidding-data/:auctionId", auth, async (req, res) => {
 /////////////////////////USER BIDDING ROUTES////////////////////////////
 
 // Confirm join-auction: assign team & avatar
-// router.post("/join-auction/:auctionId/confirm", auth, async (req, res) => {
-//   try {
-//     const { auctionId } = req.params;
-//     const userId = req.user.id;
-//     const { teamId, avatarUrl } = req.body;
-
-//     if (!teamId || !avatarUrl) {
-//       return res.status(400).json({ message: "Team and avatar are required." });
-//     }
-
-//     const auction = await Auction.findById(auctionId);
-//     if (!auction) {
-//       return res.status(404).json({ message: "Auction not found." });
-//     }
-
-//     // Check if user already a manager
-//     const alreadyManager = auction.selectedTeams.find(
-//       (entry) => entry && entry.manager && entry.manager.toString() === userId
-//     );
-//     if (alreadyManager) {
-//       return res
-//         .status(409)
-//         .json({ message: "You have already selected a team and avatar." });
-//     }
-
-//     // Validate team selection
-//     const teamEntry = auction.selectedTeams.find(
-//       (t) => t?.team?.toString() === teamId
-//     );
-//     if (!teamEntry) {
-//       return res.status(400).json({ message: "Invalid team selection." });
-//     }
-//     if (teamEntry.manager) {
-//       return res
-//         .status(409)
-//         .json({ message: "Team already selected by another user." });
-//     }
-
-//     // Assign manager and avatar
-//     teamEntry.manager = userId;
-//     teamEntry.avatar = avatarUrl;
-
-//     await auction.save();
-
-//     // Emit that a new manager joined this auction
-//     {
-//       const io = req.app.get("io");
-//       io.to(auctionId).emit("team:joined", {
-//         message: "A manager joined the auction",
-//         teamId,
-//         managerId: userId,
-//         avatarUrl,
-//       });
-//     }
-
-//     res.status(200).json({ message: "Team and avatar selection successful." });
-//   } catch (err) {
-//     console.error("Error in join-auction/confirm:", err);
-//     res.status(500).json({ message: "Internal server error." });
-//   }
-// });
-
 router.post("/join-auction/:auctionId/confirm", auth, async (req, res) => {
   try {
     const { auctionId } = req.params;
@@ -1282,7 +1299,9 @@ router.get("/join-auction/:auctionId/teams", auth, async (req, res) => {
       "selectedTeams.team"
     );
     if (auction.createdBy.toString() === userId) {
-      return res.status(403).json({ message: "Access denied: Already the Host." });
+      return res
+        .status(403)
+        .json({ message: "Access denied: Already the Host." });
     }
 
     if (!auction) {
@@ -1331,7 +1350,9 @@ router.get("/bidding-portal/:auctionId", auth, async (req, res) => {
       return res.status(404).json({ message: "Auction not found" });
     }
     if (auction.createdBy.toString() === userId.toString()) {
-      return res.status(403).json({ message: "Access denied: Already the Host" });
+      return res
+        .status(403)
+        .json({ message: "Access denied: Already the Host" });
     }
 
     // Find the user's team entry
@@ -1404,92 +1425,116 @@ router.get("/bidding-portal/:auctionId", auth, async (req, res) => {
   }
 });
 
-router.get('/auto-bid-settings/:auctionId', async (req, res) => {
+router.get("/auto-bid-settings/:auctionId", async (req, res) => {
   try {
     const { auctionId } = req.params;
-    
+
     const auction = await Auction.findById(auctionId);
     if (!auction) {
-      return res.status(404).json({ error: 'Auction not found' });
+      return res.status(404).json({ error: "Auction not found" });
     }
-    
+
     res.json({
       isEnabled: auction.autoBidEnabled || false,
-      range: auction.autoBidRange || 10000
+      range: auction.autoBidRange || 10000,
     });
   } catch (error) {
-    console.error('Error fetching auto bid settings:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Error fetching auto bid settings:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
 // 2. Update auto bid settings
-router.post('/auto-bid-settings/:auctionId', async (req, res) => {
+router.post("/auto-bid-settings/:auctionId", async (req, res) => {
   try {
     const { auctionId } = req.params;
     const { isEnabled, range } = req.body;
-    
+
     const auction = await Auction.findById(auctionId);
     if (!auction) {
-      return res.status(404).json({ error: 'Auction not found' });
+      return res.status(404).json({ error: "Auction not found" });
     }
-    
+
     // Update auction with auto bid settings
     auction.autoBidEnabled = isEnabled;
     auction.autoBidRange = range;
     await auction.save();
-    
+
     // Get io instance from app
-    const io = req.app.get('io');
-    
+    const io = req.app.get("io");
+
     // Emit to all connected clients about the auto bid settings change
-    io.to(`auction-${auctionId}`).emit('auto-bid:settings-updated', {
+    io.to(`auction-${auctionId}`).emit("auto-bid:settings-updated", {
       isEnabled,
-      range
+      range,
     });
-    
-    res.json({ 
-      success: true, 
-      message: 'Auto bid settings updated successfully',
-      settings: { isEnabled, range }
+
+    res.json({
+      success: true,
+      message: "Auto bid settings updated successfully",
+      settings: { isEnabled, range },
     });
-    
   } catch (error) {
-    console.error('Error updating auto bid settings:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Error updating auto bid settings:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
-
-router.patch('/update-bid/:auctionId', async (req, res) => {
+router.patch("/update-bid/:auctionId", async (req, res) => {
   try {
     const { auctionId } = req.params;
     const { amount } = req.body;
 
     if (!amount || amount <= 0) {
-      return res.status(400).json({ error: 'Invalid bid amount' });
+      return res.status(400).json({ error: "Invalid bid amount" });
     }
 
     const auction = await Auction.findById(auctionId)
-      .populate('currentPlayerOnBid')
-      .populate('currentBid.team');
+      .populate("currentPlayerOnBid")
+      .populate("currentBid.team");
 
     if (!auction) {
-      return res.status(404).json({ error: 'Auction not found' });
+      return res.status(404).json({ error: "Auction not found" });
     }
 
     if (!auction.currentPlayerOnBid) {
-      return res.status(400).json({ error: 'No player currently on bid' });
+      return res.status(400).json({ error: "No player currently on bid" });
     }
 
-    // Update bid amount
-    auction.bidAmount = { amount };
-    await auction.save();
+    const currentBidAmount = auction.currentBid?.amount || 0;
+    const shouldResetTimer = currentBidAmount !== amount;
 
-    const io = req.app.get('io');
+    // Update bid amount and timer
+    const updateData = {
+      "bidAmount.amount": amount,
+      "bidAmount.player": auction.currentPlayerOnBid._id,
+    };
 
-    // ✅ Correct room name formatting
-    io.to(`${auctionId}`).emit('bid:updated', {
+    if (shouldResetTimer) {
+      const now = new Date();
+      updateData.timerStartedAt = now;
+      updateData.timerExpiredAt = new Date(
+        now.getTime() + auction.timerDuration
+      );
+      updateData.isTimerActive = true;
+    }
+
+    await Auction.findByIdAndUpdate(auctionId, updateData);
+
+    const io = req.app.get("io");
+
+    // Emit timer update
+    io.to(`${auctionId}`).emit("timer:update", {
+      auctionId,
+      timerStartedAt: updateData.timerStartedAt,
+      timerExpiredAt: updateData.timerExpiredAt,
+      isTimerActive: updateData.isTimerActive,
+      duration: auction.timerDuration,
+      resetTimer: shouldResetTimer,
+    });
+
+    // Emit bid update
+    io.to(`${auctionId}`).emit("bid:updated", {
       auctionId,
       playerId: auction.currentPlayerOnBid._id,
       newBid: {
@@ -1499,21 +1544,20 @@ router.patch('/update-bid/:auctionId', async (req, res) => {
       },
       timestamp: new Date(),
       systemGenerated: true,
-      isAmountUpdateOnly: true, // ✅ Add this flag
+      isAmountUpdateOnly: true,
     });
 
     res.json({
-      message: 'Bid updated successfully',
+      message: "Bid updated successfully",
       newBidAmount: amount,
       auctionId,
+      timerReset: shouldResetTimer,
     });
   } catch (error) {
-    console.error('Error updating bid:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Error updating bid:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
-
-
 
 // Add this at the top of your file or in a separate middleware file
 const spamTracker = new Map(); // In-memory store for tracking spam attempts
@@ -1524,21 +1568,21 @@ const SPAM_CONFIG = {
   MAX_FAILED_ATTEMPTS: 5, // Max failed attempts in time window
   TIME_WINDOW: 30000, // 30 seconds
   BAN_DURATION: 10 * 60 * 1000, // 10 minutes
-  RESET_WINDOW: 60000 // Reset counter after 1 minute of no activity
+  RESET_WINDOW: 60000, // Reset counter after 1 minute of no activity
 };
 
 // Function to check if team is banned
 const isTeamBanned = (teamId, auctionId) => {
   const key = `${auctionId}-${teamId}`;
   const banInfo = bannedTeams.get(key);
-  
+
   if (!banInfo) return false;
-  
+
   if (Date.now() > banInfo.bannedUntil) {
     bannedTeams.delete(key);
     return false;
   }
-  
+
   return true;
 };
 
@@ -1546,93 +1590,97 @@ const isTeamBanned = (teamId, auctionId) => {
 const trackSpamAttempt = (teamId, auctionId, isSuccess = false) => {
   const key = `${auctionId}-${teamId}`;
   const now = Date.now();
-  
+
   if (!spamTracker.has(key)) {
     spamTracker.set(key, {
       attempts: [],
-      lastActivity: now
+      lastActivity: now,
     });
   }
-  
+
   const tracker = spamTracker.get(key);
-  
+
   // Remove old attempts outside time window
   tracker.attempts = tracker.attempts.filter(
-    attempt => now - attempt.timestamp < SPAM_CONFIG.TIME_WINDOW
+    (attempt) => now - attempt.timestamp < SPAM_CONFIG.TIME_WINDOW
   );
-  
+
   // If successful bid, reset the counter
   if (isSuccess) {
     tracker.attempts = [];
     tracker.lastActivity = now;
     return false;
   }
-  
+
   // Add failed attempt
   tracker.attempts.push({
     timestamp: now,
-    type: 'failed_bid'
+    type: "failed_bid",
   });
-  
+
   tracker.lastActivity = now;
-  
+
   // Check if spam threshold exceeded
   if (tracker.attempts.length >= SPAM_CONFIG.MAX_FAILED_ATTEMPTS) {
     // Ban the team
     bannedTeams.set(key, {
       bannedAt: now,
       bannedUntil: now + SPAM_CONFIG.BAN_DURATION,
-      reason: 'Excessive failed bid attempts'
+      reason: "Excessive failed bid attempts",
     });
-    
+
     // Clear spam tracker for this team
     spamTracker.delete(key);
-    
+
     return true; // Team is now banned
   }
-  
+
   return false;
 };
 
 // Cleanup old entries periodically
 setInterval(() => {
   const now = Date.now();
-  
+
   // Clean spam tracker
   for (const [key, tracker] of spamTracker.entries()) {
     if (now - tracker.lastActivity > SPAM_CONFIG.RESET_WINDOW) {
       spamTracker.delete(key);
     }
   }
-  
+
   // Clean banned teams
   for (const [key, banInfo] of bannedTeams.entries()) {
     if (now > banInfo.bannedUntil) {
       bannedTeams.delete(key);
     }
   }
-}, 60000); // Run cleanup every minute
+}, 60000); 
 
 router.post("/place-bid/:auctionId", auth, async (req, res) => {
   try {
     const { playerId, teamId, bidAmount } = req.body;
     const { auctionId } = req.params;
 
-    // Check if team is banned from bidding
+    // Check if team is banned
     if (isTeamBanned(teamId, auctionId)) {
       const key = `${auctionId}-${teamId}`;
       const banInfo = bannedTeams.get(key);
-      const remainingTime = Math.ceil((banInfo.bannedUntil - Date.now()) / 60000);
-      
-      return res.status(429).json({ 
+      const remainingTime = Math.ceil(
+        (banInfo.bannedUntil - Date.now()) / 60000
+      );
+
+      return res.status(429).json({
         error: `Your team is temporarily banned from bidding due to excessive spam attempts. Please wait ${remainingTime} minutes.`,
         isBanned: true,
-        bannedUntil: banInfo.bannedUntil
+        bannedUntil: banInfo.bannedUntil,
       });
     }
 
     // First, get the current auction state
-    const auction = await Auction.findById(auctionId).populate("currentBid.team");
+    const auction = await Auction.findById(auctionId).populate(
+      "currentBid.team"
+    );
     if (!auction) {
       trackSpamAttempt(teamId, auctionId, false);
       return res.status(404).json({ error: "Auction not found" });
@@ -1653,11 +1701,31 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
       });
     }
 
+    // Timer validation
+    const now = new Date();
+    const isTimerExpired =
+      auction.timerExpiredAt && now > auction.timerExpiredAt;
     const currentBidAmount = Number(auction.currentBid?.amount) || 0;
     const newBidAmount = Number(bidAmount);
     const currentBidTeam = auction.currentBid?.team?._id?.toString();
 
-    // Validation checks
+    // Check if timer has expired and amounts match (no new bids allowed)
+    if (isTimerExpired && currentBidAmount === newBidAmount) {
+      trackSpamAttempt(teamId, auctionId, false);
+      return res.status(400).json({
+        error: "Timer has expired and no new bids are allowed.",
+        timerExpired: true,
+      });
+    }
+    if (isTimerExpired && currentBidAmount !== newBidAmount) {
+      trackSpamAttempt(teamId, auctionId, false);
+      return res.status(400).json({
+        error: "Timer has expired and no new bids are allowed.",
+        timerExpired: true,
+      });
+    }
+
+    // ORIGINAL VALIDATION LOGIC - Same amount and team checks
     const isSameAmount = currentBidAmount === newBidAmount;
     const isSameTeam = currentBidTeam === teamId.toString();
 
@@ -1670,14 +1738,17 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
       } else {
         trackSpamAttempt(teamId, auctionId, false);
         return res.status(400).json({
-          error: `${auction.currentBid?.team?.shortName || "Another team"} already placed this bid. Wait for the amount to change.`,
+          error: `${
+            auction.currentBid?.team?.teamName || "Another team"
+          } already placed this bid. Wait for the amount to change.`,
         });
       }
     } else {
       if (isSameTeam) {
         trackSpamAttempt(teamId, auctionId, false);
         return res.status(400).json({
-          error: "You already placed bid for the previous amount!! Give other team chance",
+          error:
+            "You already placed bid for the previous amount!! Give other team chance",
         });
       }
     }
@@ -1690,7 +1761,9 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
 
     if (team.remaining < newBidAmount) {
       trackSpamAttempt(teamId, auctionId, false);
-      return res.status(400).json({ error: "Insufficient balance to place this bid." });
+      return res
+        .status(400)
+        .json({ error: "Insufficient balance to place this bid." });
     }
 
     // CRITICAL FIX: Include current bid amount in the update condition
@@ -1699,7 +1772,12 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
       currentPlayerOnBid: playerId,
       isPaused: false,
       status: "live",
-      "currentBid.amount": currentBidAmount
+      "currentBid.amount": currentBidAmount,
+      $or: [
+        { timerExpiredAt: { $gt: now } }, // Timer not expired
+        { timerExpiredAt: null }, // No timer set
+        { isTimerActive: false }, // Timer not active
+      ],
     };
 
     // If there's no current bid, we need to handle that case
@@ -1708,10 +1786,14 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
       updateCondition.$or = [
         { "currentBid.amount": { $exists: false } },
         { "currentBid.amount": 0 },
-        { "currentBid.amount": null }
+        { "currentBid.amount": null },
+        { timerExpiredAt: { $gt: now } }, // Timer not expired
+        { timerExpiredAt: null }, // No timer set
+        { isTimerActive: false }, // Timer not active
       ];
     }
 
+    const now2 = new Date();
     // Atomic update with race condition protection
     const updatedAuction = await Auction.findOneAndUpdate(
       updateCondition,
@@ -1719,13 +1801,16 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
         $set: {
           "currentBid.amount": newBidAmount,
           "currentBid.team": teamId,
+          timerStartedAt: now2,
+          timerExpiredAt: new Date(now2.getTime() + auction.timerDuration),
+          isTimerActive: true,
         },
         $push: {
           biddingHistory: {
             player: playerId,
             team: teamId,
             bidAmount: newBidAmount,
-            time: new Date(),
+            time: now2,
           },
         },
       },
@@ -1735,8 +1820,9 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
     // If updatedAuction is null, it means the condition wasn't met
     if (!updatedAuction) {
       trackSpamAttempt(teamId, auctionId, false);
-      return res.status(409).json({ 
-        error: "Bid was already updated by another user. Please refresh and try again." 
+      return res.status(409).json({
+        error:
+          "Bid was already updated by another user. Please refresh and try again.",
       });
     }
 
@@ -1744,6 +1830,18 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
     trackSpamAttempt(teamId, auctionId, true);
 
     const io = req.app.get("io");
+
+    // Emit timer reset
+    io.to(auctionId).emit("timer:update", {
+      auctionId,
+      timerStartedAt: now2,
+      timerExpiredAt: new Date(now2.getTime() + auction.timerDuration),
+      isTimerActive: true,
+      duration: auction.timerDuration,
+      resetTimer: true,
+    });
+
+    // Emit bid placed
     io.to(auctionId).emit("bid:placed", {
       currentPlayerOnBid: updatedAuction.currentPlayerOnBid,
       newBid: {
@@ -1756,16 +1854,60 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
     return res.status(200).json({ message: "Bid placed successfully" });
   } catch (err) {
     // Track as failed attempt for any server errors too
-    const { teamId, auctionId } = req.body ? { teamId: req.body.teamId, auctionId: req.params.auctionId } : {};
+    const { teamId, auctionId } = req.body
+      ? { teamId: req.body.teamId, auctionId: req.params.auctionId }
+      : {};
     if (teamId && auctionId) {
       const isBanned = trackSpamAttempt(teamId, auctionId, false);
       if (isBanned) {
-        console.log(`Team ${teamId} has been banned for spamming in auction ${auctionId}`);
+        console.log(
+          `Team ${teamId} has been banned for spamming in auction ${auctionId}`
+        );
       }
     }
-    
+
     console.error("Place bid error:", err);
-    res.status(500).json({ error: "Internal server error", details: err.message });
+    res
+      .status(500)
+      .json({ error: "Internal server error", details: err.message });
+  }
+});
+
+// 4. Route to start timer when first player comes to bid
+router.post("/start-player-timer/:auctionId", async (req, res) => {
+  try {
+    const { auctionId } = req.params;
+
+    const auction = await Auction.findById(auctionId);
+    if (!auction) {
+      return res.status(404).json({ error: "Auction not found" });
+    }
+
+    if (!auction.currentPlayerOnBid) {
+      return res.status(400).json({ error: "No player currently on bid" });
+    }
+
+    const now = new Date();
+    await Auction.findByIdAndUpdate(auctionId, {
+      timerStartedAt: now,
+      timerExpiredAt: new Date(now.getTime() + auction.timerDuration),
+      isTimerActive: true,
+    });
+
+    const io = req.app.get("io");
+    io.to(`${auctionId}`).emit("timer:update", {
+      auctionId,
+      timerStartedAt: now,
+      timerExpiredAt: new Date(now.getTime() + auction.timerDuration),
+      isTimerActive: true,
+      duration: auction.timerDuration,
+      resetTimer: true,
+    });
+
+    res.json({ message: "Timer started successfully" });
+  } catch (error) {
+    console.error("Error starting timer:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -1773,19 +1915,21 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
 router.get("/ban-status/:auctionId/:teamId", auth, async (req, res) => {
   try {
     const { auctionId, teamId } = req.params;
-    
+
     if (isTeamBanned(teamId, auctionId)) {
       const key = `${auctionId}-${teamId}`;
       const banInfo = bannedTeams.get(key);
-      const remainingTime = Math.ceil((banInfo.bannedUntil - Date.now()) / 60000);
-      
+      const remainingTime = Math.ceil(
+        (banInfo.bannedUntil - Date.now()) / 60000
+      );
+
       return res.json({
         isBanned: true,
         remainingMinutes: remainingTime,
-        bannedUntil: banInfo.bannedUntil
+        bannedUntil: banInfo.bannedUntil,
       });
     }
-    
+
     return res.json({ isBanned: false });
   } catch (err) {
     console.error("Ban status check error:", err);
@@ -1799,18 +1943,16 @@ router.post("/unban-team/:auctionId/:teamId", auth, async (req, res) => {
     // Add admin check here if needed
     const { auctionId, teamId } = req.params;
     const key = `${auctionId}-${teamId}`;
-    
+
     bannedTeams.delete(key);
     spamTracker.delete(key);
-    
+
     return res.json({ message: "Team unbanned successfully" });
   } catch (err) {
     console.error("Unban team error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
-
-
 
 router.post("/use-rtm/:auctionId", auth, async (req, res) => {
   try {
@@ -1865,7 +2007,6 @@ router.post("/use-rtm/:auctionId", auth, async (req, res) => {
         .status(400)
         .json({ message: "Player is already in your team" });
     }
-
 
     if (
       auction.pendingRTMRequest &&

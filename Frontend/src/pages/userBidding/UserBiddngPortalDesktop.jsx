@@ -175,6 +175,25 @@ export default function UserBiddingDashboardDesktop() {
   };
   const [isBanned, setIsBanned] = useState(false);
   const [banInfo, setBanInfo] = useState(null);
+  const [timerData, setTimerData] = useState({
+    isActive: false,
+    remainingTime: 0,
+    startedAt: null,
+    expiresAt: null,
+    duration: 10000, // 10 seconds
+  });
+
+  const [isBidDisabled, setIsBidDisabled] = useState(false);
+  const timerIntervalRef = useRef(null);
+
+  // 2. Timer calculation function
+  const calculateRemainingTime = (expiresAt) => {
+    if (!expiresAt) return 0;
+    const now = new Date().getTime();
+    const expires = new Date(expiresAt).getTime();
+    const remaining = Math.max(0, expires - now);
+    return Math.ceil(remaining / 1000); // Convert to seconds
+  };
 
   // Function to check ban status
   const checkBanStatus = async () => {
@@ -339,7 +358,6 @@ export default function UserBiddingDashboardDesktop() {
     setSelectedPlayer(null);
   };
 
-  // Handle placing a bid
   // const handleBid = async () => {
   //   const playerId = auctionData?.currentPlayer?._id;
   //   const teamId = auctionData?.team?.teamId;
@@ -351,6 +369,16 @@ export default function UserBiddingDashboardDesktop() {
   //   }
   //   if (!visibleBid || visibleBid <= 0) {
   //     toast.error("Invalid bid amount.");
+  //     return;
+  //   }
+
+  //   // Check if team is banned
+  //   if (isBanned) {
+  //     toast.error(
+  //       `Your team is banned from bidding. Please wait ${
+  //         banInfo?.remainingMinutes || 0
+  //       } minutes.`
+  //     );
   //     return;
   //   }
 
@@ -376,10 +404,21 @@ export default function UserBiddingDashboardDesktop() {
   //     console.error("Failed to place bid:", error);
   //     const errorMessage = error.response?.data?.error || "Failed to place bid";
 
-  //     // Handle the race condition case specifically
-  //     if (error.response?.status === 409) {
+  //     // Handle different error types
+  //     if (error.response?.status === 429) {
+  //       // Team is banned
+  //       const banData = error.response.data;
+  //       setIsBanned(true);
+  //       setBanInfo({
+  //         remainingMinutes: Math.ceil(
+  //           (banData.bannedUntil - Date.now()) / 60000
+  //         ),
+  //         bannedUntil: banData.bannedUntil,
+  //       });
+  //       toast.error(errorMessage, { duration: 5000 });
+  //     } else if (error.response?.status === 409) {
+  //       // Race condition
   //       toast.warning("Someone else just placed a bid. Refreshing...");
-  //       // Automatically refresh the auction data
   //       fetchAuctionData();
   //     } else {
   //       toast.error(errorMessage);
@@ -392,7 +431,7 @@ export default function UserBiddingDashboardDesktop() {
   const handleBid = async () => {
     const playerId = auctionData?.currentPlayer?._id;
     const teamId = auctionData?.team?.teamId;
-    const visibleBid = auctionData?.bidAmount;
+    const visibleBid = auctionData?.bidAmount?.amount || auctionData?.bidAmount; // Handle both cases
 
     if (!playerId || !teamId) {
       toast.error("Missing team or player information.");
@@ -400,6 +439,14 @@ export default function UserBiddingDashboardDesktop() {
     }
     if (!visibleBid || visibleBid <= 0) {
       toast.error("Invalid bid amount.");
+      return;
+    }
+
+    // Check if bidding is disabled due to timer
+    if (isBidDisabled) {
+      toast.error(
+        "Bidding is disabled. Timer has expired or wait for price update."
+      );
       return;
     }
 
@@ -446,11 +493,15 @@ export default function UserBiddingDashboardDesktop() {
           ),
           bannedUntil: banData.bannedUntil,
         });
-        toast.error(errorMessage, { duration: 5000 });
+        toast.success(errorMessage, { duration: 5000 });
       } else if (error.response?.status === 409) {
         // Race condition
-        toast.warning("Someone else just placed a bid. Refreshing...");
+        toast.custom("Someone else just placed a bid. Refreshing...");
         fetchAuctionData();
+      } else if (error.response?.data?.timerExpired) {
+        // Timer expired
+        toast.error("Timer has expired. Wait for the next bid amount update.");
+        setIsBidDisabled(true);
       } else {
         toast.error(errorMessage);
       }
@@ -467,7 +518,9 @@ export default function UserBiddingDashboardDesktop() {
       return;
     }
 
-    const socket = io("https://cricket-bidding-website-production.up.railway.app", {
+    const socket = io(
+      "https://cricket-bidding-website-production.up.railway.app",
+      {
     // const socket = io("http://localhost:6001", {
       auth: { token },
       transports: ["websocket"],
@@ -560,11 +613,21 @@ export default function UserBiddingDashboardDesktop() {
     });
 
     // Bid events
+    // socket.on("bid:updated", (payload) => {
+    //   console.log("bid:updated", payload);
+    //   fetchAuctionData();
+    //   toast.success(
+    //     `Bid Amount Updated To₹${formatIndianNumber(
+    //       payload.newBid.amount
+    //     )} You can Bid Now`
+    //   );
+    // });
+
     socket.on("bid:updated", (payload) => {
       console.log("bid:updated", payload);
       fetchAuctionData();
       toast.success(
-        `Bid Amount Updated To₹${formatIndianNumber(
+        `Bid Amount Updated To ₹${formatIndianNumber(
           payload.newBid.amount
         )} You can Bid Now`
       );
@@ -585,13 +648,32 @@ export default function UserBiddingDashboardDesktop() {
     socket.on("bid:placed", (payload) => {
       console.log("bid:placed", payload);
 
-      // Debounce the fetchAuctionData call to avoid multiple rapid calls
       clearTimeout(window.auctionDataTimeout);
       window.auctionDataTimeout = setTimeout(() => {
         fetchAuctionData();
       }, 100);
 
       toast.success(`New bid ₹${formatIndianNumber(payload.newBid.amount)}`);
+    });
+
+    socket.on("timer:update", (payload) => {
+      console.log("timer:update", payload);
+
+      if (payload.auctionId === id) {
+        const remainingTime = calculateRemainingTime(payload.timerExpiredAt);
+
+        setTimerData({
+          isActive: payload.isTimerActive,
+          remainingTime,
+          startedAt: payload.timerStartedAt,
+          expiresAt: payload.timerExpiredAt,
+          duration: payload.duration,
+        });
+
+        if (payload.resetTimer) {
+          toast.success(`Timer Reset - ${remainingTime} seconds remaining`);
+        }
+      }
     });
 
     socket.on("player:rtm", (payload) => {
@@ -743,6 +825,10 @@ export default function UserBiddingDashboardDesktop() {
       console.log("bidding:started", payload);
       fetchAuctionData();
     });
+    socket.on("timer:expired", (payload) => {
+      console.log("Timer expired received:", payload);
+      toast.error("⏱ Timer expired — Bidding is now disabled");
+    });
 
     return () => {
       if (socketRef.current) {
@@ -757,9 +843,15 @@ export default function UserBiddingDashboardDesktop() {
       socket.off("rtm:request");
       socket.off("rtm:approved");
       socket.off("rtm:rejected");
+      socket.off("bid:updated");
+      socket.off("bid:placed");
+      socket.off("timer:update");
     };
   }, [id, navigate]); // Removed auctionData dependency to prevent socket recreation
 
+  useEffect(() => {
+    checkBidDisabled();
+  }, [auctionData, timerData.remainingTime]);
   // ENHANCED: Ensure userTeamIdRef is always synchronized
   useEffect(() => {
     if (
@@ -809,6 +901,67 @@ export default function UserBiddingDashboardDesktop() {
   useEffect(() => {
     checkBanStatus();
   }, [auctionData?.team?.teamId, id]);
+
+  useEffect(() => {
+    if (timerData.isActive && timerData.expiresAt) {
+      // Clear existing interval
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+
+      // Start new interval
+      timerIntervalRef.current = setInterval(() => {
+        const remaining = calculateRemainingTime(timerData.expiresAt);
+
+        setTimerData((prev) => ({
+          ...prev,
+          remainingTime: remaining,
+        }));
+
+        // Check if timer expired
+        if (remaining <= 0) {
+          clearInterval(timerIntervalRef.current);
+          setTimerData((prev) => ({
+            ...prev,
+            isActive: false,
+            remainingTime: 0,
+          }));
+        
+          // Notify other clients (especially admin) that timer ended
+          if (socketRef.current) {
+            socketRef.current.emit("timer:expired", { auctionId: id });
+          }
+        
+          // Optionally check for UI state change
+          checkBidDisabled();
+        }        
+      }, 1000);
+    } else {
+      // Clear interval if timer is not active
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+    }
+
+    // Cleanup on unmount
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+    };
+  }, [timerData.isActive, timerData.expiresAt]);
+
+  // 4. Check if bid should be disabled
+  const checkBidDisabled = () => {
+    const currentBidAmount = auctionData?.currentBid?.amount || 0;
+    const bidAmountValue = auctionData?.bidAmount?.amount || 0;
+    const amountsMatch = currentBidAmount === bidAmountValue;
+    const isTimerExpired = timerData.remainingTime <= 0;
+
+    // Disable bid if timer expired AND amounts match
+    const shouldDisable = isTimerExpired && amountsMatch;
+    setIsBidDisabled(shouldDisable);
+  };
 
   // ENHANCED: RTM Handler with better error handling
   const handleUseRTM = async () => {
@@ -867,6 +1020,44 @@ export default function UserBiddingDashboardDesktop() {
       console.error("Error status:", err.response?.status);
       toast.error(err.response?.data?.message || "Failed to use RTM");
     }
+  };
+  const TimerDisplay = () => {
+    if (!timerData.isActive) return null;
+
+    const progress =
+      (timerData.remainingTime / (timerData.duration / 1000)) * 100;
+    const isLowTime = timerData.remainingTime <= 3;
+
+    return (
+      <div className="bg-gradient-to-r from-orange-900/50 to-red-800/50 rounded-xl p-3 mb-4 shadow-lg">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-medium text-orange-200">Bidding Timer</h3>
+          <span
+            className={`text-lg font-bold ${
+              isLowTime ? "text-red-400 animate-pulse" : "text-orange-300"
+            }`}
+          >
+            {timerData.remainingTime}s
+          </span>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="w-full bg-gray-700 rounded-full h-2">
+          <div
+            className={`h-2 rounded-full transition-all duration-1000 ${
+              isLowTime ? "bg-red-500" : "bg-orange-500"
+            }`}
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+
+        <p className="text-xs text-orange-200 mt-1 opacity-75">
+          {isBidDisabled
+            ? "Bidding disabled - Timer expired"
+            : "Place your bid before timer ends"}
+        </p>
+      </div>
+    );
   };
 
   // ─── Render ───────────────────────────────────────────────────────
@@ -1034,22 +1225,8 @@ export default function UserBiddingDashboardDesktop() {
         </motion.div>
 
         {/* Bid Now */}
-        {/* <motion.div
-          className="bg-gradient-to-r from-indigo-900/50 to-blue-800/50 rounded-xl p-4 shadow-lg w-full max-w-md text-center"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <h3 className="text-xs font-medium mb-1">Bid Now</h3>
-          <BidButton onClick={handleBid} disabled={isBidding} />
-          <p className="mt-1 text-xs opacity-75">
-            Next Updated Price:{" "}
-            {nextBidAmount != null
-              ? `₹${formatIndianNumber(nextBidAmount)}`
-              : "--/--"}
-          </p>
-        </motion.div> */}
 
-        <motion.div
+        {/* <motion.div
           className="bg-gradient-to-r from-indigo-900/50 to-blue-800/50 rounded-xl p-4 shadow-lg w-full max-w-md text-center"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1091,6 +1268,61 @@ export default function UserBiddingDashboardDesktop() {
           {isBanned && (
             <p className="mt-2 text-xs text-red-400">
               You can still watch the auction but cannot place bids
+            </p>
+          )}
+        </motion.div> */}
+
+        <motion.div
+          className="bg-gradient-to-r from-indigo-900/50 to-blue-800/50 rounded-xl p-4 shadow-lg w-full max-w-md text-center"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          {/* Timer Display */}
+          <TimerDisplay />
+
+          <h3 className="text-xs font-medium mb-1">Bid Now</h3>
+
+          {isBanned ? (
+            <div className="text-center">
+              <div className="bg-red-500/20 border border-red-400 rounded-lg p-3 mb-2">
+                <p className="text-red-400 text-sm font-medium">
+                  🚫 Temporarily Banned
+                </p>
+                <p className="text-red-300 text-xs mt-1">
+                  Your team is banned from bidding for{" "}
+                  {banInfo?.remainingMinutes || 0} more minutes
+                </p>
+                <p className="text-red-200 text-xs mt-1 opacity-75">
+                  Reason: Excessive bid attempts
+                </p>
+              </div>
+              <button
+                className="bg-gray-500 text-gray-300 px-4 py-2 rounded-lg cursor-not-allowed opacity-50"
+                disabled
+              >
+                Bidding Disabled
+              </button>
+            </div>
+          ) : (
+            <BidButton
+              onClick={handleBid}
+              disabled={isBidding || isBanned || isBidDisabled}
+              className={isBidDisabled ? "opacity-50 cursor-not-allowed" : ""}
+            />
+          )}
+
+          <p className="mt-1 text-xs opacity-75">
+            Next Updated Price:{" "}
+            {nextBidAmount != null
+              ? `₹${formatIndianNumber(nextBidAmount)}`
+              : "--/--"}
+          </p>
+
+          {(isBanned || isBidDisabled) && (
+            <p className="mt-2 text-xs text-red-400">
+              {isBanned
+                ? "You can still watch the auction but cannot place bids"
+                : "Bidding disabled - Timer expired"}
             </p>
           )}
         </motion.div>

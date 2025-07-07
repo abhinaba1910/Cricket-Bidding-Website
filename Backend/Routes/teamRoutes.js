@@ -113,6 +113,75 @@ router.get("/get-team/:id", authMiddleware, async (req, res) => {
 });
 
 
+// router.put(
+//   "/update-team/:id",
+//   authMiddleware,
+//   upload.single("logoFile"),
+//   async (req, res) => {
+//     try {
+//       const { id } = req.params;
+//       const {
+//         teamName,
+//         shortName,
+//         purse,
+//         manager,
+//         retainedPlayers, // [{playerId, price}]
+//         releasedPlayers, // [playerId]
+//       } = req.body;
+//       const userId = req.user.id;
+
+//       const team = await Team.findById(id);
+//       if (!team) return res.status(404).json({ error: "Team not found" });
+//       if (team.createdBy.toString() !== userId)
+//         return res.status(403).json({ error: "Unauthorized to update this team" });
+
+//       // Basic updates
+//       team.teamName = teamName || team.teamName;
+//       team.shortName = shortName || team.shortName;
+//       team.purse = purse || team.purse;
+
+//       // Handle logo update
+//       if (req.file && req.file.path) {
+//         team.logoUrl = req.file.path;
+//       }
+//       if (manager !== undefined) {
+//         team.manager = manager?.trim() || null;
+//       }
+
+//       // Parse if sent as JSON strings
+//       const retained = typeof retainedPlayers === 'string' ? JSON.parse(retainedPlayers) : retainedPlayers || [];
+//       const released = typeof releasedPlayers === 'string' ? JSON.parse(releasedPlayers) : releasedPlayers || [];
+
+//       // Process released players
+//       for (const playerId of released) {
+//         team.players = team.players.filter(p => p.player.toString() !== playerId);
+//         await Player.findByIdAndUpdate(playerId, { availability: "Available" ,isRTM: false});
+//         await Team.findByIdAndDelete(playerId)
+//       }
+
+//       // Process retained players
+//       for (const { playerId, price } of retained) {
+//         const existing = team.players.find(p => p.player.toString() === playerId);
+//         if (!existing) {
+//           team.players.push({ player: playerId, price });
+//         } else {
+//           existing.price = price;
+//         }
+
+//         await Player.findByIdAndUpdate(playerId, { availability: "Retained" });
+//         team.purse -= price;
+//       }
+
+//       team.remaining = team.purse;
+//       await team.save();
+//       res.json({ message: "Team updated with players", team });
+//     } catch (err) {
+//       console.error(err);
+//       res.status(500).json({ error: "Failed to update team" });
+//     }
+//   }
+// );
+
 router.put(
   "/update-team/:id",
   authMiddleware,
@@ -125,59 +194,73 @@ router.put(
         shortName,
         purse,
         manager,
-        retainedPlayers, // [{playerId, price}]
-        releasedPlayers, // [playerId]
+        retainedPlayers,
+        releasedPlayers,
+        remaining, // manual override
       } = req.body;
       const userId = req.user.id;
 
       const team = await Team.findById(id);
       if (!team) return res.status(404).json({ error: "Team not found" });
       if (team.createdBy.toString() !== userId)
-        return res.status(403).json({ error: "Unauthorized to update this team" });
+        return res.status(403).json({ error: "Unauthorized" });
 
       // Basic updates
-      team.teamName = teamName || team.teamName;
-      team.shortName = shortName || team.shortName;
-      team.purse = purse || team.purse;
+      if (teamName) team.teamName = teamName;
+      if (shortName) team.shortName = shortName;
+      if (purse !== undefined) team.purse = purse;
+      if (manager !== undefined) team.manager = manager?.trim() || null;
 
-      // Handle logo update
       if (req.file && req.file.path) {
         team.logoUrl = req.file.path;
       }
-      if (manager !== undefined) {
-        team.manager = manager?.trim() || null;
-      }
 
-      // Parse if sent as JSON strings
-      const retained = typeof retainedPlayers === 'string' ? JSON.parse(retainedPlayers) : retainedPlayers || [];
-      const released = typeof releasedPlayers === 'string' ? JSON.parse(releasedPlayers) : releasedPlayers || [];
+      const retained = typeof retainedPlayers === "string" ? JSON.parse(retainedPlayers) : retainedPlayers || [];
+      const released = typeof releasedPlayers === "string" ? JSON.parse(releasedPlayers) : releasedPlayers || [];
 
-      // Process released players
+      // Track if any player operations happened
+      let playerOpsHappened = false;
+
+      // Handle Released Players
       for (const playerId of released) {
-        team.players = team.players.filter(p => p.player.toString() !== playerId);
-        await Player.findByIdAndUpdate(playerId, { availability: "Available" ,isRTM: false});
-        await Team.findByIdAndDelete(playerId)
+        const player = team.players.find(p => p.player.toString() === playerId);
+        if (player) {
+          team.remaining += player.price;
+          team.players = team.players.filter(p => p.player.toString() !== playerId);
+          await Player.findByIdAndUpdate(playerId, {
+            availability: "Available",
+            isRTM: false,
+          });
+          playerOpsHappened = true;
+        }
       }
 
-      // Process retained players
+      // Handle Retained Players
       for (const { playerId, price } of retained) {
         const existing = team.players.find(p => p.player.toString() === playerId);
-        if (!existing) {
-          team.players.push({ player: playerId, price });
-        } else {
+        if (existing) {
+          team.remaining += existing.price;
           existing.price = price;
+          team.remaining -= price;
+        } else {
+          team.players.push({ player: playerId, price });
+          team.remaining -= price;
         }
 
         await Player.findByIdAndUpdate(playerId, { availability: "Retained" });
-        team.purse -= price;
+        playerOpsHappened = true;
       }
 
-      team.remaining = team.purse;
+      // Only override remaining manually if no player updates happened
+      if (!playerOpsHappened && remaining !== undefined && !isNaN(remaining)) {
+        team.remaining = Number(remaining);
+      }
+
       await team.save();
-      res.json({ message: "Team updated with players", team });
+      res.json({ message: "Team updated", team });
     } catch (err) {
       console.error(err);
-      res.status(500).json({ error: "Failed to update team" });
+      res.status(500).json({ error: "Update failed" });
     }
   }
 );

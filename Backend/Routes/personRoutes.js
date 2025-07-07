@@ -75,14 +75,16 @@ router.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
     console.log("Login attempt:", req.body);
+
     const user = await Person.findOne({ username });
+
     if (!user) {
-      return res.status(400).json({ error: "Invalid username or password." });
+      return res.status(400).json({ error: "Username is incorrect." });
     }
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      return res.status(400).json({ error: "Invalid username or password." });
+      return res.status(400).json({ error: "Password is incorrect." });
     }
 
     const token = jwt.sign(
@@ -96,7 +98,7 @@ router.post("/login", async (req, res) => {
       { expiresIn: "24h" }
     );
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Login successful!",
       token,
       user: {
@@ -107,9 +109,11 @@ router.post("/login", async (req, res) => {
       },
     });
   } catch (err) {
-    res.status(500).json({ error: "Something went wrong. Please try again." });
+    console.error("Login error:", err);
+    return res.status(500).json({ error: "Something went wrong. Please try again." });
   }
 });
+
 
 router.get('/get-profile', AuthMiddleWare, async (req, res) => {
   try {
@@ -300,5 +304,133 @@ router.post("/set-password", AuthMiddleWare, async (req, res) => {
     res.status(500).json({ error: "Failed to set password." });
   }
 });
+
+// router.post("/forgot-password", async (req, res) => {
+//   const { email } = req.body;
+
+//   try {
+//     const user = await Person.findOne({ email });
+
+//     if (!user) {
+//       return res.status(404).json({ error: "No account with this email found." });
+//     }
+
+//     const token = crypto.randomBytes(32).toString("hex");
+
+//     user.resetPasswordToken = token;
+//     user.resetPasswordExpires = Date.now() + 15 * 60 * 1000; // 15 minutes
+//     await user.save();
+
+//     const resetLink = `https://cricbid.sytes.net/reset-password/${token}`;
+
+//     const transporter = nodemailer.createTransport({
+//       service: "gmail", // or your email provider
+//       auth: {
+//         user: process.env.EMAIL_USER,
+//         pass: process.env.EMAIL_PASS,
+//       },
+//     });
+
+//     await transporter.sendMail({
+//       to: user.email,
+//       from: process.env.EMAIL_USER,
+//       subject: "Reset your password",
+//       html: `<p>Hello ${user.username},</p>
+//         <p>You requested to reset your password. Click the link below to set a new password:</p>
+//         <a href="${resetLink}">${resetLink}</a>
+//         <p>This link is valid for 15 minutes.</p>`,
+//     });
+
+//     res.json({ message: "Password reset link sent to your email." });
+//   } catch (error) {
+//     console.error("Forgot password error:", error);
+//     res.status(500).json({ error: "Something went wrong. Please try again later." });
+//   }
+// });
+
+router.post("/forgot-password", async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await Person.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ error: "No account with this email found." });
+    }
+
+    const token = crypto.randomBytes(32).toString("hex");
+
+    user.resetPasswordToken = token;
+    user.resetPasswordExpires = Date.now() + 15 * 60 * 1000; // 15 minutes
+    await user.save();
+
+    const resetLink = `https://cricbid.sytes.net/reset-password/${token}`;
+
+    // ✅ Use a plain-text format only
+    const textMessage = `
+Hi ${user.username},
+
+We received a request to reset your password.
+
+Click the link below to reset it (valid for 15 minutes):
+${resetLink}
+
+If you did not request this, you can ignore this email.
+
+– CricBid Support Team
+    `.trim();
+
+    // ✅ Gmail SMTP (still fine for dev/testing)
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    await transporter.sendMail({
+      from: `"CricBid Support" <${process.env.EMAIL_USER}>`, // ✅ Name + Email
+      to: user.email,
+      replyTo: process.env.EMAIL_USER,
+      subject: "CricBid Password Reset Request",
+      text: textMessage,
+      headers: {
+        "X-Priority": "1", // ✅ High priority
+      },
+    });
+
+    return res.json({ message: "Password reset link sent to your email." });
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    return res.status(500).json({ error: "Something went wrong. Please try again later." });
+  }
+});
+
+router.post("/reset-password", async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  try {
+    const user = await Person.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: "Invalid or expired reset token." });
+    }
+
+    user.password = newPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    res.json({ message: "Password has been reset successfully." });
+  } catch (error) {
+    console.error("Reset password error:", error);
+    res.status(500).json({ error: "Unable to reset password. Try again later." });
+  }
+});
+
 
 module.exports = router;

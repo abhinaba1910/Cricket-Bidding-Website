@@ -107,8 +107,23 @@ const auctionSchema = new mongoose.Schema(
     bidAmount: {
       player: { type: mongoose.Schema.Types.ObjectId, ref: "Player" },
       amount: { type: Number, default: 0 },
-    },    
-
+    },
+    timerStartedAt: {
+      type: Date,
+      default: null,
+    },
+    timerDuration: {
+      type: Number,
+      default: 10000, // 10 seconds in milliseconds
+    },
+    isTimerActive: {
+      type: Boolean,
+      default: false,
+    },
+    timerExpiredAt: {
+      type: Date,
+      default: null,
+    },
     // Current queue position for manual mode
     currentQueuePosition: {
       player: { type: mongoose.Schema.Types.ObjectId, ref: "Player" },

@@ -172,6 +172,11 @@ io.on("connection", (socket) => {
     console.log(`Socket joined room ${auctionId}`);
   });
 
+  socket.on("timer:expired", ({ auctionId }) => {
+    console.log(`Timer expired for auction ${auctionId}`);
+    io.to(auctionId).emit("timer:expired", { auctionId });
+  });
+  
   socket.on("leave-auction", (auctionId) => {
     socket.leave(auctionId);
     console.log(`Socket left room ${auctionId}`);

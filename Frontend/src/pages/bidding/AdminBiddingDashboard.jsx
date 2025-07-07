@@ -173,11 +173,13 @@ export default function AdminBiddingDashboard() {
     socket.on("bid:updated", (payload) => {
       console.log("Received bid:updated", payload);
       const { newBid, isAmountUpdateOnly } = payload;
-    
+
       if (isAmountUpdateOnly) {
         // Only update bid amount, don't update currentBid team info
         setBidAmount(newBid.amount);
-        toast.info(`Bid amount updated to: ₹${formatIndianNumber(newBid.amount)}`);
+        toast.success(
+          `Bid amount updated to: ₹${formatIndianNumber(newBid.amount)}`
+        );
       } else {
         // Full bid update from actual team bid
         setAuctionData((prev) => ({
@@ -188,7 +190,7 @@ export default function AdminBiddingDashboard() {
             teamLogo: newBid.teamLogo,
           },
         }));
-    
+
         setBidAmount(newBid.amount);
         toast.success(`Bid updated: ₹${formatIndianNumber(newBid.amount)}`);
       }
@@ -460,6 +462,12 @@ export default function AdminBiddingDashboard() {
         current: newPos + 1,
         total: newQueue.length,
       });
+    });
+
+    // 13. Timer expired
+    socket.on("timer:expired", (payload) => {
+      console.log("Timer expired received:", payload);
+      toast.error("⏱ Timer expired — Bidding is now disabled");
     });
 
     // Cleanup
@@ -1673,28 +1681,27 @@ export default function AdminBiddingDashboard() {
             </motion.button>
           </div>
           <div className="mb-6">
-  {!isAutoBidEnabled ? (
-    <button
-      onClick={handleEnableAutoBid}
-      className="bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600 text-white px-5 py-2 rounded-xl shadow-md transition-all text-sm font-semibold"
-    >
-      Enable Auto Bid
-    </button>
-  ) : (
-    <div className="flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-lg">
-      <span className="text-sm sm:text-base text-green-300 font-semibold">
-        Auto Bid Enabled: + ₹{formatIndianNumber(autoBidRange)}
-      </span>
-      <button
-        onClick={handleDisableAutoBid}
-        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-      >
-        Disable
-      </button>
-    </div>
-  )}
-</div>
-
+            {!isAutoBidEnabled ? (
+              <button
+                onClick={handleEnableAutoBid}
+                className="bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600 text-white px-5 py-2 rounded-xl shadow-md transition-all text-sm font-semibold"
+              >
+                Enable Auto Bid
+              </button>
+            ) : (
+              <div className="flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-lg">
+                <span className="text-sm sm:text-base text-green-300 font-semibold">
+                  Auto Bid Enabled: + ₹{formatIndianNumber(autoBidRange)}
+                </span>
+                <button
+                  onClick={handleDisableAutoBid}
+                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Disable
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Right Sidebar (desktop only) */}

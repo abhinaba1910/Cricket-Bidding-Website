@@ -41,6 +41,8 @@ import UserBiddingPlayerList from "./pages/userBidding/UserBiddingPlayerList";
 import UserBiddingPlayerView from "./pages/userBidding/UserBiddingPlayerView";
 import EditAuction from "./pages/auctions/EditAuction";
 import GuideLines from "./pages/guidelines/UserGuideLines";
+import ForgotPassword from "./pages/forgot-Password/ForgotPassword";
+import ResetPassword from "./pages/forgot-Password/ResetPassword";
 function ProtectedLayout({ isAuthenticated }) {
   if (!isAuthenticated) return <AuthPage />;
   return (
@@ -113,7 +115,13 @@ function App() {
           path="/user-bidding-portal/user-bidding-player-view/:id"
           element={<UserBiddingPlayerView />}
         />
-        <Route path="/user-bidding-portal/:id/user-guidelines" element={<GuideLines/>}/>
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
+
+        <Route
+          path="/user-bidding-portal/:id/user-guidelines"
+          element={<GuideLines />}
+        />
         <Route element={<ProtectedLayout isAuthenticated={isAuthenticated} />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/create-auction" element={<CreateAuction />} />

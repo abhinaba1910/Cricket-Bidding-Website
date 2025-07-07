@@ -32,8 +32,13 @@ export default function EditTeam() {
       try {
         const res = await Api.get(`/get-team/${id}`);
         const t = res.data;
-        console.log(t);
-        reset({ teamName: t.teamName, shortName: t.shortName, purse: t.purse ,manager: t.manager || ""});
+        reset({
+          teamName: t.teamName,
+          shortName: t.shortName,
+          purse: t.purse,
+          remaining: t.remaining,
+          manager: t.manager || "",
+        });
         setPreview(t.logoUrl);
         setTeamPlayers(t.players || []); // Assuming populated players
       } catch (err) {
@@ -62,12 +67,12 @@ export default function EditTeam() {
       formData.append("teamName", data.teamName);
       formData.append("shortName", data.shortName);
       formData.append("purse", data.purse);
+      formData.append("remaining", data.remaining || 0);
       formData.append("retainedPlayers", JSON.stringify(retainedPlayers));
       formData.append("releasedPlayers", JSON.stringify(releasedPlayers));
       if (data.manager) {
         formData.append("manager", data.manager.trim());
       }
-      
 
       if (data.logoFile instanceof File) {
         formData.append("logoFile", data.logoFile);
@@ -220,18 +225,39 @@ export default function EditTeam() {
                 </p>
               )}
             </div>
+            {/* Remaining Purse Amount */}
+            <div>
+              <label className="block font-medium mb-1">
+                Remaining Purse Amount
+              </label>
+              <input
+                {...register("remaining", {
+                  valueAsNumber: true,
+                  min: { value: 0, message: "Must be non-negative" },
+                })}
+                type="number"
+                className="w-full border px-3 py-2 rounded"
+              />
+              <p className="text-gray-500 text-sm mt-1">
+                You can manually update remaining purse here if needed.
+              </p>
+            </div>
+
             {/* Manager Username (optional) */}
-<div>
-  <label className="block font-medium mb-1">Manager Username (Optional)</label>
-  <input
-    {...register("manager")}
-    placeholder="e.g., johndoe123"
-    className="w-full border px-3 py-2 rounded"
-  />
-  <p className="text-gray-500 text-sm mt-1">
-    Only this user will be allowed to select this team while joining auction.
-  </p>
-</div>
+            <div>
+              <label className="block font-medium mb-1">
+                Manager Username (Optional)
+              </label>
+              <input
+                {...register("manager")}
+                placeholder="e.g., johndoe123"
+                className="w-full border px-3 py-2 rounded"
+              />
+              <p className="text-gray-500 text-sm mt-1">
+                Only this user will be allowed to select this team while joining
+                auction.
+              </p>
+            </div>
 
             <div>
               <h2 className="text-lg font-semibold mb-2">Players</h2>
@@ -250,72 +276,80 @@ export default function EditTeam() {
                     </div>
 
                     <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4">
-  {/* Retain */}
-  {player.availability !== "Retained" && (
-    <label className="flex items-center gap-1 text-sm">
-      <input
-        type="checkbox"
-        onChange={(e) => {
-          if (e.target.checked) {
-            setRetainedPlayers((prev) => [
-              ...prev,
-              { playerId: player._id, price },
-            ]);
-            setReleasedPlayers((prev) =>
-              prev.filter((id) => id !== player._id)
-            );
-          } else {
-            setRetainedPlayers((prev) =>
-              prev.filter((p) => p.playerId !== player._id)
-            );
-          }
-        }}
-        checked={retainedPlayers.some((p) => p.playerId === player._id)}
-      />
-      Retain
-    </label>
-  )}
+                      {/* Retain */}
+                      {player.availability !== "Retained" && (
+                        <label className="flex items-center gap-1 text-sm">
+                          <input
+                            type="checkbox"
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setRetainedPlayers((prev) => [
+                                  ...prev,
+                                  { playerId: player._id, price },
+                                ]);
+                                setReleasedPlayers((prev) =>
+                                  prev.filter((id) => id !== player._id)
+                                );
+                              } else {
+                                setRetainedPlayers((prev) =>
+                                  prev.filter((p) => p.playerId !== player._id)
+                                );
+                              }
+                            }}
+                            checked={retainedPlayers.some(
+                              (p) => p.playerId === player._id
+                            )}
+                          />
+                          Retain
+                        </label>
+                      )}
 
-  {/* Retain Price */}
-  <input
-    type="number"
-    className="w-full md:w-24 border px-2 py-1 rounded text-sm"
-    value={
-      retainedPlayers.find((p) => p.playerId === player._id)?.price || ""
-    }
-    onChange={(e) => {
-      const val = parseInt(e.target.value) || 0;
-      setRetainedPlayers((prev) =>
-        prev.map((p) =>
-          p.playerId === player._id ? { ...p, price: val } : p
-        )
-      );
-    }}
-    disabled={
-      !retainedPlayers.some((p) => p.playerId === player._id)
-    }
-  />
+                      {/* Retain Price */}
+                      <input
+                        type="number"
+                        className="w-full md:w-24 border px-2 py-1 rounded text-sm"
+                        value={
+                          retainedPlayers.find((p) => p.playerId === player._id)
+                            ?.price || ""
+                        }
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 0;
+                          setRetainedPlayers((prev) =>
+                            prev.map((p) =>
+                              p.playerId === player._id
+                                ? { ...p, price: val }
+                                : p
+                            )
+                          );
+                        }}
+                        disabled={
+                          !retainedPlayers.some(
+                            (p) => p.playerId === player._id
+                          )
+                        }
+                      />
 
-  {/* Release */}
-  {releasedPlayers.includes(player._id) ? (
-    <span className="text-gray-500 italic text-sm">Released</span>
-  ) : (
-    <button
-      type="button"
-      onClick={() => {
-        setSelectedReleasePlayer({
-          id: player._id,
-          name: player.name,
-        });
-        setShowReleaseModal(true);
-      }}
-      className="text-red-500 hover:underline text-sm"
-    >
-      Release
-    </button>
-  )}
-</div>
-
+                      {/* Release */}
+                      {releasedPlayers.includes(player._id) ? (
+                        <span className="text-gray-500 italic text-sm">
+                          Released
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedReleasePlayer({
+                              id: player._id,
+                              name: player.name,
+                            });
+                            setShowReleaseModal(true);
+                          }}
+                          className="text-red-500 hover:underline text-sm"
+                        >
+                          Release
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
             </div>
