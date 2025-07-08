@@ -1801,9 +1801,6 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
         $set: {
           "currentBid.amount": newBidAmount,
           "currentBid.team": teamId,
-          // timerStartedAt: now2,
-          // timerExpiredAt: new Date(now2.getTime() + auction.timerDuration),
-          // isTimerActive: true,
         },
         $push: {
           biddingHistory: {
@@ -1830,16 +1827,6 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
     trackSpamAttempt(teamId, auctionId, true);
 
     const io = req.app.get("io");
-
-    // Emit timer reset
-    // io.to(auctionId).emit("timer:update", {
-    //   auctionId,
-    //   timerStartedAt: now2,
-    //   timerExpiredAt: new Date(now2.getTime() + auction.timerDuration),
-    //   isTimerActive: true,
-    //   duration: auction.timerDuration,
-    //   resetTimer: true,
-    // });
 
     // Emit bid placed
     io.to(auctionId).emit("bid:placed", {

@@ -182,7 +182,7 @@ export default function UserBiddingDashboardDesktop() {
     remainingTime: 0,
     startedAt: null,
     expiresAt: null,
-    duration: 10000, // 10 seconds
+    duration: 20000,
   });
 
   const [isBidDisabled, setIsBidDisabled] = useState(false);
@@ -822,6 +822,7 @@ export default function UserBiddingDashboardDesktop() {
       socket.off("bid:updated");
       socket.off("bid:placed");
       socket.off("timer:update");
+      socket.off("timer:expired");
     };
   }, [id, navigate]); // Removed auctionData dependency to prevent socket recreation
 

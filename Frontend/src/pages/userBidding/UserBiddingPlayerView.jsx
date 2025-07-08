@@ -10,7 +10,12 @@ import {
   FiGlobe,
   FiUser,
 } from "react-icons/fi";
-import { FaRunning, FaBaseballBall, FaMedal, FaRupeeSign } from "react-icons/fa";
+import {
+  FaRunning,
+  FaBaseballBall,
+  FaMedal,
+  FaRupeeSign,
+} from "react-icons/fa";
 import MobileStickyNav from "../../components/layout/MobileStickyNav";
 
 const PageWrapper = ({ children }) => (
@@ -43,6 +48,7 @@ export default function UserBiddingPlayerView() {
     const fetchPlayer = async () => {
       try {
         const res = await Api.get(`/get-player/${playerId}`);
+        console.log(res.data);
         setPlayer(res.data);
       } catch (err) {
         console.error("Error fetching player:", err);
@@ -96,6 +102,7 @@ export default function UserBiddingPlayerView() {
     strikeRate,
     matchesPlayed,
     points,
+    isCapped,
     highestScore,
   } = player;
 
@@ -150,7 +157,7 @@ export default function UserBiddingPlayerView() {
             </div>
 
             <div className="pt-20 pb-6 px-6 text-center">
-            <div
+              <div
                 className={`inline-block px-3 py-1 rounded-full text-xs font-semibold text-white mb-3 ${
                   roleColors[role] || roleColors.default
                 }`}
@@ -229,6 +236,11 @@ export default function UserBiddingPlayerView() {
                   icon={<FiUser className="text-pink-500" />}
                   title="Grade"
                   value={grade || "N/A"}
+                />
+                <DetailItem
+                  icon={<FaMedal className="text-blue-500" />}
+                  title="Status"
+                  value={isCapped ? "Internationally Capped" : "Uncapped"}
                 />
               </div>
             </motion.div>

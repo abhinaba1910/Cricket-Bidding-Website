@@ -480,6 +480,7 @@ export default function AdminBiddingDashboard() {
       socket.off("rtm:request");
       socket.off("rtm:approved");
       socket.off("rtm:rejected");
+      socket.off("timer:expired");
     };
   }, [id, isAutoBidEnabled, autoBidRange]);
 

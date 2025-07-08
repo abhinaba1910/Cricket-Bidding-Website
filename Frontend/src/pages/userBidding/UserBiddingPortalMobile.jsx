@@ -242,7 +242,7 @@ export default function UserBiddingDashboardMobile() {
     remainingTime: 0,
     startedAt: null,
     expiresAt: null,
-    duration: 10000, // 10 seconds
+    duration: 20000, 
   });
 
   const calculateRemainingTime = (expiresAt) => {
@@ -1194,13 +1194,16 @@ export default function UserBiddingDashboardMobile() {
                   : "--/--"}
               </p>
             </motion.div>
+            <SmallPlayerCard player={currentPlayer} />
 
             {/* <motion.div
               className="bg-gradient-to-r from-indigo-900/50 to-blue-800/50 rounded-xl p-4 shadow-lg w-full max-w-md text-center"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
             >
+            
+              <TimerDisplay />
+
               <h3 className="text-xs font-medium mb-1">Bid Now</h3>
 
               {isBanned ? (
@@ -1214,7 +1217,7 @@ export default function UserBiddingDashboardMobile() {
                       {banInfo?.remainingMinutes || 0} more minutes
                     </p>
                     <p className="text-red-200 text-xs mt-1 opacity-75">
-                      Reason: Spamming Bid Button
+                      Reason: Excessive bid attempts
                     </p>
                   </div>
                   <button
@@ -1226,9 +1229,11 @@ export default function UserBiddingDashboardMobile() {
                 </div>
               ) : (
                 <BidButton
-                  amount={nextBidAmount}
                   onClick={handleBid}
-                  disabled={isBidding}
+                  disabled={isBidding || isBanned || isBidDisabled}
+                  className={
+                    isBidDisabled ? "opacity-50 cursor-not-allowed" : ""
+                  }
                 />
               )}
 
@@ -1239,14 +1244,21 @@ export default function UserBiddingDashboardMobile() {
                   : "--/--"}
               </p>
 
-              {isBanned && (
+              {(isBanned || isBidDisabled) && (
                 <p className="mt-2 text-xs text-red-400">
-                  You can still watch the auction but cannot place bids
+                  {isBanned
+                    ? "You can still watch the auction but cannot place bids"
+                    : "Bidding disabled - Timer expired"}
                 </p>
               )}
             </motion.div> */}
+          </div>
+        </div>
 
-            <motion.div
+        {/* ─── MOBILE: Bidding / Stats Sections ─────────────── */}
+        <AnimatePresence mode="wait">
+
+        <motion.div
               className="bg-gradient-to-r from-indigo-900/50 to-blue-800/50 rounded-xl p-4 shadow-lg w-full max-w-md text-center"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1302,11 +1314,6 @@ export default function UserBiddingDashboardMobile() {
                 </p>
               )}
             </motion.div>
-          </div>
-        </div>
-
-        {/* ─── MOBILE: Bidding / Stats Sections ─────────────── */}
-        <AnimatePresence mode="wait">
           {/* Bidding Tab */}
           {mobileTab === "bid" && (
             <motion.div
@@ -1317,7 +1324,7 @@ export default function UserBiddingDashboardMobile() {
               key="bid-tab"
             >
               {/* Small Player Card */}
-              <SmallPlayerCard player={currentPlayer} />
+              {/* <SmallPlayerCard player={currentPlayer} /> */}
 
               {/* Current Bid Section */}
               <motion.div

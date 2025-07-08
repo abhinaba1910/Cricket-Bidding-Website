@@ -101,7 +101,9 @@ export default function AuctionsInfo() {
   // Initialize socket connection
   useEffect(() => {
     // const socketInstance = io("http://localhost:6001");
-    const socketInstance = io("https://cricket-bidding-website-production.up.railway.app");
+    const socketInstance = io(
+      "https://cricket-bidding-website-production.up.railway.app"
+    );
     setSocket(socketInstance);
 
     // Listen for auction timer events
@@ -255,13 +257,13 @@ export default function AuctionsInfo() {
           </div>
           <Link
             to="/create-auction"
-            className="md:hidden inline-flex items-center px-4 py-2 bg-teal-600 text-white rounded shadow hover:bg-teal-700 whitespace-nowrap"
+            className="inline-flex items-center px-4 py-2 bg-teal-600 text-white rounded shadow hover:bg-teal-700 whitespace-nowrap"
           >
-            <FiPlus className="mr-2" />
+            <FiPlus className="mr-2" /> Create Auction
           </Link>
         </div>
       </div>
-  
+
       {/* Tabs */}
       <div className="flex space-x-4 mb-6 overflow-x-auto">
         {TABS.map((tab) => (
@@ -278,7 +280,7 @@ export default function AuctionsInfo() {
           </button>
         ))}
       </div>
-  
+
       {/* Auction Cards */}
       {filteredAuctions.length > 0 ? (
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
@@ -286,7 +288,7 @@ export default function AuctionsInfo() {
             const canStart =
               a.status === "upcoming" && now >= a.startTime && now <= a.endTime;
             const hasExpired = a.status === "upcoming" && now > a.endTime;
-  
+
             return (
               <div
                 key={a.id}
@@ -305,7 +307,8 @@ export default function AuctionsInfo() {
                           {a.name}
                         </h3>
                         <p className="text-sm text-gray-500">
-                          {formatISTDate(a.startTime)} · {formatISTTime(a.startTime)}
+                          {formatISTDate(a.startTime)} ·{" "}
+                          {formatISTTime(a.startTime)}
                         </p>
                       </div>
                     </div>
@@ -317,7 +320,7 @@ export default function AuctionsInfo() {
                       {TABS.find((t) => t.key === a.status)?.label}
                     </span>
                   </div>
-  
+
                   <div className="text-sm text-gray-600 mt-2">
                     <p>
                       <strong>Join Code:</strong> {a.joinCode}
@@ -329,21 +332,24 @@ export default function AuctionsInfo() {
                       <strong>Teams:</strong> {a.selectedTeams?.length || 0}
                     </p>
                   </div>
-  
+
                   <p className="text-sm text-gray-700 mt-2 line-clamp-3">
                     {a.description}
                   </p>
-  
+
                   {hasExpired && (
                     <p className="text-red-600 text-sm font-semibold mt-2">
                       ⚠️ Auction window expired
                     </p>
                   )}
-  
+
                   {a.status === "upcoming" && a.countdownStartedAt && (
-                    <AuctionTimer auction={a} onTimerExpired={handleTimerExpired} />
+                    <AuctionTimer
+                      auction={a}
+                      onTimerExpired={handleTimerExpired}
+                    />
                   )}
-  
+
                   {canStart && (
                     <button
                       onClick={() => handleStartAuction(a.id, a.status)}
@@ -352,7 +358,7 @@ export default function AuctionsInfo() {
                       Start Auction
                     </button>
                   )}
-  
+
                   {(a.status === "live" || joinedAuctions[a.id]) && (
                     <button
                       onClick={() =>
@@ -364,7 +370,7 @@ export default function AuctionsInfo() {
                     </button>
                   )}
                 </div>
-  
+
                 <div className="bg-gray-50 px-4 py-3 border-t flex justify-between items-center">
                   <button
                     onClick={() => setViewAuction(a)}
@@ -372,7 +378,7 @@ export default function AuctionsInfo() {
                   >
                     <FiEye className="mr-1" /> View
                   </button>
-  
+
                   <Link
                     to={`/edit-auction/${a.id}`}
                     className="text-sm bg-yellow-100 text-yellow-800 font-semibold px-3 py-1.5 rounded hover:bg-yellow-200 transition"
@@ -387,7 +393,7 @@ export default function AuctionsInfo() {
       ) : (
         <p className="text-gray-500">No {activeTab} auctions found.</p>
       )}
-  
+
       {/* View Modal */}
       {viewAuction && (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
@@ -398,7 +404,7 @@ export default function AuctionsInfo() {
             >
               ✕
             </button>
-  
+
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold text-gray-800">
                 {viewAuction.name}
@@ -408,7 +414,7 @@ export default function AuctionsInfo() {
                 {formatISTTime(viewAuction.startTime)}
               </p>
             </div>
-  
+
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-gray-800 mb-2">
                 📝 Description
@@ -417,7 +423,7 @@ export default function AuctionsInfo() {
                 {viewAuction.description || "No description provided."}
               </p>
             </div>
-  
+
             {/* Players */}
             <details className="mb-4 rounded-lg border border-gray-200 overflow-hidden">
               <summary className="bg-teal-50 px-4 py-2 cursor-pointer font-medium text-teal-700 hover:bg-teal-100 transition-all">
@@ -435,7 +441,7 @@ export default function AuctionsInfo() {
                 )}
               </div>
             </details>
-  
+
             {/* Teams */}
             <details className="mb-2 rounded-lg border border-gray-200 overflow-hidden">
               <summary className="bg-indigo-50 px-4 py-2 cursor-pointer font-medium text-indigo-700 hover:bg-indigo-100 transition-all">
@@ -456,9 +462,8 @@ export default function AuctionsInfo() {
           </div>
         </div>
       )}
-  
+
       <MobileStickyNav />
     </div>
   );
-  
 }
