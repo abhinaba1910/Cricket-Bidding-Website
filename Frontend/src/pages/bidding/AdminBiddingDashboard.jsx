@@ -553,7 +553,7 @@ export default function AdminBiddingDashboard() {
     { value: 40000000, label: "₹4,00,00,000 (4 Cr)" },
     { value: 50000000, label: "₹5,00,00,000 (5 Cr)" },
     { value: 100000000, label: "₹10,00,00,000 (10 Cr)" },
-  ];
+  ];  
 
   // Initial fetch once
   useEffect(() => {

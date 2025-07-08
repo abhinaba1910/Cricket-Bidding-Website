@@ -12,6 +12,7 @@ import { io } from "socket.io-client";
 import { formatIndianNumber } from "../../types/formatIndianNumber";
 import { IoIosHelpCircle } from "react-icons/io";
 import { ArrowLeft } from "lucide-react";
+import confetti from "canvas-confetti";
 const TeamInfoCard = ({ team }) => {
   if (!team) return null;
 
@@ -160,6 +161,7 @@ export default function UserBiddingDashboardMobile() {
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [showCelebration, setShowCelebration] = useState(false);
   const socketRef = useRef(null);
   const emoteTimeoutRef = useRef(null);
   const userTeamIdRef = useRef(null); // Added userTeamIdRef
@@ -379,76 +381,6 @@ export default function UserBiddingDashboardMobile() {
     }
   };
 
-  // const handleBid = async () => {
-  //   const playerId = auctionData?.currentPlayer?._id;
-  //   const teamId = auctionData?.team?.teamId;
-  //   const visibleBid = auctionData?.bidAmount;
-
-  //   if (!playerId || !teamId) {
-  //     toast.error("Missing team or player information.");
-  //     return;
-  //   }
-  //   if (!visibleBid || visibleBid <= 0) {
-  //     toast.error("Invalid bid amount.");
-  //     return;
-  //   }
-
-  //   // Check if team is banned
-  //   if (isBanned) {
-  //     toast.error(
-  //       `Your team is banned from bidding. Please wait ${
-  //         banInfo?.remainingMinutes || 0
-  //       } minutes.`
-  //     );
-  //     return;
-  //   }
-
-  //   // Prevent multiple simultaneous clicks
-  //   if (isBidding) {
-  //     return;
-  //   }
-
-  //   const payload = {
-  //     playerId,
-  //     teamId,
-  //     bidAmount: visibleBid,
-  //   };
-
-  //   try {
-  //     setIsBidding(true);
-  //     await Api.post(`/place-bid/${id}`, payload);
-  //     toast.success("Bid Placed Successfully");
-  //     fetchAuctionData();
-  //     setEmoteToPlay("HandRaise");
-  //     setTimeout(() => setEmoteToPlay(null), 2000);
-  //   } catch (error) {
-  //     console.error("Failed to place bid:", error);
-  //     const errorMessage = error.response?.data?.error || "Failed to place bid";
-
-  //     // Handle different error types
-  //     if (error.response?.status === 429) {
-  //       // Team is banned
-  //       const banData = error.response.data;
-  //       setIsBanned(true);
-  //       setBanInfo({
-  //         remainingMinutes: Math.ceil(
-  //           (banData.bannedUntil - Date.now()) / 60000
-  //         ),
-  //         bannedUntil: banData.bannedUntil,
-  //       });
-  //       toast.error(errorMessage, { duration: 5000 });
-  //     } else if (error.response?.status === 409) {
-  //       // Race condition
-  //       toast.warning("Someone else just placed a bid. Refreshing...");
-  //       fetchAuctionData();
-  //     } else {
-  //       toast.error(errorMessage);
-  //     }
-  //   } finally {
-  //     setIsBidding(false);
-  //   }
-  // };
-
   const handleBid = async () => {
     const playerId = auctionData?.currentPlayer?._id;
     const teamId = auctionData?.team?.teamId;
@@ -590,6 +522,32 @@ export default function UserBiddingDashboardMobile() {
     }
   };
 
+   useEffect(() => {
+      if (showCelebration) {
+        const duration = 3000;
+        const end = Date.now() + duration;
+    
+        (function frame() {
+          confetti({
+            particleCount: 5,
+            angle: 60,
+            spread: 55,
+            origin: { x: 0 },
+          });
+          confetti({
+            particleCount: 5,
+            angle: 120,
+            spread: 55,
+            origin: { x: 1 },
+          });
+    
+          if (Date.now() < end) {
+            requestAnimationFrame(frame);
+          }
+        })();
+      }
+    }, [showCelebration]);
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -630,25 +588,60 @@ export default function UserBiddingDashboardMobile() {
     });
 
     // Enhanced player:sold event with emote logic
+    // socket.on("player:sold", (payload) => {
+    //   console.log("Received player:sold", payload);
+    //   const winnerId = payload.soldTo;
+    //   const teamId = userTeamIdRef.current;
+    //   if (teamId && winnerId) {
+    //     if (winnerId === teamId) {
+    //       setEmoteToPlay("BidWon");
+    //     } else {
+    //       setEmoteToPlay("LostBid");
+    //     }
+    //     if (emoteTimeoutRef.current) {
+    //       clearTimeout(emoteTimeoutRef.current);
+    //     }
+    //     emoteTimeoutRef.current = setTimeout(() => {
+    //       setEmoteToPlay(null);
+    //       emoteTimeoutRef.current = null;
+    //     }, 3000);
+    //   }
+    //   fetchAuctionData();
+    //   if (payload.amount != null) {
+    //     toast.success(`Sold for ₹${formatIndianNumber(payload.amount)}`);
+    //   } else {
+    //     toast.success("Player sold");
+    //   }
+    // });
+
     socket.on("player:sold", (payload) => {
       console.log("Received player:sold", payload);
       const winnerId = payload.soldTo;
       const teamId = userTeamIdRef.current;
+    
       if (teamId && winnerId) {
         if (winnerId === teamId) {
           setEmoteToPlay("BidWon");
+          setShowCelebration(true); // 🎉 Start celebration
         } else {
           setEmoteToPlay("LostBid");
+          setShowCelebration(false); // 🛑 No celebration
         }
+    
+        // Reset emote after 3 seconds
         if (emoteTimeoutRef.current) {
           clearTimeout(emoteTimeoutRef.current);
         }
+    
         emoteTimeoutRef.current = setTimeout(() => {
           setEmoteToPlay(null);
+          setShowCelebration(false);
           emoteTimeoutRef.current = null;
         }, 3000);
       }
+    
       fetchAuctionData();
+    
       if (payload.amount != null) {
         toast.success(`Sold for ₹${formatIndianNumber(payload.amount)}`);
       } else {

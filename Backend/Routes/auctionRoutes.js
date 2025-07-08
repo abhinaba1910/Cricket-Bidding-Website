@@ -98,7 +98,7 @@ router.get("/get-auction", AuthMiddleWare, async (req, res) => {
     }
 
     const auctions = await Auction.find({ createdBy: userId })
-      .populate("selectedTeams.team", "name logo")
+    .populate("selectedTeams.team", "teamName shortName logoUrl")
       .populate("selectedPlayers", "name photo")
       .sort({ createdAt: -1 });
 
@@ -149,14 +149,27 @@ router.get("/get-auction", AuthMiddleWare, async (req, res) => {
       shortName: a.shortName,
       logo: a.auctionImage,
       description: a.description,
-      startDate: a.startDate, // Full ISO string in UTC
+      startDate: a.startDate,
       status: a.status,
-      selectedTeams: a.selectedTeams,
-      selectedPlayers: a.selectedPlayers,
       joinCode: a.shortName,
       createdAt: a.createdAt,
-      countdownStartedAt: a.countdownStartedAt, // Include countdown start time
+      countdownStartedAt: a.countdownStartedAt,
+      selectedPlayers: a.selectedPlayers.map((p) => ({
+        id: p._id,
+        name: p.name,
+        photo: p.photo,
+      })),
+      selectedTeams: a.selectedTeams.map((t) => ({
+        id: t.team?._id || null,
+        name: t.team?.teamName || "Unnamed",
+        shortName: t.team?.shortName || "",
+        logo: t.team?.logoUrl || "",
+        manager: t.manager || null,
+        avatar: t.avatar || null,
+        rtmCount: t.rtmCount || 0,
+      })),
     }));
+    
 
     res.json({ auctions: normalized });
   } catch (error) {
@@ -509,7 +522,7 @@ router.get("/get-all-auctions", AuthMiddleWare, async (req, res) => {
   try {
     const auctions = await Auction.find()
       .populate("selectedPlayers", "name photo")
-      .populate("selectedTeams", "name logo")
+      .populate("selectedTeams.team", "teamName shortName logoUrl")
       .sort({ createdAt: -1 });
 
     const now = new Date();
@@ -531,7 +544,6 @@ router.get("/get-all-auctions", AuthMiddleWare, async (req, res) => {
         minute: "2-digit",
         hour12: true,
       });
-
       return {
         id: auction._id,
         name: auction.auctionName,
@@ -541,11 +553,24 @@ router.get("/get-all-auctions", AuthMiddleWare, async (req, res) => {
         date: istDate,
         time: istTime,
         status: auction.status,
-        selectedTeams: auction.selectedTeams,
-        selectedPlayers: auction.selectedPlayers,
         joinCode: auction.shortName,
         createdAt: auction.createdAt,
+        selectedPlayers: auction.selectedPlayers.map((p) => ({
+          id: p._id,
+          name: p.name,
+          photo: p.photo,
+        })),
+        selectedTeams: auction.selectedTeams.map((entry) => ({
+          id: entry.team?._id,
+          name: entry.team?.teamName,
+          shortName: entry.team?.shortName,
+          logo: entry.team?.logoUrl,
+          manager: entry.manager,       // Optional
+          avatar: entry.avatar,         // Optional
+          rtmCount: entry.rtmCount,     // Optional
+        })),
       };
+      
     });
 
     res.json({ auctions: processedAuctions });

@@ -1523,16 +1523,6 @@ router.patch("/update-bid/:auctionId", async (req, res) => {
 
     const io = req.app.get("io");
 
-    // Emit timer update
-    io.to(`${auctionId}`).emit("timer:update", {
-      auctionId,
-      timerStartedAt: updateData.timerStartedAt,
-      timerExpiredAt: updateData.timerExpiredAt,
-      isTimerActive: updateData.isTimerActive,
-      duration: auction.timerDuration,
-      resetTimer: shouldResetTimer,
-    });
-
     // Emit bid update
     io.to(`${auctionId}`).emit("bid:updated", {
       auctionId,
@@ -1545,6 +1535,16 @@ router.patch("/update-bid/:auctionId", async (req, res) => {
       timestamp: new Date(),
       systemGenerated: true,
       isAmountUpdateOnly: true,
+    });
+
+    // Emit timer update
+    io.to(`${auctionId}`).emit("timer:update", {
+      auctionId,
+      timerStartedAt: updateData.timerStartedAt,
+      timerExpiredAt: updateData.timerExpiredAt,
+      isTimerActive: updateData.isTimerActive,
+      duration: auction.timerDuration,
+      resetTimer: shouldResetTimer,
     });
 
     res.json({
@@ -1801,9 +1801,9 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
         $set: {
           "currentBid.amount": newBidAmount,
           "currentBid.team": teamId,
-          timerStartedAt: now2,
-          timerExpiredAt: new Date(now2.getTime() + auction.timerDuration),
-          isTimerActive: true,
+          // timerStartedAt: now2,
+          // timerExpiredAt: new Date(now2.getTime() + auction.timerDuration),
+          // isTimerActive: true,
         },
         $push: {
           biddingHistory: {
@@ -1832,14 +1832,14 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
     const io = req.app.get("io");
 
     // Emit timer reset
-    io.to(auctionId).emit("timer:update", {
-      auctionId,
-      timerStartedAt: now2,
-      timerExpiredAt: new Date(now2.getTime() + auction.timerDuration),
-      isTimerActive: true,
-      duration: auction.timerDuration,
-      resetTimer: true,
-    });
+    // io.to(auctionId).emit("timer:update", {
+    //   auctionId,
+    //   timerStartedAt: now2,
+    //   timerExpiredAt: new Date(now2.getTime() + auction.timerDuration),
+    //   isTimerActive: true,
+    //   duration: auction.timerDuration,
+    //   resetTimer: true,
+    // });
 
     // Emit bid placed
     io.to(auctionId).emit("bid:placed", {

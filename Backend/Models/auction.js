@@ -114,7 +114,7 @@ const auctionSchema = new mongoose.Schema(
     },
     timerDuration: {
       type: Number,
-      default: 10000, // 10 seconds in milliseconds
+      default: 20000, // 15 seconds in milliseconds
     },
     isTimerActive: {
       type: Boolean,
