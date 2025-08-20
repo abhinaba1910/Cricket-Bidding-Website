@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useSwipeable } from "react-swipeable";
 import BidButton from "../../components/ui/BidButton";
 import CharacterCard from "../characters/CharacterCard";
-import toast from "react-hot-toast";
+// import toast from "react-hot-toast";
 import { FaUserTie, FaWallet, FaUsers } from "react-icons/fa";
 import { GiMoneyStack, GiCardRandom, GiTeamIdea } from "react-icons/gi";
 import Api from "../../userManagement/Api";
@@ -123,7 +123,7 @@ function SmallPlayerCard({ player }) {
           <span className="text-2xl">👤</span>
         )}
       </motion.div>
-      <div className="flex flex-col">
+      {/* <div className="flex flex-col">
         <h2 className="text-lg font-bold truncate">
           {currentPlayer.name || "--/--"}
         </h2>
@@ -133,6 +133,33 @@ function SmallPlayerCard({ player }) {
           </span>
           <span className="text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full shadow-sm">
             {currentPlayer.points || "--/--"}
+          </span>
+
+          <span className="text-xs bg-amber-600/30 px-2 py-1 rounded-full font-semibold">
+            {currentPlayer && currentPlayer.basePrice != null
+              ? `₹${formatIndianNumber(currentPlayer.basePrice)}`
+              : "--"}
+          </span>
+        </div>
+      </div> */}
+
+      <div className="flex flex-col w-0 flex-1">
+        {" "}
+        {/* added w-0 flex-1 for width control */}
+        <h2 className="text-lg font-bold break-words max-w-[180px] sm:max-w-full">
+          {currentPlayer.name || "--/--"}
+        </h2>
+        <div className="flex items-center gap-2 mt-1 flex-wrap">
+          <span className="text-xs bg-blue-600/30 px-2 py-1 rounded-full">
+            {currentPlayer.role || "--/--"}
+          </span>
+          <span className="text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full shadow-sm">
+            {currentPlayer.points || "--/--"}
+          </span>
+          <span className="text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full shadow-sm">
+            {currentPlayer.country && currentPlayer.country !== "INDIA"
+              ? "✈️"
+              : null}
           </span>
 
           <span className="text-xs bg-amber-600/30 px-2 py-1 rounded-full font-semibold">
@@ -169,8 +196,8 @@ export default function UserBiddingDashboardMobile() {
   useEffect(() => {
     const keepWarm = () => {
       fetch(
-        "https://cricket-bidding-website-production.up.railway.app/health"
-        // "http://localhost:6001/health"
+        // "https://cricket-bidding-website-production.up.railway.app/health"
+        "http://localhost:6001/health"
       ).catch((err) => console.log("Ping failed:", err));
     };
 
@@ -242,7 +269,7 @@ export default function UserBiddingDashboardMobile() {
     remainingTime: 0,
     startedAt: null,
     expiresAt: null,
-    duration: 20000, 
+    duration: 20000,
   });
 
   const calculateRemainingTime = (expiresAt) => {
@@ -376,7 +403,7 @@ export default function UserBiddingDashboardMobile() {
       }
     } catch (error) {
       console.error("Error fetching auction data:", error);
-      toast.error("Error fetching auction data");
+      // toast.error("Error fetching auction data");
       setError(error);
     }
   };
@@ -387,29 +414,29 @@ export default function UserBiddingDashboardMobile() {
     const visibleBid = auctionData?.bidAmount?.amount || auctionData?.bidAmount; // Handle both cases
 
     if (!playerId || !teamId) {
-      toast.error("Missing team or player information.");
+      // toast.error("Missing team or player information.");
       return;
     }
     if (!visibleBid || visibleBid <= 0) {
-      toast.error("Invalid bid amount.");
+      // toast.error("Invalid bid amount.");
       return;
     }
 
     // Check if bidding is disabled due to timer
     if (isBidDisabled) {
-      toast.error(
-        "Bidding is disabled. Timer has expired or wait for price update."
-      );
+      // toast.error(
+      //   "Bidding is disabled. Timer has expired or wait for price update."
+      // );
       return;
     }
 
     // Check if team is banned
     if (isBanned) {
-      toast.error(
-        `Your team is banned from bidding. Please wait ${
-          banInfo?.remainingMinutes || 0
-        } minutes.`
-      );
+      // toast.error(
+      //   `Your team is banned from bidding. Please wait ${
+      //     banInfo?.remainingMinutes || 0
+      //   } minutes.`
+      // );
       return;
     }
 
@@ -427,7 +454,7 @@ export default function UserBiddingDashboardMobile() {
     try {
       setIsBidding(true);
       await Api.post(`/place-bid/${id}`, payload);
-      toast.success("Bid Placed Successfully");
+      // toast.success("Bid Placed Successfully");
       fetchAuctionData();
       setEmoteToPlay("HandRaise");
       setTimeout(() => setEmoteToPlay(null), 2000);
@@ -446,17 +473,17 @@ export default function UserBiddingDashboardMobile() {
           ),
           bannedUntil: banData.bannedUntil,
         });
-        toast.error(errorMessage, { duration: 5000 });
+        // toast.error(errorMessage, { duration: 5000 });
       } else if (error.response?.status === 409) {
         // Race condition
-        toast.warning("Someone else just placed a bid. Refreshing...");
+        // toast.warning("Someone else just placed a bid. Refreshing...");
         fetchAuctionData();
       } else if (error.response?.data?.timerExpired) {
         // Timer expired
-        toast.error("Timer has expired. Wait for the next bid amount update.");
+        // toast.error("Timer has expired. Wait for the next bid amount update.");
         setIsBidDisabled(true);
       } else {
-        toast.error(errorMessage);
+        // toast.error(errorMessage);
       }
     } finally {
       setIsBidding(false);
@@ -473,13 +500,13 @@ export default function UserBiddingDashboardMobile() {
 
     if (rtmCount <= 0) {
       console.log("❌ No RTMs left");
-      toast.error("No RTMs left");
+      // toast.error("No RTMs left");
       return;
     }
 
     if (rtmRequestPending) {
       console.log("❌ RTM request already pending");
-      toast.error("RTM request already pending approval");
+      // toast.error("RTM request already pending approval");
       return;
     }
 
@@ -487,7 +514,7 @@ export default function UserBiddingDashboardMobile() {
 
     if (!myTeamId) {
       console.log("❌ No team ID found");
-      toast.error("Team ID not found");
+      // toast.error("Team ID not found");
       return;
     }
 
@@ -507,9 +534,9 @@ export default function UserBiddingDashboardMobile() {
 
       if (response.data.status === "pending") {
         // setRtmRequestPending(true); // Will be set by socket event
-        toast.success("RTM request sent for admin approval!");
+        // toast.success("RTM request sent for admin approval!");
       } else {
-        toast.success("RTM successful!");
+        // toast.success("RTM successful!");
         setRtmCount((prev) => prev - 1);
       }
 
@@ -518,35 +545,35 @@ export default function UserBiddingDashboardMobile() {
       console.error("❌ RTM error:", err);
       console.error("Error response:", err.response?.data);
       console.error("Error status:", err.response?.status);
-      toast.error(err.response?.data?.message || "Failed to use RTM");
+      // toast.error(err.response?.data?.message || "Failed to use RTM");
     }
   };
 
-   useEffect(() => {
-      if (showCelebration) {
-        const duration = 3000;
-        const end = Date.now() + duration;
-    
-        (function frame() {
-          confetti({
-            particleCount: 5,
-            angle: 60,
-            spread: 55,
-            origin: { x: 0 },
-          });
-          confetti({
-            particleCount: 5,
-            angle: 120,
-            spread: 55,
-            origin: { x: 1 },
-          });
-    
-          if (Date.now() < end) {
-            requestAnimationFrame(frame);
-          }
-        })();
-      }
-    }, [showCelebration]);
+  useEffect(() => {
+    if (showCelebration) {
+      const duration = 3000;
+      const end = Date.now() + duration;
+
+      (function frame() {
+        confetti({
+          particleCount: 5,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0 },
+        });
+        confetti({
+          particleCount: 5,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1 },
+        });
+
+        if (Date.now() < end) {
+          requestAnimationFrame(frame);
+        }
+      })();
+    }
+  }, [showCelebration]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -555,15 +582,10 @@ export default function UserBiddingDashboardMobile() {
       return;
     }
 
-    const socket = io("https://cricket-bidding-website-production.up.railway.app", {
-    // const socket = io("http://localhost:6001", {
+    // const socket = io("https://cricket-bidding-website-production.up.railway.app", {
+    const socket = io("http://localhost:6001", {
       auth: { token },
       transports: ["websocket"],
-      // timeout: 5000,
-      // reconnection: true,
-      // reconnectionDelay: 1000,
-      // reconnectionAttempts: 5,
-      // maxReconnectionAttempts: 5,
     });
     socketRef.current = socket;
 
@@ -573,52 +595,16 @@ export default function UserBiddingDashboardMobile() {
         socket.emit("join-auction", id);
       }
     });
-    // socket.on("connect_error", (error) => {
-    //   console.error("Socket connection error:", error);
-    //   toast.error("Connection issues detected. Retrying...");
-    // });
-
-    // socket.on("reconnect", (attemptNumber) => {
-    //   console.log("Socket reconnected after", attemptNumber, "attempts");
-    //   toast.success("Connection restored!");
-    // });
 
     socket.on("disconnect", (reason) => {
       console.log("Socket disconnected:", reason);
     });
 
-    // Enhanced player:sold event with emote logic
-    // socket.on("player:sold", (payload) => {
-    //   console.log("Received player:sold", payload);
-    //   const winnerId = payload.soldTo;
-    //   const teamId = userTeamIdRef.current;
-    //   if (teamId && winnerId) {
-    //     if (winnerId === teamId) {
-    //       setEmoteToPlay("BidWon");
-    //     } else {
-    //       setEmoteToPlay("LostBid");
-    //     }
-    //     if (emoteTimeoutRef.current) {
-    //       clearTimeout(emoteTimeoutRef.current);
-    //     }
-    //     emoteTimeoutRef.current = setTimeout(() => {
-    //       setEmoteToPlay(null);
-    //       emoteTimeoutRef.current = null;
-    //     }, 3000);
-    //   }
-    //   fetchAuctionData();
-    //   if (payload.amount != null) {
-    //     toast.success(`Sold for ₹${formatIndianNumber(payload.amount)}`);
-    //   } else {
-    //     toast.success("Player sold");
-    //   }
-    // });
-
     socket.on("player:sold", (payload) => {
       console.log("Received player:sold", payload);
       const winnerId = payload.soldTo;
       const teamId = userTeamIdRef.current;
-    
+
       if (teamId && winnerId) {
         if (winnerId === teamId) {
           setEmoteToPlay("BidWon");
@@ -627,25 +613,25 @@ export default function UserBiddingDashboardMobile() {
           setEmoteToPlay("LostBid");
           setShowCelebration(false); // 🛑 No celebration
         }
-    
+
         // Reset emote after 3 seconds
         if (emoteTimeoutRef.current) {
           clearTimeout(emoteTimeoutRef.current);
         }
-    
+
         emoteTimeoutRef.current = setTimeout(() => {
           setEmoteToPlay(null);
           setShowCelebration(false);
           emoteTimeoutRef.current = null;
         }, 3000);
       }
-    
+
       fetchAuctionData();
-    
+
       if (payload.amount != null) {
-        toast.success(`Sold for ₹${formatIndianNumber(payload.amount)}`);
+        // toast.success(`Sold for ₹${formatIndianNumber(payload.amount)}`);
       } else {
-        toast.success("Player sold");
+        // toast.success("Player sold");
       }
     });
 
@@ -672,7 +658,7 @@ export default function UserBiddingDashboardMobile() {
             teamLogo: null,
           },
         }));
-        toast.info("No more players in the queue.");
+        // toast.info("No more players in the queue.");
       }
 
       setCurrentQueuePosition(newPos);
@@ -683,56 +669,60 @@ export default function UserBiddingDashboardMobile() {
       fetchAuctionData();
     });
 
-    // Existing bid events
-    // socket.on("bid:updated", (payload) => {
-    //   console.log("bid:updated", payload);
-    //   fetchAuctionData();
-    //   toast.success(
-    //     `Bid Amount Updated To₹${formatIndianNumber(
-    //       payload.newBid.amount
-    //     )} You can Bid Now`
-    //   );
-    // });
-
     socket.on("bid:updated", (payload) => {
       console.log("bid:updated", payload);
       fetchAuctionData();
-      toast.success(
-        `Bid Amount Updated To ₹${formatIndianNumber(
-          payload.newBid.amount
-        )} You can Bid Now`
-      );
+      // toast.success(
+      //   `Bid Amount Updated To ₹${formatIndianNumber(
+      //     payload.newBid.amount
+      //   )} You can Bid Now`
+      // );
     });
 
     // socket.on("bid:placed", (payload) => {
     //   console.log("bid:placed", payload);
 
-    //   // Debounce the fetchAuctionData call to avoid multiple rapid calls
     //   clearTimeout(window.auctionDataTimeout);
     //   window.auctionDataTimeout = setTimeout(() => {
     //     fetchAuctionData();
     //   }, 100);
 
-    //   toast.success(`New bid ₹${formatIndianNumber(payload.newBid.amount)}`);
+    // toast.success(`New bid ₹${formatIndianNumber(payload.newBid.amount)}`);
     // });
 
     socket.on("bid:placed", (payload) => {
       console.log("bid:placed", payload);
-
       clearTimeout(window.auctionDataTimeout);
       window.auctionDataTimeout = setTimeout(() => {
         fetchAuctionData();
       }, 100);
-
-      toast.success(`New bid ₹${formatIndianNumber(payload.newBid.amount)}`);
+      // toast.success(`New bid ₹${formatIndianNumber(payload.newBid.amount)}`);
     });
+
+    // socket.on("timer:update", (payload) => {
+    //   console.log("timer:update", payload);
+
+    //   if (payload.auctionId === id) {
+    //     const remainingTime = calculateRemainingTime(payload.timerExpiredAt);
+
+    //     setTimerData({
+    //       isActive: payload.isTimerActive,
+    //       remainingTime,
+    //       startedAt: payload.timerStartedAt,
+    //       expiresAt: payload.timerExpiredAt,
+    //       duration: payload.duration,
+    //     });
+
+    //     if (payload.resetTimer) {
+    // toast.success(`Timer Reset - ${remainingTime} seconds remaining`);
+    //     }
+    //   }
+    // });
 
     socket.on("timer:update", (payload) => {
       console.log("timer:update", payload);
-
       if (payload.auctionId === id) {
         const remainingTime = calculateRemainingTime(payload.timerExpiredAt);
-
         setTimerData({
           isActive: payload.isTimerActive,
           remainingTime,
@@ -740,22 +730,22 @@ export default function UserBiddingDashboardMobile() {
           expiresAt: payload.timerExpiredAt,
           duration: payload.duration,
         });
-
         if (payload.resetTimer) {
-          toast.success(`Timer Reset - ${remainingTime} seconds remaining`);
+          // toast.success(`Timer Reset - ${remainingTime} seconds remaining`);
         }
       }
     });
+
     socket.on("timer:expired", (payload) => {
       console.log("Timer expired received:", payload);
-      toast.error("⏱ Timer expired — Bidding is now disabled");
+      // toast.error("⏱ Timer expired — Bidding is now disabled");
     });
 
     // RTM Events
     socket.on("player:rtm", (payload) => {
       console.log("player:rtm", payload);
       fetchAuctionData();
-      toast.success("RTM used");
+      // toast.success("RTM used");
     });
 
     // RTM request confirmations
@@ -765,7 +755,7 @@ export default function UserBiddingDashboardMobile() {
       const currentTeamId = userTeamIdRef.current || auctionData?.team?.teamId;
 
       if (payload.teamId === currentTeamId) {
-        toast.success("RTM request sent, waiting for admin approval...");
+        // toast.success("RTM request sent, waiting for admin approval...");
       }
     });
 
@@ -777,7 +767,7 @@ export default function UserBiddingDashboardMobile() {
       if (payload.toTeam === currentTeamId) {
         setRtmRequestPending(false);
         setRtmCount((prev) => prev - 1);
-        toast.success(`RTM approved! ${payload.playerName} added to your team`);
+        // toast.success(`RTM approved! ${payload.playerName} added to your team`);
       }
       fetchAuctionData();
     });
@@ -814,9 +804,9 @@ export default function UserBiddingDashboardMobile() {
         // Enhanced error message with fallbacks
         const playerName =
           payload.playerName || payload.player?.name || "Unknown Player";
-        console.log("Player name for toast:", playerName);
+        // console.log("Player name for toast:", playerName);
 
-        toast.error(`RTM rejected for ${playerName}`);
+        // toast.error(`RTM rejected for ${playerName}`);
       } else {
         // Show generic rejection toast if we can't determine team ownership
         // but we received the event (might be helpful for debugging)
@@ -824,10 +814,10 @@ export default function UserBiddingDashboardMobile() {
           "❌ RTM rejection not for my team or couldn't determine team"
         );
         if (!currentTeamId) {
-          console.log("⚠️ No team ID available, showing generic toast");
+          // console.log("⚠️ No team ID available, showing generic toast");
           const playerName =
             payload.playerName || payload.player?.name || "Player";
-          toast.error(`RTM rejected for ${playerName}`);
+          // toast.error(`RTM rejected for ${playerName}`);
         }
       }
 
@@ -838,17 +828,17 @@ export default function UserBiddingDashboardMobile() {
     // Auction state events
     socket.on("auction:paused", () => {
       console.log("auction:paused");
-      toast.success("Auction paused");
+      // toast.success("Auction paused");
     });
 
     socket.on("auction:resumed", () => {
       console.log("auction:resumed");
-      toast.success("Auction resumed");
+      // toast.success("Auction resumed");
     });
 
     socket.on("auction:ended", () => {
       console.log("auction:ended");
-      toast.success("Auction ended");
+      // toast.success("Auction ended");
       navigate("/dashboard");
     });
 
@@ -903,7 +893,7 @@ export default function UserBiddingDashboardMobile() {
         if (now > banInfo.bannedUntil) {
           setIsBanned(false);
           setBanInfo(null);
-          toast.success("Your team can now place bids again!");
+          // toast.success("Your team can now place bids again!");
         } else {
           // Update remaining time
           setBanInfo((prev) => ({
@@ -1067,6 +1057,7 @@ export default function UserBiddingDashboardMobile() {
   const purseBalance =
     auctionData.team?.purse || auctionData.purseBalance || "--/--";
   const nextBidAmount = auctionData.bidAmount || "--/--";
+  // const remainingBalance=auctionData.team?.
 
   return (
     <div className={`${containerClasses} md:hidden`} {...handlers}>
@@ -1193,127 +1184,73 @@ export default function UserBiddingDashboardMobile() {
                   ? `₹${formatIndianNumber(purseBalance)}`
                   : "--/--"}
               </p>
-            </motion.div>
-            <SmallPlayerCard player={currentPlayer} />
-
-            {/* <motion.div
-              className="bg-gradient-to-r from-indigo-900/50 to-blue-800/50 rounded-xl p-4 shadow-lg w-full max-w-md text-center"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-            
-              <TimerDisplay />
-
-              <h3 className="text-xs font-medium mb-1">Bid Now</h3>
-
-              {isBanned ? (
-                <div className="text-center">
-                  <div className="bg-red-500/20 border border-red-400 rounded-lg p-3 mb-2">
-                    <p className="text-red-400 text-sm font-medium">
-                      🚫 Temporarily Banned
-                    </p>
-                    <p className="text-red-300 text-xs mt-1">
-                      Your team is banned from bidding for{" "}
-                      {banInfo?.remainingMinutes || 0} more minutes
-                    </p>
-                    <p className="text-red-200 text-xs mt-1 opacity-75">
-                      Reason: Excessive bid attempts
-                    </p>
-                  </div>
-                  <button
-                    className="bg-gray-500 text-gray-300 px-4 py-2 rounded-lg cursor-not-allowed opacity-50"
-                    disabled
-                  >
-                    Bidding Disabled
-                  </button>
-                </div>
-              ) : (
-                <BidButton
-                  onClick={handleBid}
-                  disabled={isBidding || isBanned || isBidDisabled}
-                  className={
-                    isBidDisabled ? "opacity-50 cursor-not-allowed" : ""
-                  }
-                />
-              )}
-
-              <p className="mt-1 text-xs opacity-75">
-                Next Updated Price:{" "}
-                {nextBidAmount != null
-                  ? `₹${formatIndianNumber(nextBidAmount)}`
+              <h3 className="text-xs font-medium mb-1">Remaining</h3>
+              <p className="text-lg font-mono text-green-400">
+                {auctionData.team.remaining != null
+                  ? `₹${formatIndianNumber(auctionData.team.remaining)}`
                   : "--/--"}
               </p>
-
-              {(isBanned || isBidDisabled) && (
-                <p className="mt-2 text-xs text-red-400">
-                  {isBanned
-                    ? "You can still watch the auction but cannot place bids"
-                    : "Bidding disabled - Timer expired"}
-                </p>
-              )}
-            </motion.div> */}
+            </motion.div>
+            <SmallPlayerCard player={currentPlayer} />
           </div>
         </div>
 
         {/* ─── MOBILE: Bidding / Stats Sections ─────────────── */}
         <AnimatePresence mode="wait">
+          <motion.div
+            className="bg-gradient-to-r from-indigo-900/50 to-blue-800/50 rounded-xl p-4 shadow-lg w-full max-w-md text-center"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            {/* Timer Display */}
+            <TimerDisplay />
 
-        <motion.div
-              className="bg-gradient-to-r from-indigo-900/50 to-blue-800/50 rounded-xl p-4 shadow-lg w-full max-w-md text-center"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              {/* Timer Display */}
-              <TimerDisplay />
+            <h3 className="text-xs font-medium mb-1">Bid Now</h3>
 
-              <h3 className="text-xs font-medium mb-1">Bid Now</h3>
-
-              {isBanned ? (
-                <div className="text-center">
-                  <div className="bg-red-500/20 border border-red-400 rounded-lg p-3 mb-2">
-                    <p className="text-red-400 text-sm font-medium">
-                      🚫 Temporarily Banned
-                    </p>
-                    <p className="text-red-300 text-xs mt-1">
-                      Your team is banned from bidding for{" "}
-                      {banInfo?.remainingMinutes || 0} more minutes
-                    </p>
-                    <p className="text-red-200 text-xs mt-1 opacity-75">
-                      Reason: Excessive bid attempts
-                    </p>
-                  </div>
-                  <button
-                    className="bg-gray-500 text-gray-300 px-4 py-2 rounded-lg cursor-not-allowed opacity-50"
-                    disabled
-                  >
-                    Bidding Disabled
-                  </button>
+            {isBanned ? (
+              <div className="text-center">
+                <div className="bg-red-500/20 border border-red-400 rounded-lg p-3 mb-2">
+                  <p className="text-red-400 text-sm font-medium">
+                    🚫 Temporarily Banned
+                  </p>
+                  <p className="text-red-300 text-xs mt-1">
+                    Your team is banned from bidding for{" "}
+                    {banInfo?.remainingMinutes || 0} more minutes
+                  </p>
+                  <p className="text-red-200 text-xs mt-1 opacity-75">
+                    Reason: Excessive bid attempts
+                  </p>
                 </div>
-              ) : (
-                <BidButton
-                  onClick={handleBid}
-                  disabled={isBidding || isBanned || isBidDisabled}
-                  className={
-                    isBidDisabled ? "opacity-50 cursor-not-allowed" : ""
-                  }
-                />
-              )}
+                <button
+                  className="bg-gray-500 text-gray-300 px-4 py-2 rounded-lg cursor-not-allowed opacity-50"
+                  disabled
+                >
+                  Bidding Disabled
+                </button>
+              </div>
+            ) : (
+              <BidButton
+                onClick={handleBid}
+                disabled={isBidding || isBanned || isBidDisabled}
+                className={isBidDisabled ? "opacity-50 cursor-not-allowed" : ""}
+              />
+            )}
 
-              <p className="mt-1 text-xs opacity-75">
-                Next Updated Price:{" "}
-                {nextBidAmount != null
-                  ? `₹${formatIndianNumber(nextBidAmount)}`
-                  : "--/--"}
+            <p className="mt-1 text-xs opacity-75">
+              Next Updated Price:{" "}
+              {nextBidAmount != null
+                ? `₹${formatIndianNumber(nextBidAmount)}`
+                : "--/--"}
+            </p>
+
+            {(isBanned || isBidDisabled) && (
+              <p className="mt-2 text-xs text-red-400">
+                {isBanned
+                  ? "You can still watch the auction but cannot place bids"
+                  : "Bidding disabled - Timer expired"}
               </p>
-
-              {(isBanned || isBidDisabled) && (
-                <p className="mt-2 text-xs text-red-400">
-                  {isBanned
-                    ? "You can still watch the auction but cannot place bids"
-                    : "Bidding disabled - Timer expired"}
-                </p>
-              )}
-            </motion.div>
+            )}
+          </motion.div>
           {/* Bidding Tab */}
           {mobileTab === "bid" && (
             <motion.div

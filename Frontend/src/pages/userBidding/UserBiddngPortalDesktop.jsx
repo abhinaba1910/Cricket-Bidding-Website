@@ -446,7 +446,7 @@ export default function UserBiddingDashboardDesktop() {
     if (showCelebration) {
       const duration = 3000;
       const end = Date.now() + duration;
-  
+
       (function frame() {
         confetti({
           particleCount: 5,
@@ -460,7 +460,7 @@ export default function UserBiddingDashboardDesktop() {
           spread: 55,
           origin: { x: 1 },
         });
-  
+
         if (Date.now() < end) {
           requestAnimationFrame(frame);
         }
@@ -476,17 +476,12 @@ export default function UserBiddingDashboardDesktop() {
       return;
     }
 
-    const socket = io(
-      "https://cricket-bidding-website-production.up.railway.app",
-      {
-    // const socket = io("http://localhost:6001", {
+    // const socket = io(
+    //   "https://cricket-bidding-website-production.up.railway.app",
+    //   {
+    const socket = io("http://localhost:6001", {
       auth: { token },
       transports: ["websocket"],
-      // timeout: 5000,
-      // reconnection: true,
-      // reconnectionDelay: 1000,
-      // reconnectionAttempts: 5,
-      // maxReconnectionAttempts: 5,
     });
     socketRef.current = socket;
 
@@ -496,54 +491,16 @@ export default function UserBiddingDashboardDesktop() {
         socket.emit("join-auction", id);
       }
     });
-    // socket.on("connect_error", (error) => {
-    //   console.error("Socket connection error:", error);
-    //   toast.error("Connection issues detected. Retrying...");
-    // });
-
-    // socket.on("reconnect", (attemptNumber) => {
-    //   console.log("Socket reconnected after", attemptNumber, "attempts");
-    //   toast.success("Connection restored!");
-    // });
 
     socket.on("disconnect", (reason) => {
       console.log("Socket disconnected:", reason);
     });
 
-    // socket.on("player:sold", (payload) => {
-    //   console.log("Received player:sold", payload);
-    //   console.log("[DESKTOP USER] got player:sold:", payload);
-    //   const winnerId = payload.soldTo;
-    //   const teamId = userTeamIdRef.current;
-    //   if (teamId && winnerId) {
-    //     if (winnerId === teamId) {
-    //       setEmoteToPlay("BidWon");
-    //     } else {
-    //       setEmoteToPlay("LostBid");
-    //     }
-    //     if (emoteTimeoutRef.current) {
-    //       clearTimeout(emoteTimeoutRef.current);
-    //     }
-    //     emoteTimeoutRef.current = setTimeout(() => {
-    //       setEmoteToPlay(null);
-    //       emoteTimeoutRef.current = null;
-    //     }, 3000);
-    //   }
-    //   fetchAuctionData();
-    //   if (payload.amount != null) {
-    //     toast.success(`Sold for ₹${formatIndianNumber(payload.amount)}`);
-    //   } else {
-    //     toast.success("Player sold");
-    //   }
-    // });
-
-
-
     socket.on("player:sold", (payload) => {
       console.log("Received player:sold", payload);
       const winnerId = payload.soldTo;
       const teamId = userTeamIdRef.current;
-    
+
       if (teamId && winnerId) {
         if (winnerId === teamId) {
           setEmoteToPlay("BidWon");
@@ -552,29 +509,28 @@ export default function UserBiddingDashboardDesktop() {
           setEmoteToPlay("LostBid");
           setShowCelebration(false); // 🛑 No celebration
         }
-    
+
         // Reset emote after 3 seconds
         if (emoteTimeoutRef.current) {
           clearTimeout(emoteTimeoutRef.current);
         }
-    
+
         emoteTimeoutRef.current = setTimeout(() => {
           setEmoteToPlay(null);
           setShowCelebration(false);
           emoteTimeoutRef.current = null;
         }, 3000);
       }
-    
+
       fetchAuctionData();
-    
+
       if (payload.amount != null) {
         toast.success(`Sold for ₹${formatIndianNumber(payload.amount)}`);
       } else {
         toast.success("Player sold");
       }
     });
-    
-    
+
     socket.on("player:unsold", (payload) => {
       console.log("[USER] Received player:unsold", payload);
       const {
@@ -621,23 +577,50 @@ export default function UserBiddingDashboardDesktop() {
       );
     });
 
+    // socket.on("bid:placed", (payload) => {
+    //   console.log("bid:placed", payload);
+
+    //   clearTimeout(window.auctionDataTimeout);
+    //   window.auctionDataTimeout = setTimeout(() => {
+    //     fetchAuctionData();
+    //   }, 100);
+
+    //   toast.success(`New bid ₹${formatIndianNumber(payload.newBid.amount)}`);
+    // });
+
     socket.on("bid:placed", (payload) => {
       console.log("bid:placed", payload);
-
       clearTimeout(window.auctionDataTimeout);
       window.auctionDataTimeout = setTimeout(() => {
         fetchAuctionData();
       }, 100);
-
       toast.success(`New bid ₹${formatIndianNumber(payload.newBid.amount)}`);
     });
 
+    // socket.on("timer:update", (payload) => {
+    //   console.log("timer:update", payload);
+
+    //   if (payload.auctionId === id) {
+    //     const remainingTime = calculateRemainingTime(payload.timerExpiredAt);
+
+    //     setTimerData({
+    //       isActive: payload.isTimerActive,
+    //       remainingTime,
+    //       startedAt: payload.timerStartedAt,
+    //       expiresAt: payload.timerExpiredAt,
+    //       duration: payload.duration,
+    //     });
+
+    //     if (payload.resetTimer) {
+    //       toast.success(`Timer Reset - ${remainingTime} seconds remaining`);
+    //     }
+    //   }
+    // });
+
     socket.on("timer:update", (payload) => {
       console.log("timer:update", payload);
-
       if (payload.auctionId === id) {
         const remainingTime = calculateRemainingTime(payload.timerExpiredAt);
-
         setTimerData({
           isActive: payload.isTimerActive,
           remainingTime,
@@ -645,7 +628,6 @@ export default function UserBiddingDashboardDesktop() {
           expiresAt: payload.timerExpiredAt,
           duration: payload.duration,
         });
-
         if (payload.resetTimer) {
           toast.success(`Timer Reset - ${remainingTime} seconds remaining`);
         }
@@ -903,15 +885,15 @@ export default function UserBiddingDashboardDesktop() {
             isActive: false,
             remainingTime: 0,
           }));
-        
+
           // Notify other clients (especially admin) that timer ended
           if (socketRef.current) {
             socketRef.current.emit("timer:expired", { auctionId: id });
           }
-        
+
           // Optionally check for UI state change
           checkBidDisabled();
-        }        
+        }
       }, 1000);
     } else {
       // Clear interval if timer is not active
@@ -998,13 +980,50 @@ export default function UserBiddingDashboardDesktop() {
       toast.error(err.response?.data?.message || "Failed to use RTM");
     }
   };
+  // const TimerDisplay = () => {
+  //   if (!timerData.isActive) return null;
+
+  //   const progress =
+  //     (timerData.remainingTime / (timerData.duration / 1000)) * 100;
+  //   const isLowTime = timerData.remainingTime <= 3;
+
+  //   return (
+  //     <div className="bg-gradient-to-r from-orange-900/50 to-red-800/50 rounded-xl p-3 mb-4 shadow-lg">
+  //       <div className="flex items-center justify-between mb-2">
+  //         <h3 className="text-sm font-medium text-orange-200">Bidding Timer</h3>
+  //         <span
+  //           className={`text-lg font-bold ${
+  //             isLowTime ? "text-red-400 animate-pulse" : "text-orange-300"
+  //           }`}
+  //         >
+  //           {timerData.remainingTime}s
+  //         </span>
+  //       </div>
+
+  //       {/* Progress Bar */}
+  //       <div className="w-full bg-gray-700 rounded-full h-2">
+  //         <div
+  //           className={`h-2 rounded-full transition-all duration-1000 ${
+  //             isLowTime ? "bg-red-500" : "bg-orange-500"
+  //           }`}
+  //           style={{ width: `${progress}%` }}
+  //         />
+  //       </div>
+
+  //       <p className="text-xs text-orange-200 mt-1 opacity-75">
+  //         {isBidDisabled
+  //           ? "Bidding disabled - Timer expired"
+  //           : "Place your bid before timer ends"}
+  //       </p>
+  //     </div>
+  //   );
+  // };
+
   const TimerDisplay = () => {
     if (!timerData.isActive) return null;
-
     const progress =
       (timerData.remainingTime / (timerData.duration / 1000)) * 100;
     const isLowTime = timerData.remainingTime <= 3;
-
     return (
       <div className="bg-gradient-to-r from-orange-900/50 to-red-800/50 rounded-xl p-3 mb-4 shadow-lg">
         <div className="flex items-center justify-between mb-2">
@@ -1017,7 +1036,6 @@ export default function UserBiddingDashboardDesktop() {
             {timerData.remainingTime}s
           </span>
         </div>
-
         {/* Progress Bar */}
         <div className="w-full bg-gray-700 rounded-full h-2">
           <div
@@ -1027,7 +1045,6 @@ export default function UserBiddingDashboardDesktop() {
             style={{ width: `${progress}%` }}
           />
         </div>
-
         <p className="text-xs text-orange-200 mt-1 opacity-75">
           {isBidDisabled
             ? "Bidding disabled - Timer expired"
@@ -1147,14 +1164,21 @@ export default function UserBiddingDashboardDesktop() {
               </p>
             </div>
           </div>
-          <div className="mt-3 flex justify-center">
-            <div>
-              <span className="text-xs opacity-75">Rating</span>
-              <p className="text-sm">
-                {auctionData.currentPlayer?.points ?? "--/--"}
-              </p>
-            </div>
-          </div>
+          <div className="mt-3 flex items-center justify-center gap-3">
+  <div className="flex flex-col items-center">
+    <span className="text-xs opacity-75">Rating</span>
+    <p className="text-sm">
+      {auctionData.currentPlayer?.points ?? "--/--"}
+    </p>
+  </div>
+  {auctionData.currentPlayer?.country &&
+    auctionData.currentPlayer?.country !== "INDIA" && (
+      <span className="text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full shadow-sm flex items-center">
+        ✈️
+      </span>
+    )}
+</div>
+
           <p className="mt-3 text-base font-semibold bg-blue-900/50 py-1 rounded-lg border border-blue-700">
             Base Price:{" "}
             {auctionData.currentPlayer?.basePrice != null

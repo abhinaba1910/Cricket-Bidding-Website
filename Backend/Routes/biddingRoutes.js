@@ -1250,7 +1250,7 @@ router.post("/join-auction/:auctionId/confirm", auth, async (req, res) => {
     // If user is assigned to a team, ensure it's the one being selected
     if (userTeam._id.toString() !== teamId) {
       return res.status(403).json({
-        message: `You are assigned to the team '${userTeam.teamName}'. Please select that team.`,
+        message: `You are assigned to the team '${userTeam.shortName}'. Please select that team.`,
       });
     }
 
@@ -1480,50 +1480,132 @@ router.post("/auto-bid-settings/:auctionId", async (req, res) => {
   }
 });
 
+// router.patch("/update-bid/:auctionId", async (req, res) => {
+//   try {
+//     const { auctionId } = req.params;
+//     const { amount } = req.body;
+
+//     if (!amount || amount <= 0) {
+//       return res.status(400).json({ error: "Invalid bid amount" });
+//     }
+
+//     const auction = await Auction.findById(auctionId)
+//       .populate("currentPlayerOnBid")
+//       .populate("currentBid.team");
+
+//     if (!auction) {
+//       return res.status(404).json({ error: "Auction not found" });
+//     }
+
+//     if (!auction.currentPlayerOnBid) {
+//       return res.status(400).json({ error: "No player currently on bid" });
+//     }
+
+//     const currentBidAmount = auction.currentBid?.amount || 0;
+//     const shouldResetTimer = currentBidAmount !== amount;
+
+//     // Update bid amount and timer
+//     const updateData = {
+//       "bidAmount.amount": amount,
+//       "bidAmount.player": auction.currentPlayerOnBid._id,
+//     };
+
+//     if (shouldResetTimer) {
+//       const now = new Date();
+//       updateData.timerStartedAt = now;
+//       updateData.timerExpiredAt = new Date(
+//         now.getTime() + auction.timerDuration
+//       );
+//       updateData.isTimerActive = true;
+//     }
+
+//     await Auction.findByIdAndUpdate(auctionId, updateData);
+
+//     const io = req.app.get("io");
+
+//     // Emit bid update
+//     io.to(`${auctionId}`).emit("bid:updated", {
+//       auctionId,
+//       playerId: auction.currentPlayerOnBid._id,
+//       newBid: {
+//         amount,
+//         team: auction.currentBid?.team?.teamName || null,
+//         teamLogo: auction.currentBid?.team?.logoUrl || null,
+//       },
+//       timestamp: new Date(),
+//       systemGenerated: true,
+//       isAmountUpdateOnly: true,
+//     });
+
+//     // Emit timer update
+//     io.to(`${auctionId}`).emit("timer:update", {
+//       auctionId,
+//       timerStartedAt: updateData.timerStartedAt,
+//       timerExpiredAt: updateData.timerExpiredAt,
+//       isTimerActive: updateData.isTimerActive,
+//       duration: auction.timerDuration,
+//       resetTimer: shouldResetTimer,
+//     });
+
+//     res.json({
+//       message: "Bid updated successfully",
+//       newBidAmount: amount,
+//       auctionId,
+//       timerReset: shouldResetTimer,
+//     });
+//   } catch (error) {
+//     console.error("Error updating bid:", error);
+//     res.status(500).json({ error: "Internal server error" });
+//   }
+// });
+
+
 router.patch("/update-bid/:auctionId", async (req, res) => {
   try {
     const { auctionId } = req.params;
     const { amount } = req.body;
-
     if (!amount || amount <= 0) {
       return res.status(400).json({ error: "Invalid bid amount" });
     }
-
     const auction = await Auction.findById(auctionId)
       .populate("currentPlayerOnBid")
       .populate("currentBid.team");
-
     if (!auction) {
       return res.status(404).json({ error: "Auction not found" });
     }
-
     if (!auction.currentPlayerOnBid) {
       return res.status(400).json({ error: "No player currently on bid" });
     }
-
     const currentBidAmount = auction.currentBid?.amount || 0;
     const shouldResetTimer = currentBidAmount !== amount;
-
-    // Update bid amount and timer
+    // update data object
     const updateData = {
       "bidAmount.amount": amount,
       "bidAmount.player": auction.currentPlayerOnBid._id,
     };
-
+    let now;
     if (shouldResetTimer) {
-      const now = new Date();
+      now = new Date();
       updateData.timerStartedAt = now;
-      updateData.timerExpiredAt = new Date(
-        now.getTime() + auction.timerDuration
-      );
+      updateData.timerExpiredAt = new Date(now.getTime() + auction.timerDuration);
       updateData.isTimerActive = true;
     }
 
     await Auction.findByIdAndUpdate(auctionId, updateData);
-
     const io = req.app.get("io");
 
-    // Emit bid update
+    // Only emit timer:update if the timer actually needs resetting
+    if (shouldResetTimer) {
+      io.to(`${auctionId}`).emit("timer:update", {
+        auctionId,
+        timerStartedAt: updateData.timerStartedAt,
+        timerExpiredAt: updateData.timerExpiredAt,
+        isTimerActive: updateData.isTimerActive,
+        duration: auction.timerDuration,
+        resetTimer: true,
+      });
+    }
+
     io.to(`${auctionId}`).emit("bid:updated", {
       auctionId,
       playerId: auction.currentPlayerOnBid._id,
@@ -1536,17 +1618,6 @@ router.patch("/update-bid/:auctionId", async (req, res) => {
       systemGenerated: true,
       isAmountUpdateOnly: true,
     });
-
-    // Emit timer update
-    io.to(`${auctionId}`).emit("timer:update", {
-      auctionId,
-      timerStartedAt: updateData.timerStartedAt,
-      timerExpiredAt: updateData.timerExpiredAt,
-      isTimerActive: updateData.isTimerActive,
-      duration: auction.timerDuration,
-      resetTimer: shouldResetTimer,
-    });
-
     res.json({
       message: "Bid updated successfully",
       newBidAmount: amount,
@@ -1861,26 +1932,60 @@ router.post("/place-bid/:auctionId", auth, async (req, res) => {
 });
 
 // 4. Route to start timer when first player comes to bid
+// router.post("/start-player-timer/:auctionId", async (req, res) => {
+//   try {
+//     const { auctionId } = req.params;
+
+//     const auction = await Auction.findById(auctionId);
+//     if (!auction) {
+//       return res.status(404).json({ error: "Auction not found" });
+//     }
+
+//     if (!auction.currentPlayerOnBid) {
+//       return res.status(400).json({ error: "No player currently on bid" });
+//     }
+
+//     const now = new Date();
+//     await Auction.findByIdAndUpdate(auctionId, {
+//       timerStartedAt: now,
+//       timerExpiredAt: new Date(now.getTime() + auction.timerDuration),
+//       isTimerActive: true,
+//     });
+
+//     const io = req.app.get("io");
+//     io.to(`${auctionId}`).emit("timer:update", {
+//       auctionId,
+//       timerStartedAt: now,
+//       timerExpiredAt: new Date(now.getTime() + auction.timerDuration),
+//       isTimerActive: true,
+//       duration: auction.timerDuration,
+//       resetTimer: true,
+//     });
+
+//     res.json({ message: "Timer started successfully" });
+//   } catch (error) {
+//     console.error("Error starting timer:", error);
+//     res.status(500).json({ error: "Internal server error" });
+//   }
+// });
+
+
 router.post("/start-player-timer/:auctionId", async (req, res) => {
   try {
     const { auctionId } = req.params;
-
     const auction = await Auction.findById(auctionId);
     if (!auction) {
       return res.status(404).json({ error: "Auction not found" });
     }
-
     if (!auction.currentPlayerOnBid) {
       return res.status(400).json({ error: "No player currently on bid" });
     }
-
     const now = new Date();
     await Auction.findByIdAndUpdate(auctionId, {
       timerStartedAt: now,
       timerExpiredAt: new Date(now.getTime() + auction.timerDuration),
       isTimerActive: true,
     });
-
     const io = req.app.get("io");
     io.to(`${auctionId}`).emit("timer:update", {
       auctionId,
@@ -1890,7 +1995,6 @@ router.post("/start-player-timer/:auctionId", async (req, res) => {
       duration: auction.timerDuration,
       resetTimer: true,
     });
-
     res.json({ message: "Timer started successfully" });
   } catch (error) {
     console.error("Error starting timer:", error);

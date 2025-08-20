@@ -115,9 +115,9 @@ export default function AdminBiddingDashboard() {
       console.warn("No auth token found. Cannot connect socket.");
       return;
     }
-    const SOCKET_SERVER_URL =
-      "https://cricket-bidding-website-production.up.railway.app";
-    // const SOCKET_SERVER_URL = "http://localhost:6001";
+    // const SOCKET_SERVER_URL =
+    //   "https://cricket-bidding-website-production.up.railway.app";
+    const SOCKET_SERVER_URL = "http://localhost:6001";
     const socket = io(SOCKET_SERVER_URL, {
       auth: { token },
       transports: ["websocket"],
@@ -554,7 +554,7 @@ export default function AdminBiddingDashboard() {
     { value: 40000000, label: "₹4,00,00,000 (4 Cr)" },
     { value: 50000000, label: "₹5,00,00,000 (5 Cr)" },
     { value: 100000000, label: "₹10,00,00,000 (10 Cr)" },
-  ];  
+  ];
 
   // Initial fetch once
   useEffect(() => {
@@ -861,6 +861,7 @@ export default function AdminBiddingDashboard() {
           playerPic:
             data.currentPlayerOnBid?.playerPic || prev.currentLot.playerPic,
           points: data.currentPlayerOnBid?.points || prev.currentLot.points,
+          country: data.currentPlayerOnBid?.country || prev.currentLot.country,
         },
         currentBid: {
           amount: data.currentBid?.amount || prev.currentBid.amount,
@@ -1416,6 +1417,12 @@ export default function AdminBiddingDashboard() {
             <h2 className="font-bold text-lg sm:text-xl">
               {auctionData.currentLot.name}
             </h2>
+            {auctionData.currentLot?.country && auctionData.currentLot?.country !== "INDIA" && (
+  <span className="mt-2 mx-auto block w-max text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full shadow-sm flex items-center justify-center">
+    ✈️
+  </span>
+)}
+
             <p className="text-sm bg-blue-600/30 inline-block px-2 py-1 rounded-full mt-1">
               {auctionData.currentLot.role}
             </p>
@@ -1597,6 +1604,13 @@ export default function AdminBiddingDashboard() {
               <h2 className="font-bold text-sm truncate">
                 {auctionData.currentLot.name}
               </h2>
+              {auctionData.currentLot?.country &&
+                auctionData.currentLot?.country !== "INDIA" && (
+                  <span className="mt-2 mx-auto block w-max text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full shadow-sm flex items-center justify-center">
+                    ✈️
+                  </span>
+                )}
+
               <p className="text-xs bg-blue-600/30 inline-block px-2 py-0.5 rounded-full">
                 {auctionData.currentLot.role}
               </p>
@@ -2055,6 +2069,10 @@ export default function AdminBiddingDashboard() {
               Select Player Selection Mode
             </h2>
 
+            {/* If you don't already have this in parent scope, add:
+          const [popupSelection, setPopupSelection] = useState(null);
+      */}
+
             <div className="flex gap-4 justify-center my-4">
               <motion.button
                 onClick={() => setPopupSelection("manual")}
@@ -2069,42 +2087,49 @@ export default function AdminBiddingDashboard() {
               </motion.button>
             </div>
 
-            <div className="flex gap-3">
-              {/* <motion.button
-                onClick={handleSaveStartSelection}
-                className="flex-1 rounded-xl bg-gradient-to-r from-green-600 to-emerald-500 px-4 py-2 hover:from-green-700 hover:to-emerald-600 text-sm font-medium shadow-md"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                Save
-              </motion.button> */}
+            {/* Derived disabled state for Save */}
+            {/*
+        const isSaveDisabled = popupSelection !== "manual" || isSavingSelection;
+      */}
+            {(() => {
+              const isSaveDisabled =
+                popupSelection !== "manual" || isSavingSelection;
 
-              <motion.button
-                onClick={handleSaveStartSelection}
-                disabled={isSavingSelection}
-                className={`flex-1 rounded-xl px-4 py-2 text-sm font-medium shadow-md transition ${
-                  isSavingSelection
-                    ? "bg-gray-500 cursor-not-allowed"
-                    : "bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600"
-                }`}
-                whileHover={!isSavingSelection ? { scale: 1.05 } : {}}
-                whileTap={!isSavingSelection ? { scale: 0.95 } : {}}
-              >
-                {isSavingSelection ? "Saving..." : "Save"}
-              </motion.button>
+              return (
+                <div className="flex gap-3">
+                  <motion.button
+                    onClick={handleSaveStartSelection}
+                    disabled={isSaveDisabled}
+                    className={`flex-1 rounded-xl px-4 py-2 text-sm font-medium shadow-md transition ${
+                      isSaveDisabled
+                        ? "bg-gray-500 cursor-not-allowed"
+                        : "bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600"
+                    }`}
+                    whileHover={!isSaveDisabled ? { scale: 1.05 } : {}}
+                    whileTap={!isSaveDisabled ? { scale: 0.95 } : {}}
+                  >
+                    {isSavingSelection
+                      ? "Saving..."
+                      : popupSelection !== "manual"
+                      ? "Select Manual"
+                      : "Save"}
+                  </motion.button>
 
-              <motion.button
-                onClick={() => setShowStartPopup(false)}
-                className="flex-1 rounded-xl bg-gradient-to-r from-gray-600 to-gray-500 px-4 py-2 hover:from-gray-700 hover:to-gray-600 text-sm font-medium shadow-md"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                Cancel
-              </motion.button>
-            </div>
+                  <motion.button
+                    onClick={() => setShowStartPopup(false)}
+                    className="flex-1 rounded-xl bg-gradient-to-r from-gray-600 to-gray-500 px-4 py-2 hover:from-gray-700 hover:to-gray-600 text-sm font-medium shadow-md"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    Cancel
+                  </motion.button>
+                </div>
+              );
+            })()}
           </motion.div>
         </motion.div>
       )}
+
       {showRTMPopup && (
         <RTMApprovalPopup
           rtmRequest={pendingRTMRequest}
