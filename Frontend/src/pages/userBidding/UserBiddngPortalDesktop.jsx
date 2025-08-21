@@ -1113,7 +1113,7 @@ export default function UserBiddingDashboardDesktop() {
               {info?.name ?? "--/--"}
             </p>
             <p className="text-xs opacity-80">
-              {/* {info?.price ?? "--/--"} — {info?.team ?? "--/--"} */}
+              
               {info?.price != null
                 ? `₹${formatIndianNumber(info.price)}`
                 : "--/--"}{" "}
