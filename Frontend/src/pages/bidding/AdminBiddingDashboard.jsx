@@ -115,9 +115,9 @@ export default function AdminBiddingDashboard() {
       console.warn("No auth token found. Cannot connect socket.");
       return;
     }
-    // const SOCKET_SERVER_URL =
-    //   "https://cricket-bidding-website-production.up.railway.app";
-    const SOCKET_SERVER_URL = "http://localhost:6001";
+    const SOCKET_SERVER_URL =
+      "https://cricket-bidding-website-production.up.railway.app";
+    // const SOCKET_SERVER_URL = "http://localhost:6001";
     const socket = io(SOCKET_SERVER_URL, {
       auth: { token },
       transports: ["websocket"],

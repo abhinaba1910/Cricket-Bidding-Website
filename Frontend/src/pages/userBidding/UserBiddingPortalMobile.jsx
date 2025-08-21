@@ -196,8 +196,8 @@ export default function UserBiddingDashboardMobile() {
   useEffect(() => {
     const keepWarm = () => {
       fetch(
-        // "https://cricket-bidding-website-production.up.railway.app/health"
-        "http://localhost:6001/health"
+        "https://cricket-bidding-website-production.up.railway.app/health"
+        // "http://localhost:6001/health"
       ).catch((err) => console.log("Ping failed:", err));
     };
 
@@ -582,8 +582,8 @@ export default function UserBiddingDashboardMobile() {
       return;
     }
 
-    // const socket = io("https://cricket-bidding-website-production.up.railway.app", {
-    const socket = io("http://localhost:6001", {
+    const socket = io("https://cricket-bidding-website-production.up.railway.app", {
+    // const socket = io("http://localhost:6001", {
       auth: { token },
       transports: ["websocket"],
     });
