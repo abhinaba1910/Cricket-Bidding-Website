@@ -582,7 +582,9 @@ export default function UserBiddingDashboardMobile() {
       return;
     }
 
-    const socket = io("https://cricket-bidding-website-production.up.railway.app", {
+    const socket = io(
+      "https://cricket-bidding-website-production.up.railway.app",
+      {
     // const socket = io("http://localhost:6001", {
       auth: { token },
       transports: ["websocket"],
@@ -1059,6 +1061,12 @@ export default function UserBiddingDashboardMobile() {
   const nextBidAmount = auctionData.bidAmount || "--/--";
   // const remainingBalance=auctionData.team?.
 
+  const [displayedBid, setDisplayedBid] = useState(nextBidAmount);
+
+  useEffect(() => {
+    setDisplayedBid(nextBidAmount); // will retrigger animation on value change
+  }, [nextBidAmount]);
+
   return (
     <div className={`${containerClasses} md:hidden`} {...handlers}>
       {/* ─── Header ───────────────────────────────────────────── */}
@@ -1236,11 +1244,54 @@ export default function UserBiddingDashboardMobile() {
               />
             )}
 
-            <p className="mt-1 text-xs opacity-75">
+            {/* <p className="mt-1 text-xs opacity-75">
               Next Updated Price:{" "}
               {nextBidAmount != null
                 ? `₹${formatIndianNumber(nextBidAmount)}`
                 : "--/--"}
+            </p> */}
+
+            <p className="mt-1 text-xs opacity-75 flex items-center gap-1">
+              Next Updated Price:&nbsp;
+              <AnimatePresence>
+                <motion.span
+                  key={displayedBid}
+                  initial={{
+                    y: 16, // slide up entrance
+                    opacity: 0,
+                    backgroundColor: "#e0e7ff", // soft brand highlight
+                    color: "#334155",
+                  }}
+                  animate={{
+                    y: 0,
+                    opacity: 1,
+                    backgroundColor: "#f1f5f9", // transition to normal
+                    color: "#0f172a",
+                  }}
+                  exit={{
+                    y: -10, // slide out upwards
+                    opacity: 0,
+                  }}
+                  transition={{
+                    duration: 0.45,
+                    type: "spring",
+                    stiffness: 280,
+                    damping: 18,
+                  }}
+                  style={{
+                    display: "inline-block",
+                    borderRadius: 8,
+                    padding: "2px 12px",
+                    fontWeight: 600,
+                    minWidth: 52,
+                    textAlign: "center",
+                  }}
+                >
+                  {displayedBid != null
+                    ? `₹${formatIndianNumber(displayedBid)}`
+                    : "--/--"}
+                </motion.span>
+              </AnimatePresence>
             </p>
 
             {(isBanned || isBidDisabled) && (
