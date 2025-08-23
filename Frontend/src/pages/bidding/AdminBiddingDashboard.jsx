@@ -71,6 +71,7 @@ export default function AdminBiddingDashboard() {
   // NEW: admin emote state + timeout ref so we can reset after playing
   const [adminEmote, setAdminEmote] = useState(null);
   const adminEmoteTimeoutRef = useRef(null);
+  const [selectedChar, setSelectedChar] = useState(9); // default char9
 
   const user = JSON.parse(localStorage.getItem("user")); // or your user context/session
   const isAdmin = user?.role === "admin" || user?.role === "temp-admin";
@@ -1525,15 +1526,22 @@ export default function AdminBiddingDashboard() {
                 transition={{ delay: 0.35 }}
               >
                 <div className="w-full rounded-xl overflow-hidden">
-                  <div className="bg-gradient-to-br from-indigo-900/30 to-blue-800/30 rounded-xl  shadow-lg flex items-center justify-center">
+
                     {/* modelPath is static for admin view — change to any model you want */}
+                            <motion.div
+                              className="bg-gradient-to-br from-indigo-900/30 to-blue-800/30 rounded-lg shadow-lg flex items-center justify-center"
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                            >
+
                     <CharacterCard
-                      modelPath="/models/char4.glb" // <-- replace with preferred model
+                      modelPath="/models/char10.glb" // <-- replace with preferred model
                       triggerEmote={adminEmote}
                       // You can override emotePaths/labels here if needed; defaults are fine.
-                    />
+                      />
+                      </motion.div>
                   </div>
-                </div>
+
               </motion.div>
             </motion.div>
           </div>
