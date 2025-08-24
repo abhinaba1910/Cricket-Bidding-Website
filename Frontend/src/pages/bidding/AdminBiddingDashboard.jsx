@@ -6,8 +6,8 @@ import { toast } from "react-hot-toast";
 import Api from "../../userManagement/Api";
 import RTMApprovalPopup from "./RTMApprovalPopup";
 import { formatIndianNumber } from "../../types/formatIndianNumber";
-
 import CharacterCard from "../characters/CharacterCard";
+import confetti from "canvas-confetti";
 
 const SAMPLE_AUCTION = {
   lastSold: { name: "--/--", price: "--/--", team: "--/--" },
@@ -34,6 +34,7 @@ export default function AdminBiddingDashboard() {
   const incoming = location.state?.selectedPlayers || [];
   const socketRef = useRef(null);
   const { id } = useParams(); // auctionId
+  const userTeamIdRef = useRef(null);
 
   // STATE
   const [auctionData, setAuctionData] = useState(SAMPLE_AUCTION);
@@ -69,6 +70,7 @@ export default function AdminBiddingDashboard() {
   const [selectedRange, setSelectedRange] = useState(2000000); // Default 10K increment
   const [showAutoBidModal, setShowAutoBidModal] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [winningTeamInfo, setWinningTeamInfo] = useState(null);
 
   // NEW: admin emote state + timeout ref so we can reset after playing
   const [adminEmote, setAdminEmote] = useState(null);
@@ -116,32 +118,73 @@ export default function AdminBiddingDashboard() {
   }, [id]);
 
   useEffect(() => {
-    if (showCelebration) {
-      const duration = 3000;
+    if (showCelebration && winningTeamInfo) {
+      console.log("🎉 Starting celebration for:", winningTeamInfo.teamName);
+
+      const duration = 4000; // 4 seconds celebration
       const end = Date.now() + duration;
-  
+
       (function frame() {
+        // Multiple confetti bursts from different angles
         confetti({
-          particleCount: 5,
+          particleCount: 15,
           angle: 60,
           spread: 55,
-          origin: { x: 0 },
+          origin: { x: 0, y: 0.8 },
+          colors: [
+            "#ff6b6b",
+            "#4ecdc4",
+            "#45b7d1",
+            "#96ceb4",
+            "#ffeaa7",
+            "#dda0dd",
+          ],
+          zIndex: 99999
         });
+
         confetti({
-          particleCount: 5,
+          particleCount: 15,
           angle: 120,
           spread: 55,
-          origin: { x: 1 },
+          origin: { x: 1, y: 0.8 },
+          colors: [
+            "#ff6b6b",
+            "#4ecdc4",
+            "#45b7d1",
+            "#96ceb4",
+            "#ffeaa7",
+            "#dda0dd",
+          ],
+          zIndex: 99999
         });
-  
+
+        // Center burst
+        confetti({
+          particleCount: 20,
+          angle: 90,
+          spread: 100,
+          origin: { x: 0.5, y: 0.7 },
+          colors: [
+            "#ff6b6b",
+            "#4ecdc4",
+            "#45b7d1",
+            "#96ceb4",
+            "#ffeaa7",
+            "#dda0dd",
+          ],
+          zIndex: 99999
+        });
+
         if (Date.now() < end) {
           requestAnimationFrame(frame);
         } else {
+          console.log("🛑 Stopping celebration");
           setShowCelebration(false);
+          setWinningTeamInfo(null);
         }
       })();
     }
-  }, [showCelebration]);
+  }, [showCelebration, winningTeamInfo]);
 
   // -------------------------------
   // SOCKET.IO: connect, join room, listeners
@@ -376,23 +419,31 @@ export default function AdminBiddingDashboard() {
         currentQueuePosition: newPos,
         totalQueueLength,
         isPaused: pausedFlag,
-        soldTo, // Extract soldTo from payload
+        soldTo,
+        teamName, // Get team name from payload
       } = payload;
-    
+
       toast.success(`Player sold for ₹${amount.toLocaleString()}`);
       setIsPaused(pausedFlag);
       playAdminEmote("BidWon", 3000);
-    
-      // 🎉 Celebration logic based on soldTo (winner)
-      const teamId = userTeamIdRef.current;
-      if (teamId && soldTo) {
-        if (soldTo === teamId) {
-          setShowCelebration(true); // Trigger celebration if admin's team wins
-        } else {
-          setShowCelebration(false);
-        }
+
+      // 🎉 Always trigger celebration when player is sold
+      if (soldTo) {
+        console.log(
+          "🎉 Triggering celebration for team:",
+          teamName || "Unknown Team"
+        );
+
+        // Set winning team info for celebration
+        setWinningTeamInfo({
+          teamId: soldTo,
+          teamName: teamName || auctionData?.currentBid?.team || "Winning Team",
+        });
+
+        // Start celebration
+        setShowCelebration(true);
       }
-    
+
       if (nextPlayer) {
         setAuctionData((prev) => ({
           ...prev,
@@ -445,7 +496,7 @@ export default function AdminBiddingDashboard() {
         setStatus("completed");
         setCanChangeMode(true);
       }
-    
+
       fetchAuctionData();
       fetchQueueStatus();
     });
@@ -1230,11 +1281,12 @@ export default function AdminBiddingDashboard() {
         nextPlayer,
         isLastPlayer,
         biddingEnded,
-        soldTo, // Extract soldTo from response
+        soldTo,
         amount,
         isPaused: pausedFlag,
+        teamName, // Get team name from response
       } = response.data;
-  
+
       if (pausedFlag) {
         toast.success("Auction Paused");
       }
@@ -1243,17 +1295,24 @@ export default function AdminBiddingDashboard() {
       } else {
         toast.success(`Player sold for ₹${amount.toLocaleString()}!`);
       }
-  
-      // 🎉 Celebration logic based on soldTo (winner)
-      const teamId = userTeamIdRef.current;
-      if (teamId && soldTo) {
-        if (soldTo === teamId) {
-          setShowCelebration(true); // Trigger celebration if admin's team wins
-        } else {
-          setShowCelebration(false);
-        }
+
+      // 🎉 Always trigger celebration when player is sold
+      if (soldTo) {
+        console.log(
+          "🎉 Triggering celebration for team:",
+          teamName || "Unknown Team"
+        );
+
+        // Set winning team info for celebration
+        setWinningTeamInfo({
+          teamId: soldTo,
+          teamName: teamName || auctionData?.currentBid?.team || "Winning Team",
+        });
+
+        // Start celebration
+        setShowCelebration(true);
       }
-  
+
       if (nextPlayer) {
         setAuctionData((prev) => ({
           ...prev,
@@ -1305,7 +1364,7 @@ export default function AdminBiddingDashboard() {
         setStatus("completed");
         setCanChangeMode(true);
       }
-  
+
       await fetchAuctionData();
       await fetchQueueStatus();
     } catch (error) {
@@ -1316,7 +1375,7 @@ export default function AdminBiddingDashboard() {
           "Failed to sell player. Please try again."
       );
     } finally {
-      setIsSelling(false); // ✅ enable button again
+      setIsSelling(false);
     }
   };
 
@@ -2571,6 +2630,103 @@ export default function AdminBiddingDashboard() {
           </div>
         </div>
       )}
+
+{showCelebration && winningTeamInfo && (
+  <div
+    style={{
+      position: "fixed",
+      top: 0,
+      left: 0,
+      width: "100vw",
+      height: "100vh",
+      backgroundColor: "rgba(15, 23, 42, 0.25)", // Much lighter background - 25% instead of 95%
+      color: "white",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 9998, // Lower z-index than confetti
+      pointerEvents: "none",
+      userSelect: "none",
+      textAlign: "center",
+      padding: "20px",
+      backdropFilter: "blur(2px)", // Reduced blur
+    }}
+  >
+    <h1
+      style={{
+        fontSize: "clamp(3rem, 8vw, 6rem)",
+        fontWeight: "800",
+        marginBottom: "30px",
+        color: "#ffffff",
+        textShadow: "0 4px 20px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 255, 255, 0.5)", // Enhanced shadow for visibility
+        animation: "fadeInScale 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+        letterSpacing: "2px",
+        WebkitTextStroke: "1px rgba(0, 0, 0, 0.5)", // Text outline for better visibility
+      }}
+    >
+      🎉 CONGRATULATIONS! 🎉
+    </h1>
+    <h2
+      style={{
+        fontSize: "clamp(2rem, 6vw, 4rem)",
+        fontWeight: "600",
+        color: "#FFD700", // Changed to gold for better visibility on light background
+        textShadow: "0 2px 15px rgba(0, 0, 0, 0.8), 0 0 25px rgba(255, 215, 0, 0.6)",
+        animation: "slideInUp 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s both",
+        letterSpacing: "1px",
+        WebkitTextStroke: "0.5px rgba(0, 0, 0, 0.3)", // Text outline
+      }}
+    >
+      {winningTeamInfo.teamName}
+    </h2>
+  </div>
+)}
+
+<style jsx>{`
+  @keyframes fadeInScale {
+    0% {
+      opacity: 0;
+      transform: scale(0.3) translateY(-50px);
+    }
+    60% {
+      opacity: 0.9;
+      transform: scale(1.05) translateY(-10px);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  @keyframes slideInUp {
+    0% {
+      opacity: 0;
+      transform: translateY(100px) scale(0.8);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  /* Additional smooth entrance animation */
+  @keyframes gentleGlow {
+    0%, 100% {
+      text-shadow: 0 2px 15px rgba(0, 0, 0, 0.8), 0 0 25px rgba(255, 215, 0, 0.6);
+    }
+    50% {
+      text-shadow: 0 2px 25px rgba(0, 0, 0, 0.9), 0 0 35px rgba(255, 215, 0, 0.8);
+    }
+  }
+
+  /* Apply gentle glow to team name */
+  h2 {
+    animation: slideInUp 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s both,
+               gentleGlow 2s ease-in-out 1.3s infinite;
+  }
+`}</style>
+
     </div>
   );
 }

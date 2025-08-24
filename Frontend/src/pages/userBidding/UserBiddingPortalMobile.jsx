@@ -551,25 +551,46 @@ export default function UserBiddingDashboardMobile() {
 
   useEffect(() => {
     if (showCelebration) {
-      const duration = 3000;
+      console.log("🎉 Starting mobile celebration!");
+      
+      const duration = 4000; // 4 seconds celebration
       const end = Date.now() + duration;
-
+  
       (function frame() {
+        // Multiple confetti bursts optimized for mobile
         confetti({
-          particleCount: 5,
+          particleCount: 12, // Slightly reduced for mobile performance
           angle: 60,
           spread: 55,
-          origin: { x: 0 },
+          origin: { x: 0, y: 0.8 },
+          colors: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dda0dd'],
+          zIndex: 99999
         });
+        
         confetti({
-          particleCount: 5,
+          particleCount: 12,
           angle: 120,
           spread: 55,
-          origin: { x: 1 },
+          origin: { x: 1, y: 0.8 },
+          colors: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dda0dd'],
+          zIndex: 99999
         });
-
+  
+        // Center burst
+        confetti({
+          particleCount: 15, // Slightly reduced for mobile
+          angle: 90,
+          spread: 100,
+          origin: { x: 0.5, y: 0.7 },
+          colors: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dda0dd'],
+          zIndex: 99999
+        });
+  
         if (Date.now() < end) {
           requestAnimationFrame(frame);
+        } else {
+          console.log("🛑 Stopping mobile celebration");
+          setShowCelebration(false);
         }
       })();
     }
@@ -606,7 +627,7 @@ export default function UserBiddingDashboardMobile() {
       console.log("Received player:sold", payload);
       const winnerId = payload.soldTo;
       const teamId = userTeamIdRef.current;
-
+    
       if (teamId && winnerId) {
         if (winnerId === teamId) {
           setEmoteToPlay("BidWon");
@@ -615,21 +636,21 @@ export default function UserBiddingDashboardMobile() {
           setEmoteToPlay("LostBid");
           setShowCelebration(false); // 🛑 No celebration
         }
-
-        // Reset emote after 3 seconds
+    
+        // Reset emote after 4 seconds to match celebration duration
         if (emoteTimeoutRef.current) {
           clearTimeout(emoteTimeoutRef.current);
         }
-
+    
         emoteTimeoutRef.current = setTimeout(() => {
           setEmoteToPlay(null);
           setShowCelebration(false);
           emoteTimeoutRef.current = null;
-        }, 3000);
+        }, 4000); // Changed from 3000 to 4000
       }
-
+    
       fetchAuctionData();
-
+    
       if (payload.amount != null) {
         // toast.success(`Sold for ₹${formatIndianNumber(payload.amount)}`);
       } else {
@@ -1736,6 +1757,119 @@ export default function UserBiddingDashboardMobile() {
           </motion.div>
         </motion.div>
       )}
+
+
+{showCelebration && (
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100vw",
+          height: "100vh",
+          backgroundColor: "rgba(15, 23, 42, 0.25)",
+          color: "white",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          zIndex: 9998,
+          pointerEvents: "none",
+          userSelect: "none",
+          textAlign: "center",
+          padding: "15px", // Reduced padding for mobile
+          backdropFilter: "blur(2px)",
+        }}
+      >
+        <h1
+          style={{
+            fontSize: "clamp(2rem, 12vw, 4rem)", // Mobile-optimized sizing
+            fontWeight: "800",
+            marginBottom: "20px",
+            color: "#ffffff",
+            textShadow: "0 4px 20px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 255, 255, 0.5)",
+            animation: "fadeInScale 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+            letterSpacing: "1px", // Reduced for mobile
+            WebkitTextStroke: "0.5px rgba(0, 0, 0, 0.5)", // Thinner stroke for mobile
+            lineHeight: "1.1", // Better mobile line height
+          }}
+        >
+          🎉 CONGRATULATIONS! 🎉
+        </h1>
+        <h2
+          style={{
+            fontSize: "clamp(1.2rem, 8vw, 2.5rem)", // Mobile-optimized sizing
+            fontWeight: "600",
+            color: "#FFD700",
+            textShadow: "0 2px 15px rgba(0, 0, 0, 0.8), 0 0 25px rgba(255, 215, 0, 0.6)",
+            animation: "slideInUp 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s both",
+            letterSpacing: "0.5px", // Reduced for mobile
+            WebkitTextStroke: "0.3px rgba(0, 0, 0, 0.3)", // Thinner stroke
+            lineHeight: "1.2",
+          }}
+        >
+          🏆 YOU WON! 🏆
+        </h2>
+      </div>
+    )}
+
+    <style jsx>{`
+      @keyframes fadeInScale {
+        0% {
+          opacity: 0;
+          transform: scale(0.3) translateY(-30px); /* Reduced translation for mobile */
+        }
+        60% {
+          opacity: 0.9;
+          transform: scale(1.03) translateY(-5px); /* Smaller scale for mobile */
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1) translateY(0);
+        }
+      }
+
+      @keyframes slideInUp {
+        0% {
+          opacity: 0;
+          transform: translateY(60px) scale(0.8); /* Reduced translation for mobile */
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      /* Mobile-optimized gentle glow */
+      @keyframes gentleGlow {
+        0%, 100% {
+          text-shadow: 0 2px 15px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 215, 0, 0.6);
+        }
+        50% {
+          text-shadow: 0 2px 20px rgba(0, 0, 0, 0.9), 0 0 25px rgba(255, 215, 0, 0.8);
+        }
+      }
+
+      /* Apply gentle glow to "YOU WON!" text */
+      h2 {
+        animation: slideInUp 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s both,
+                   gentleGlow 2s ease-in-out 1.3s infinite;
+      }
+
+      /* Mobile-specific optimizations */
+      @media (max-width: 768px) {
+        h1 {
+          margin-bottom: 15px !important;
+        }
+        
+        /* Ensure readability on small screens */
+        @supports (-webkit-text-stroke: 1px black) {
+          h1, h2 {
+            -webkit-text-stroke: 0.5px rgba(0, 0, 0, 0.7);
+          }
+        }
+      }
+    `}</style>
     </div>
   );
 }
