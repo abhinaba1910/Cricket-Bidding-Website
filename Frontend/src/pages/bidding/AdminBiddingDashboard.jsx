@@ -68,6 +68,7 @@ export default function AdminBiddingDashboard() {
   const [autoBidRange, setAutoBidRange] = useState(0); // Store index instead of value
   const [selectedRange, setSelectedRange] = useState(2000000); // Default 10K increment
   const [showAutoBidModal, setShowAutoBidModal] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
 
   // NEW: admin emote state + timeout ref so we can reset after playing
   const [adminEmote, setAdminEmote] = useState(null);
@@ -113,6 +114,34 @@ export default function AdminBiddingDashboard() {
       fetchAutoBidSettings();
     }
   }, [id]);
+
+  useEffect(() => {
+    if (showCelebration) {
+      const duration = 3000;
+      const end = Date.now() + duration;
+  
+      (function frame() {
+        confetti({
+          particleCount: 5,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0 },
+        });
+        confetti({
+          particleCount: 5,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1 },
+        });
+  
+        if (Date.now() < end) {
+          requestAnimationFrame(frame);
+        } else {
+          setShowCelebration(false);
+        }
+      })();
+    }
+  }, [showCelebration]);
 
   // -------------------------------
   // SOCKET.IO: connect, join room, listeners
@@ -271,6 +300,74 @@ export default function AdminBiddingDashboard() {
     });
 
     // 3. Player sold
+    // socket.on("player:sold", (payload) => {
+    //   console.log("Received player:sold", payload);
+    //   const {
+    //     nextPlayer,
+    //     amount,
+    //     currentQueuePosition: newPos,
+    //     totalQueueLength,
+    //     isPaused: pausedFlag,
+    //   } = payload;
+    //   toast.success(`Player sold for ₹${amount.toLocaleString()}`);
+    //   setIsPaused(pausedFlag);
+    //   playAdminEmote("BidWon", 3000);
+    //   if (nextPlayer) {
+    //     setAuctionData((prev) => ({
+    //       ...prev,
+    //       currentLot: {
+    //         id: nextPlayer._id,
+    //         name: nextPlayer.name,
+    //         role: nextPlayer.role,
+    //         batting: nextPlayer.battingStyle,
+    //         bowling: nextPlayer.bowlingStyle,
+    //         basePrice: nextPlayer.basePrice,
+    //         playerPic: nextPlayer.playerPic,
+    //         points: nextPlayer.points,
+    //       },
+    //       currentBid: {
+    //         amount: nextPlayer.basePrice || 0,
+    //         team: null,
+    //         teamLogo: null,
+    //       },
+    //     }));
+    //     if (nextPlayer.playerPic) {
+    //       setPlayerPic(nextPlayer.playerPic);
+    //     }
+    //     setBidAmount(nextPlayer.basePrice || 0);
+    //     setCurrentQueuePosition(newPos);
+    //     setQueueDisplay({
+    //       current: newPos + 1,
+    //       total: totalQueueLength,
+    //     });
+    //   } else {
+    //     // Ended
+    //     setAuctionData((prev) => ({
+    //       ...prev,
+    //       currentLot: {
+    //         id: "--/--",
+    //         name: "No more players",
+    //         role: "--/--",
+    //         batting: "--/--",
+    //         bowling: "--/--",
+    //         basePrice: 0,
+    //         playerPic: null,
+    //         points: 0,
+    //       },
+    //       currentBid: {
+    //         amount: 0,
+    //         team: null,
+    //         teamLogo: null,
+    //       },
+    //     }));
+    //     setBiddingStarted(false);
+    //     setStatus("completed");
+    //     setCanChangeMode(true);
+    //   }
+    //   fetchAuctionData();
+    //   fetchQueueStatus();
+    // });
+
     socket.on("player:sold", (payload) => {
       console.log("Received player:sold", payload);
       const {
@@ -279,10 +376,23 @@ export default function AdminBiddingDashboard() {
         currentQueuePosition: newPos,
         totalQueueLength,
         isPaused: pausedFlag,
+        soldTo, // Extract soldTo from payload
       } = payload;
+    
       toast.success(`Player sold for ₹${amount.toLocaleString()}`);
       setIsPaused(pausedFlag);
       playAdminEmote("BidWon", 3000);
+    
+      // 🎉 Celebration logic based on soldTo (winner)
+      const teamId = userTeamIdRef.current;
+      if (teamId && soldTo) {
+        if (soldTo === teamId) {
+          setShowCelebration(true); // Trigger celebration if admin's team wins
+        } else {
+          setShowCelebration(false);
+        }
+      }
+    
       if (nextPlayer) {
         setAuctionData((prev) => ({
           ...prev,
@@ -335,6 +445,7 @@ export default function AdminBiddingDashboard() {
         setStatus("completed");
         setCanChangeMode(true);
       }
+    
       fetchAuctionData();
       fetchQueueStatus();
     });
@@ -1011,6 +1122,100 @@ export default function AdminBiddingDashboard() {
     }
   };
 
+  // const handleManualSell = async () => {
+  //   if (!auctionData.currentLot.id || auctionData.currentLot.id === "--/--") {
+  //     alert("No player currently on bid");
+  //     return;
+  //   }
+  //   setIsSelling(true);
+  //   try {
+  //     const response = await Api.post(
+  //       `/manual-sell/${id}/${auctionData.currentLot.id}`
+  //     );
+  //     const {
+  //       nextPlayer,
+  //       isLastPlayer,
+  //       biddingEnded,
+  //       soldTo,
+  //       amount,
+  //       isPaused: pausedFlag,
+  //     } = response.data;
+
+  //     if (pausedFlag) {
+  //       toast.success("Auction Paused");
+  //     }
+  //     if (biddingEnded || isLastPlayer || !pausedFlag) {
+  //       toast.success("Auction completed! No more players available.");
+  //     } else {
+  //       toast.success(`Player sold for ₹${amount.toLocaleString()}!`);
+  //     }
+
+  //     if (nextPlayer) {
+  //       setAuctionData((prev) => ({
+  //         ...prev,
+  //         currentLot: {
+  //           id: nextPlayer._id,
+  //           name: nextPlayer.name,
+  //           role: nextPlayer.role,
+  //           batting: nextPlayer.battingStyle,
+  //           bowling: nextPlayer.bowlingStyle,
+  //           basePrice: nextPlayer.basePrice,
+  //           playerPic: nextPlayer.playerPic,
+  //         },
+  //         currentBid: {
+  //           amount: nextPlayer.basePrice || 0,
+  //           team: null,
+  //           teamLogo: null,
+  //         },
+  //       }));
+  //       setBidAmount(nextPlayer.basePrice || 0);
+  //       if (selectionMode === "manual") {
+  //         setCurrentQueuePosition((prev) => prev + 1);
+  //         setQueueDisplay((prev) => ({
+  //           current: prev.current + 1,
+  //           total: prev.total,
+  //         }));
+  //       }
+  //       if (nextPlayer.playerPic) {
+  //         setPlayerPic(nextPlayer.playerPic);
+  //       }
+  //     } else {
+  //       setAuctionData((prev) => ({
+  //         ...prev,
+  //         currentLot: {
+  //           id: "--/--",
+  //           name: "No more players",
+  //           role: "--/--",
+  //           batting: "--/--",
+  //           bowling: "--/--",
+  //           basePrice: 0,
+  //           playerPic: null,
+  //         },
+  //         currentBid: {
+  //           amount: 0,
+  //           team: null,
+  //           teamLogo: null,
+  //         },
+  //       }));
+  //       setBiddingStarted(false);
+  //       setStatus("completed");
+  //       setCanChangeMode(true);
+  //     }
+
+  //     await fetchAuctionData();
+  //     await fetchQueueStatus();
+  //   } catch (error) {
+  //     console.error("Sell error:", error);
+  //     toast.error("Error selling player.");
+  //     toast.error(
+  //       error.response?.data?.error ||
+  //         "Failed to sell player. Please try again."
+  //     );
+  //   } finally {
+  //     setIsSelling(false); // ✅ enable button again
+  //   }
+  // };
+
   const handleManualSell = async () => {
     if (!auctionData.currentLot.id || auctionData.currentLot.id === "--/--") {
       alert("No player currently on bid");
@@ -1025,11 +1230,11 @@ export default function AdminBiddingDashboard() {
         nextPlayer,
         isLastPlayer,
         biddingEnded,
-        soldTo,
+        soldTo, // Extract soldTo from response
         amount,
         isPaused: pausedFlag,
       } = response.data;
-
+  
       if (pausedFlag) {
         toast.success("Auction Paused");
       }
@@ -1038,7 +1243,17 @@ export default function AdminBiddingDashboard() {
       } else {
         toast.success(`Player sold for ₹${amount.toLocaleString()}!`);
       }
-
+  
+      // 🎉 Celebration logic based on soldTo (winner)
+      const teamId = userTeamIdRef.current;
+      if (teamId && soldTo) {
+        if (soldTo === teamId) {
+          setShowCelebration(true); // Trigger celebration if admin's team wins
+        } else {
+          setShowCelebration(false);
+        }
+      }
+  
       if (nextPlayer) {
         setAuctionData((prev) => ({
           ...prev,
@@ -1090,7 +1305,7 @@ export default function AdminBiddingDashboard() {
         setStatus("completed");
         setCanChangeMode(true);
       }
-
+  
       await fetchAuctionData();
       await fetchQueueStatus();
     } catch (error) {
