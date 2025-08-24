@@ -65,7 +65,8 @@ export default function AdminBiddingDashboard() {
   const [isProcessingRTM, setIsProcessingRTM] = useState(false);
   const [isSavingSelection, setIsSavingSelection] = useState(false);
   const [isAutoBidEnabled, setIsAutoBidEnabled] = useState(false);
-  const [autoBidRange, setAutoBidRange] = useState(10000); // Default 10K increment
+  const [autoBidRange, setAutoBidRange] = useState(0); // Store index instead of value
+  const [selectedRange, setSelectedRange] = useState(2000000); // Default 10K increment
   const [showAutoBidModal, setShowAutoBidModal] = useState(false);
 
   // NEW: admin emote state + timeout ref so we can reset after playing
@@ -1386,15 +1387,15 @@ export default function AdminBiddingDashboard() {
     if (value >= 1000) return `${(value / 1000).toFixed(2)} K`;
     return value.toString();
   };
-  
+
   const BASE_STEPS = [
-    2000000,    // 20L step for 20L range
-    5000000,    // 50L step for 50L range  
-    10000000,   // 1Cr step for 1Cr range
-    20000000,   // 2Cr step for 2Cr range
-    40000000,   // 4Cr step for 4Cr range
-    50000000,   // 5Cr step for 5Cr range
-    100000000,  // 10Cr step for 10Cr range
+    2000000, // 20L step for 20L range
+    5000000, // 50L step for 50L range
+    10000000, // 1Cr step for 1Cr range
+    20000000, // 2Cr step for 2Cr range
+    40000000, // 4Cr step for 4Cr range
+    50000000, // 5Cr step for 5Cr range
+    100000000, // 10Cr step for 10Cr range
   ];
 
   function getNextBid(current) {
@@ -1526,22 +1527,19 @@ export default function AdminBiddingDashboard() {
                 transition={{ delay: 0.35 }}
               >
                 <div className="w-full rounded-xl overflow-hidden">
-
-                    {/* modelPath is static for admin view — change to any model you want */}
-                            <motion.div
-                              className="bg-gradient-to-br from-indigo-900/30 to-blue-800/30 rounded-lg shadow-lg flex items-center justify-center"
-                              initial={{ opacity: 0, y: 20 }}
-                              animate={{ opacity: 1, y: 0 }}
-                            >
-
+                  {/* modelPath is static for admin view — change to any model you want */}
+                  <motion.div
+                    className="bg-gradient-to-br from-indigo-900/30 to-blue-800/30 rounded-lg shadow-lg flex items-center justify-center"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
                     <CharacterCard
                       modelPath="/models/char10.glb" // <-- replace with preferred model
                       triggerEmote={adminEmote}
                       // You can override emotePaths/labels here if needed; defaults are fine.
-                      />
-                      </motion.div>
-                  </div>
-
+                    />
+                  </motion.div>
+                </div>
               </motion.div>
             </motion.div>
           </div>
