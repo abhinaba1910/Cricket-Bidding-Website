@@ -1388,7 +1388,7 @@ export default function AdminBiddingDashboard() {
   };
 
   const BASE_STEPS = [
-    20_000, // 10 K
+    10_000, // 10 K
     50_000, // 50 K
     100_000, // 1 L
     1_000_000, // 10 L
