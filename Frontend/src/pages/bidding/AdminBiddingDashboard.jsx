@@ -1386,15 +1386,15 @@ export default function AdminBiddingDashboard() {
     if (value >= 1000) return `${(value / 1000).toFixed(2)} K`;
     return value.toString();
   };
-
+  
   const BASE_STEPS = [
-    10_000, // 10 K
-    50_000, // 50 K
-    100_000, // 1 L
-    1_000_000, // 10 L
-    2_500_000, // 25 L
-    5_000_000, // 50 L
-    10_000_000, // 1 Cr
+    2000000,    // 20L step for 20L range
+    5000000,    // 50L step for 50L range  
+    10000000,   // 1Cr step for 1Cr range
+    20000000,   // 2Cr step for 2Cr range
+    40000000,   // 4Cr step for 4Cr range
+    50000000,   // 5Cr step for 5Cr range
+    100000000,  // 10Cr step for 10Cr range
   ];
 
   function getNextBid(current) {
