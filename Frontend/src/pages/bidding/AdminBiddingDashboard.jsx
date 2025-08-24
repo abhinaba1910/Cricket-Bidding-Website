@@ -7,6 +7,8 @@ import Api from "../../userManagement/Api";
 import RTMApprovalPopup from "./RTMApprovalPopup";
 import { formatIndianNumber } from "../../types/formatIndianNumber";
 
+import CharacterCard from "../characters/CharacterCard";
+
 const SAMPLE_AUCTION = {
   lastSold: { name: "--/--", price: "--/--", team: "--/--" },
   mostExpensive: { name: "--/--", price: "--/--", team: "--/--" },
@@ -65,6 +67,11 @@ export default function AdminBiddingDashboard() {
   const [isAutoBidEnabled, setIsAutoBidEnabled] = useState(false);
   const [autoBidRange, setAutoBidRange] = useState(10000); // Default 10K increment
   const [showAutoBidModal, setShowAutoBidModal] = useState(false);
+
+  // NEW: admin emote state + timeout ref so we can reset after playing
+  const [adminEmote, setAdminEmote] = useState(null);
+  const adminEmoteTimeoutRef = useRef(null);
+  const [selectedChar, setSelectedChar] = useState(9); // default char9
 
   const user = JSON.parse(localStorage.getItem("user")); // or your user context/session
   const isAdmin = user?.role === "admin" || user?.role === "temp-admin";
@@ -129,7 +136,6 @@ export default function AdminBiddingDashboard() {
     });
 
     socketRef.current = socket;
-
     socket.on("connect", () => {
       console.log("Socket connected:", socket.id);
       if (id) {
@@ -258,6 +264,8 @@ export default function AdminBiddingDashboard() {
 
         setBidAmount(newBid.amount);
         toast.success(`New bid: ₹${newBid.amount.toLocaleString()}`);
+        // NEW: Play hand-raise emote on admin character when any user bids
+        playAdminEmote("HandRaise", 2200);
       }
     });
 
@@ -273,6 +281,7 @@ export default function AdminBiddingDashboard() {
       } = payload;
       toast.success(`Player sold for ₹${amount.toLocaleString()}`);
       setIsPaused(pausedFlag);
+      playAdminEmote("BidWon", 3000);
       if (nextPlayer) {
         setAuctionData((prev) => ({
           ...prev,
@@ -411,6 +420,7 @@ export default function AdminBiddingDashboard() {
       console.log("Received player:rtm", payload);
       toast.success("RTM used: player transferred");
       fetchAuctionData();
+      playAdminEmote("RTM", 2800);
     });
 
     socket.on("rtm:request", (payload) => {
@@ -432,6 +442,7 @@ export default function AdminBiddingDashboard() {
         `RTM approved: ${payload.playerName} transferred to ${payload.teamName}`
       );
       fetchAuctionData();
+      playAdminEmote("RTM", 2800);
     });
 
     // RTM rejected - clear the request
@@ -472,6 +483,10 @@ export default function AdminBiddingDashboard() {
 
     // Cleanup
     return () => {
+      if (adminEmoteTimeoutRef.current) {
+        clearTimeout(adminEmoteTimeoutRef.current);
+        adminEmoteTimeoutRef.current = null;
+      }
       if (socketRef.current) {
         socketRef.current.emit("leave-auction", id); // always leave room
         socketRef.current.disconnect();
@@ -481,8 +496,29 @@ export default function AdminBiddingDashboard() {
       socket.off("rtm:approved");
       socket.off("rtm:rejected");
       socket.off("timer:expired");
+      // Also remove the emote-related handlers
+      socket.off("bid:placed");
+      socket.off("player:sold");
     };
   }, [id, isAutoBidEnabled, autoBidRange]);
+
+  // NEW helper: set admin emote and clear after `duration` ms
+  const playAdminEmote = (name, duration = 2500) => {
+    try {
+      // clear existing
+      if (adminEmoteTimeoutRef.current) {
+        clearTimeout(adminEmoteTimeoutRef.current);
+        adminEmoteTimeoutRef.current = null;
+      }
+      setAdminEmote(name);
+      adminEmoteTimeoutRef.current = setTimeout(() => {
+        setAdminEmote(null);
+        adminEmoteTimeoutRef.current = null;
+      }, duration);
+    } catch (e) {
+      console.error("playAdminEmote error:", e);
+    }
+  };
 
   const handleAutoBidIncrement = async (currentBidAmount) => {
     try {
@@ -1372,7 +1408,7 @@ export default function AdminBiddingDashboard() {
   }
 
   return (
-    <div className={containerClasses + " pt-2 md:pt-4"}>
+    <div className={containerClasses + " pt-2 md:pt-2"}>
       {/* Full-screen toggle */}
       <div className="flex justify-end mb-3">
         <button
@@ -1383,7 +1419,7 @@ export default function AdminBiddingDashboard() {
         </button>
       </div>
       {/* Responsive grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:h-[calc(85vh-4rem)]">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:h-[calc(85vh-4rem)] mb-10">
         {/* Left Sidebar (desktop only) */}
         <div className="hidden md:flex flex-col space-y-4 md:h-full md:justify-between">
           <div>
@@ -1407,46 +1443,108 @@ export default function AdminBiddingDashboard() {
               </motion.div>
             ))}
           </div>
-          {/* Current lot summary */}
-          <motion.div
-            className="bg-gradient-to-br from-indigo-800 to-blue-700 rounded-xl p-4 text-center shadow-xl"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <h2 className="font-bold text-lg sm:text-xl">
-              {auctionData.currentLot.name}
-            </h2>
-            {auctionData.currentLot?.country && auctionData.currentLot?.country !== "INDIA" && (
-  <span className="mt-2 mx-auto block w-max text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full shadow-sm flex items-center justify-center">
-    ✈️
-  </span>
-)}
+          <div>
+            {/* Current Bid info (team logo & amount) */}
+            {/* NEW: Admin Character Card under the team logo card */}
+            <motion.div
+              className="relative bg-transparent rounded-xl p-0 text-center shadow-lg overflow-visible my-5 md:w-[118%] md:max-w-none"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              {/* overlay card: team logo, bidder and amount */}
+              {/* <div className="absolute left-1/2 transform -translate-x-1/2 top-12 z-30 w-[100%] max-w-xs">
+    <div className="backdrop-blur-sm bg-white/8 border border-white/10 rounded-xl px-3 py-2 flex items-center justify-between shadow-md">
+      <div className="flex items-center gap-3">
+        {auctionData.currentBid.teamLogo ? (
+          <img
+            src={auctionData.currentBid.teamLogo}
+            alt="Team Logo"
+            className="w-12 h-12 rounded-lg object-contain border-2"
+          />
+        ) : (
+          <div className="bg-gray-200 border-2 border-dashed rounded-lg w-12 h-12" />
+        )}
+        <div className="text-left">
+          <p className="text-[10px] sm:text-xs opacity-75">Bid By</p>
+          <p className="text-sm sm:text-base font-semibold truncate">
+            {auctionData.currentBid.team}
+          </p>
+        </div>
+      </div>
 
-            <p className="text-sm bg-blue-600/30 inline-block px-2 py-1 rounded-full mt-1">
-              {auctionData.currentLot.role}
-            </p>
-            <div className="mt-3 flex justify-center gap-4">
-              <div>
-                <span className="text-xs opacity-75">Bat</span>
-                <p className="text-sm">{auctionData.currentLot.batting}</p>
+      <div className="text-right">
+        <p className="text-[10px] sm:text-xs opacity-75">Amount</p>
+        <p className="text-sm sm:text-base font-bold">
+          ₹{formatIndianNumber(auctionData.currentBid.amount)}
+        </p>
+      </div>
+    </div>
+  </div> */}
+              <div className="absolute left-1/2 transform -translate-x-1/2 top-2 z-30 w-[72%] max-w-md md:w-[88%]">
+                <div className="backdrop-blur-md bg-white/8 border border-white/10 rounded-xl px-3 py-2 flex items-center gap-3 shadow-md">
+                  {/* Team Logo */}
+                  <div className="flex-shrink-0 flex items-center justify-center">
+                    {auctionData.currentBid.teamLogo ? (
+                      <img
+                        src={auctionData.currentBid.teamLogo}
+                        alt="Team Logo"
+                        className="w-14 h-14 sm:w-20 sm:h-20 rounded-lg object-contain border-2"
+                      />
+                    ) : (
+                      <div className="bg-gray-200 border-2 border-dashed rounded-lg w-14 h-14 sm:w-20 sm:h-20" />
+                    )}
+                  </div>
+
+                  {/* Team name (left/center) */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] sm:text-xs opacity-75 mb-0">
+                      Bid By
+                    </p>
+                    <p className="text-sm sm:text-base font-semibold truncate">
+                      {auctionData.currentBid.team}
+                    </p>
+                  </div>
+
+                  {/* Amount (right) */}
+                  <div className="flex-shrink-0 text-right ml-2">
+                    <p className="text-[10px] sm:text-xs opacity-75 mb-0">
+                      Amount
+                    </p>
+                    <p className="text-sm sm:text-base font-bold">
+                      ₹{formatIndianNumber(auctionData.currentBid.amount)}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <span className="text-xs opacity-75">Ball</span>
-                <p className="text-sm">{auctionData.currentLot.bowling}</p>
-              </div>
-            </div>
-            <div className="mt-3 flex justify-center">
-              <div>
-                <span className="text-xs opacity-75">Rating</span>
-                <p className="text-sm">{auctionData.currentLot.points}</p>
-              </div>
-            </div>
-            <p className="mt-3 text-base font-semibold bg-blue-900/50 py-1 rounded-lg">
-              Base Price: ₹
-              {formatIndianNumber(auctionData.currentLot.basePrice)}
-            </p>
-          </motion.div>
+
+              {/* character card container (keeps original animation & props) */}
+              <motion.div
+                className="flex items-center justify-center"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.35 }}
+              >
+                <div className="w-full rounded-xl overflow-hidden">
+
+                    {/* modelPath is static for admin view — change to any model you want */}
+                            <motion.div
+                              className="bg-gradient-to-br from-indigo-900/30 to-blue-800/30 rounded-lg shadow-lg flex items-center justify-center"
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                            >
+
+                    <CharacterCard
+                      modelPath="/models/char10.glb" // <-- replace with preferred model
+                      triggerEmote={adminEmote}
+                      // You can override emotePaths/labels here if needed; defaults are fine.
+                      />
+                      </motion.div>
+                  </div>
+
+              </motion.div>
+            </motion.div>
+          </div>
         </div>
 
         {/* Center Section */}
@@ -1566,7 +1664,7 @@ export default function AdminBiddingDashboard() {
 
           {/* Avatar & Current Bid */}
           <motion.div
-            className="bg-gradient-to-br from-indigo-800/50 to-blue-700/50 rounded-xl p-6 text-center w-full max-w-md shadow-xl"
+            className="bg-gradient-to-br from-indigo-800/50 to-blue-700/50 rounded-xl p-6 text-center w-2/3 max-w-md shadow-xl"
             initial={{ scale: 0.95 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", stiffness: 300 }}
@@ -1606,7 +1704,7 @@ export default function AdminBiddingDashboard() {
               </h2>
               {auctionData.currentLot?.country &&
                 auctionData.currentLot?.country !== "INDIA" && (
-                  <span className="mt-2 mx-auto block w-max text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full shadow-sm flex items-center justify-center">
+                  <span className="mt-2 mx-auto w-max text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full shadow-sm flex items-center justify-center">
                     ✈️
                   </span>
                 )}
@@ -1884,30 +1982,46 @@ export default function AdminBiddingDashboard() {
               {ending ? "Ending..." : "End Auction"}
             </motion.button>
           </div>
-
-          {/* Current Bid info (team logo & amount) */}
+          {/* Current lot summary */}
           <motion.div
-            className="bg-gradient-to-r from-indigo-900/50 to-blue-800/50 rounded-xl p-4 text-center shadow-lg"
+            className="bg-gradient-to-br from-indigo-800 to-blue-700 rounded-xl p-4 w-[120%] text-center shadow-xl relative -left-6 md:-left-12"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
+            transition={{ delay: 0.2 }}
           >
-            {auctionData.currentBid.teamLogo ? (
-              <img
-                src={auctionData.currentBid.teamLogo}
-                alt="Team Logo"
-                className="w-16 h-16 rounded-xl object-contain mx-auto border-2"
-              />
-            ) : (
-              <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 mx-auto" />
-            )}
-            <p className="text-xs sm:text-sm opacity-75 mt-2">Bid By</p>
-            <h3 className="text-sm sm:text-base font-semibold mt-1">
-              {auctionData.currentBid.team}{" "}
-              <p className="text-xs sm:text-sm opacity-75 mt-2">
-                ₹{formatIndianNumber(auctionData.currentBid.amount)}
-              </p>
-            </h3>
+            <h2 className="font-bold text-lg sm:text-xl">
+              {auctionData.currentLot.name}
+            </h2>
+            {auctionData.currentLot?.country &&
+              auctionData.currentLot?.country !== "INDIA" && (
+                <span className="mt-2 mx-auto w-max text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full shadow-sm flex items-center justify-center">
+                  ✈️
+                </span>
+              )}
+
+            <p className="text-sm bg-blue-600/30 inline-block px-2 py-1 rounded-full mt-1">
+              {auctionData.currentLot.role}
+            </p>
+            <div className="mt-3 flex justify-center gap-4">
+              <div>
+                <span className="text-xs opacity-75">Bat</span>
+                <p className="text-sm">{auctionData.currentLot.batting}</p>
+              </div>
+              <div>
+                <span className="text-xs opacity-75">Ball</span>
+                <p className="text-sm">{auctionData.currentLot.bowling}</p>
+              </div>
+            </div>
+            <div className="mt-3 flex justify-center">
+              <div>
+                <span className="text-xs opacity-75">Rating</span>
+                <p className="text-sm">{auctionData.currentLot.points}</p>
+              </div>
+            </div>
+            <p className="mt-3 text-base font-semibold bg-blue-900/50 py-1 rounded-lg">
+              Base Price: ₹
+              {formatIndianNumber(auctionData.currentLot.basePrice)}
+            </p>
           </motion.div>
         </div>
       </div>
