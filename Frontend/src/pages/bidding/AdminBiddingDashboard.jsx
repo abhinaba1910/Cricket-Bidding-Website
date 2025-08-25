@@ -53,6 +53,7 @@ export default function AdminBiddingDashboard() {
   const [isUnselling, setIsUnselling] = useState(false);
 
   const [playerPic, setPlayerPic] = useState(null);
+  const [country, setCountry]=useState(null);
   const [currentPlayerId, setCurrentPlayerId] = useState(null);
 
   const [showStartPopup, setShowStartPopup] = useState(false);
@@ -139,7 +140,7 @@ export default function AdminBiddingDashboard() {
             "#ffeaa7",
             "#dda0dd",
           ],
-          zIndex: 99999
+          zIndex: 99999,
         });
 
         confetti({
@@ -155,7 +156,7 @@ export default function AdminBiddingDashboard() {
             "#ffeaa7",
             "#dda0dd",
           ],
-          zIndex: 99999
+          zIndex: 99999,
         });
 
         // Center burst
@@ -172,7 +173,7 @@ export default function AdminBiddingDashboard() {
             "#ffeaa7",
             "#dda0dd",
           ],
-          zIndex: 99999
+          zIndex: 99999,
         });
 
         if (Date.now() < end) {
@@ -201,11 +202,6 @@ export default function AdminBiddingDashboard() {
     const socket = io(SOCKET_SERVER_URL, {
       auth: { token },
       transports: ["websocket"],
-      // timeout: 5000,
-      // reconnection: true,
-      // reconnectionDelay: 1000,
-      // reconnectionAttempts: 5,
-      // maxReconnectionAttempts: 5,
     });
 
     socketRef.current = socket;
@@ -216,38 +212,12 @@ export default function AdminBiddingDashboard() {
         console.log(`Joined auction room ${id}`);
       }
     });
-    // socket.on("connect_error", (error) => {
-    //   console.error("Socket connection error:", error);
-    //   toast.error("Connection issues detected. Retrying...");
-    // });
-
-    // socket.on("reconnect", (attemptNumber) => {
-    //   console.log("Socket reconnected after", attemptNumber, "attempts");
-    //   toast.success("Connection restored!");
-    // });
 
     socket.on("disconnect", (reason) => {
       console.log("Socket disconnected:", reason);
     });
 
     // ── CATCH THE OTHER BID EVENT (some routes emit “bid:updated”) ──
-
-    // socket.on("bid:updated", (payload) => {
-    //   console.log("Received bid:updated", payload);
-    //   const { newBid } = payload;
-
-    //   setAuctionData((prev) => ({
-    //     ...prev,
-    //     currentBid: {
-    //       amount: newBid.amount,
-    //       team: newBid.team,
-    //       teamLogo: newBid.teamLogo,
-    //     },
-    //   }));
-
-    //   setBidAmount(newBid.amount);
-    //   toast.success(`Bid updated: ₹${formatIndianNumber(newBid.amount)}`);
-    // });
 
     socket.on("bid:updated", (payload) => {
       console.log("Received bid:updated", payload);
@@ -294,6 +264,7 @@ export default function AdminBiddingDashboard() {
             bowling: currentPlayer.bowlingStyle,
             basePrice: currentPlayer.basePrice,
             playerPic: currentPlayer.playerPic,
+            country: currentPlayer.country,
             points: currentPlayer.points,
           },
           currentBid: {
@@ -304,6 +275,9 @@ export default function AdminBiddingDashboard() {
         }));
         if (currentPlayer.playerPic) {
           setPlayerPic(currentPlayer.playerPic);
+        }
+        if(currentPlayer.country){
+          setCountry(currentPlayer.country);
         }
         setBidAmount(currentPlayer.basePrice || 0);
         setBiddingStarted(true);
@@ -341,75 +315,6 @@ export default function AdminBiddingDashboard() {
         playAdminEmote("HandRaise", 2200);
       }
     });
-
-    // 3. Player sold
-    // socket.on("player:sold", (payload) => {
-    //   console.log("Received player:sold", payload);
-    //   const {
-    //     nextPlayer,
-    //     amount,
-    //     currentQueuePosition: newPos,
-    //     totalQueueLength,
-    //     isPaused: pausedFlag,
-    //   } = payload;
-    //   toast.success(`Player sold for ₹${amount.toLocaleString()}`);
-    //   setIsPaused(pausedFlag);
-    //   playAdminEmote("BidWon", 3000);
-    //   if (nextPlayer) {
-    //     setAuctionData((prev) => ({
-    //       ...prev,
-    //       currentLot: {
-    //         id: nextPlayer._id,
-    //         name: nextPlayer.name,
-    //         role: nextPlayer.role,
-    //         batting: nextPlayer.battingStyle,
-    //         bowling: nextPlayer.bowlingStyle,
-    //         basePrice: nextPlayer.basePrice,
-    //         playerPic: nextPlayer.playerPic,
-    //         points: nextPlayer.points,
-    //       },
-    //       currentBid: {
-    //         amount: nextPlayer.basePrice || 0,
-    //         team: null,
-    //         teamLogo: null,
-    //       },
-    //     }));
-    //     if (nextPlayer.playerPic) {
-    //       setPlayerPic(nextPlayer.playerPic);
-    //     }
-    //     setBidAmount(nextPlayer.basePrice || 0);
-    //     setCurrentQueuePosition(newPos);
-    //     setQueueDisplay({
-    //       current: newPos + 1,
-    //       total: totalQueueLength,
-    //     });
-    //   } else {
-    //     // Ended
-    //     setAuctionData((prev) => ({
-    //       ...prev,
-    //       currentLot: {
-    //         id: "--/--",
-    //         name: "No more players",
-    //         role: "--/--",
-    //         batting: "--/--",
-    //         bowling: "--/--",
-    //         basePrice: 0,
-    //         playerPic: null,
-    //         points: 0,
-    //       },
-    //       currentBid: {
-    //         amount: 0,
-    //         team: null,
-    //         teamLogo: null,
-    //       },
-    //     }));
-    //     setBiddingStarted(false);
-    //     setStatus("completed");
-    //     setCanChangeMode(true);
-    //   }
-    //   fetchAuctionData();
-    //   fetchQueueStatus();
-    // });
 
     socket.on("player:sold", (payload) => {
       console.log("Received player:sold", payload);
@@ -455,6 +360,7 @@ export default function AdminBiddingDashboard() {
             bowling: nextPlayer.bowlingStyle,
             basePrice: nextPlayer.basePrice,
             playerPic: nextPlayer.playerPic,
+            country: nextPlayer.country,
             points: nextPlayer.points,
           },
           currentBid: {
@@ -465,6 +371,9 @@ export default function AdminBiddingDashboard() {
         }));
         if (nextPlayer.playerPic) {
           setPlayerPic(nextPlayer.playerPic);
+        }
+        if (nextPlayer.country) {
+          setCountry(nextPlayer.country);
         }
         setBidAmount(nextPlayer.basePrice || 0);
         setCurrentQueuePosition(newPos);
@@ -484,6 +393,7 @@ export default function AdminBiddingDashboard() {
             bowling: "--/--",
             basePrice: 0,
             playerPic: null,
+            country:null,
             points: 0,
           },
           currentBid: {
@@ -508,6 +418,7 @@ export default function AdminBiddingDashboard() {
       setIsPaused(true);
       setBiddingStarted(false);
       setPlayerPic(null);
+      setCountry(null);
     });
     // 5. Auction resumed
     socket.on("auction:resumed", (payload) => {
@@ -553,6 +464,7 @@ export default function AdminBiddingDashboard() {
             bowling: "--/--",
             basePrice: 0,
             playerPic: null,
+            country:null,
             points: 0,
           },
           currentBid: {
@@ -858,11 +770,15 @@ export default function AdminBiddingDashboard() {
             bowling: data.currentPlayer.bowlingStyle,
             basePrice: data.currentPlayer.basePrice,
             playerPic: data.currentPlayer.playerPic,
+            country:data.currentPlayer.country,
             points: data.currentPlayer.points,
           },
         }));
         if (data.currentPlayer.playerPic) {
           setPlayerPic(data.currentPlayer.playerPic);
+        }
+        if(data.currentPlayer.country){
+          setCountry(data.currentPlayer.country);
         }
       }
 
@@ -895,6 +811,7 @@ export default function AdminBiddingDashboard() {
           bowling: response.data.currentPlayer?.bowlingStyle,
           basePrice: response.data.currentPlayer?.basePrice,
           playerPic: response.data.currentPlayer?.playerPic,
+          country:response.data.country?.country,
           points: response.data.currentPlayer?.points,
         },
         currentBid: {
@@ -905,6 +822,9 @@ export default function AdminBiddingDashboard() {
       }));
       if (response.data.currentPlayer.playerPic) {
         setPlayerPic(response.data.currentPlayer.playerPic);
+      }
+      if (response.data.currentPlayer.country) {
+        setCountry(response.data.currentPlayer.country);
       }
       setBiddingStarted(true);
       setBidAmount(response.data.currentPlayer?.basePrice || 0);
@@ -981,6 +901,7 @@ export default function AdminBiddingDashboard() {
             bowling: response.data.currentPlayer?.bowlingStyle,
             basePrice: response.data.currentPlayer?.basePrice,
             playerPic: response.data.currentPlayer?.playerPic,
+            country: response.data.currentPlayer?.country,
             points: response.data.currentPlayer?.points,
           },
           currentBid: {
@@ -991,6 +912,9 @@ export default function AdminBiddingDashboard() {
         }));
         if (response.data.currentPlayer.playerPic) {
           setPlayerPic(response.data.currentPlayer.playerPic);
+        }
+        if (response.data.currentPlayer.country) {
+          setCountry(response.data.currentPlayer.country);
         }
         setBiddingStarted(true);
         setBidAmount(response.data.currentPlayer?.basePrice || 0);
@@ -1076,6 +1000,9 @@ export default function AdminBiddingDashboard() {
       }
       if (data.currentPlayerOnBid?.playerPic) {
         setPlayerPic(data.currentPlayerOnBid.playerPic);
+      }
+      if (data.currentPlayerOnBid?.country) {
+        setCountry(data.currentPlayerOnBid.country);
       }
 
       setBiddingStarted(data.biddingStarted || false);
@@ -1173,100 +1100,6 @@ export default function AdminBiddingDashboard() {
     }
   };
 
-  // const handleManualSell = async () => {
-  //   if (!auctionData.currentLot.id || auctionData.currentLot.id === "--/--") {
-  //     alert("No player currently on bid");
-  //     return;
-  //   }
-  //   setIsSelling(true);
-  //   try {
-  //     const response = await Api.post(
-  //       `/manual-sell/${id}/${auctionData.currentLot.id}`
-  //     );
-  //     const {
-  //       nextPlayer,
-  //       isLastPlayer,
-  //       biddingEnded,
-  //       soldTo,
-  //       amount,
-  //       isPaused: pausedFlag,
-  //     } = response.data;
-
-  //     if (pausedFlag) {
-  //       toast.success("Auction Paused");
-  //     }
-  //     if (biddingEnded || isLastPlayer || !pausedFlag) {
-  //       toast.success("Auction completed! No more players available.");
-  //     } else {
-  //       toast.success(`Player sold for ₹${amount.toLocaleString()}!`);
-  //     }
-
-  //     if (nextPlayer) {
-  //       setAuctionData((prev) => ({
-  //         ...prev,
-  //         currentLot: {
-  //           id: nextPlayer._id,
-  //           name: nextPlayer.name,
-  //           role: nextPlayer.role,
-  //           batting: nextPlayer.battingStyle,
-  //           bowling: nextPlayer.bowlingStyle,
-  //           basePrice: nextPlayer.basePrice,
-  //           playerPic: nextPlayer.playerPic,
-  //         },
-  //         currentBid: {
-  //           amount: nextPlayer.basePrice || 0,
-  //           team: null,
-  //           teamLogo: null,
-  //         },
-  //       }));
-  //       setBidAmount(nextPlayer.basePrice || 0);
-  //       if (selectionMode === "manual") {
-  //         setCurrentQueuePosition((prev) => prev + 1);
-  //         setQueueDisplay((prev) => ({
-  //           current: prev.current + 1,
-  //           total: prev.total,
-  //         }));
-  //       }
-  //       if (nextPlayer.playerPic) {
-  //         setPlayerPic(nextPlayer.playerPic);
-  //       }
-  //     } else {
-  //       setAuctionData((prev) => ({
-  //         ...prev,
-  //         currentLot: {
-  //           id: "--/--",
-  //           name: "No more players",
-  //           role: "--/--",
-  //           batting: "--/--",
-  //           bowling: "--/--",
-  //           basePrice: 0,
-  //           playerPic: null,
-  //         },
-  //         currentBid: {
-  //           amount: 0,
-  //           team: null,
-  //           teamLogo: null,
-  //         },
-  //       }));
-  //       setBiddingStarted(false);
-  //       setStatus("completed");
-  //       setCanChangeMode(true);
-  //     }
-
-  //     await fetchAuctionData();
-  //     await fetchQueueStatus();
-  //   } catch (error) {
-  //     console.error("Sell error:", error);
-  //     toast.error("Error selling player.");
-  //     toast.error(
-  //       error.response?.data?.error ||
-  //         "Failed to sell player. Please try again."
-  //     );
-  //   } finally {
-  //     setIsSelling(false); // ✅ enable button again
-  //   }
-  // };
-
   const handleManualSell = async () => {
     if (!auctionData.currentLot.id || auctionData.currentLot.id === "--/--") {
       alert("No player currently on bid");
@@ -1324,6 +1157,7 @@ export default function AdminBiddingDashboard() {
             bowling: nextPlayer.bowlingStyle,
             basePrice: nextPlayer.basePrice,
             playerPic: nextPlayer.playerPic,
+            country: nextPlayer.country
           },
           currentBid: {
             amount: nextPlayer.basePrice || 0,
@@ -1342,6 +1176,9 @@ export default function AdminBiddingDashboard() {
         if (nextPlayer.playerPic) {
           setPlayerPic(nextPlayer.playerPic);
         }
+        if (nextPlayer.country) {
+          setCountry(nextPlayer.country);
+        }
       } else {
         setAuctionData((prev) => ({
           ...prev,
@@ -1353,6 +1190,7 @@ export default function AdminBiddingDashboard() {
             bowling: "--/--",
             basePrice: 0,
             playerPic: null,
+            country: null,
           },
           currentBid: {
             amount: 0,
@@ -1454,6 +1292,7 @@ export default function AdminBiddingDashboard() {
             bowling: response.data.nextPlayer.bowlingStyle,
             basePrice: response.data.nextPlayer.basePrice,
             playerPic: response.data.nextPlayer.playerPic,
+            country: response.data.nextPlayer.country,
           },
         }));
       }
@@ -1511,6 +1350,7 @@ export default function AdminBiddingDashboard() {
             bowling: nextPlayer.bowlingStyle,
             basePrice: nextPlayer.basePrice,
             playerPic: nextPlayer.playerPic,
+            country: nextPlayer.country,
             points: nextPlayer.points,
           },
           currentBid: {
@@ -1531,6 +1371,9 @@ export default function AdminBiddingDashboard() {
         if (nextPlayer.playerPic) {
           setPlayerPic(nextPlayer.playerPic);
         }
+        if (nextPlayer.country) {
+          setCountry(nextPlayer.country);
+        }
       } else {
         setAuctionData((prev) => ({
           ...prev,
@@ -1542,6 +1385,7 @@ export default function AdminBiddingDashboard() {
             bowling: "--/--",
             basePrice: 0,
             playerPic: null,
+            country: null,
             points: 0,
           },
           currentBid: {
@@ -1614,6 +1458,7 @@ export default function AdminBiddingDashboard() {
       }
     }
     setPlayerPic(null);
+    setCountry(null);
   };
 
   const handleManualSelect = () => {
@@ -1727,35 +1572,6 @@ export default function AdminBiddingDashboard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
             >
-              {/* overlay card: team logo, bidder and amount */}
-              {/* <div className="absolute left-1/2 transform -translate-x-1/2 top-12 z-30 w-[100%] max-w-xs">
-    <div className="backdrop-blur-sm bg-white/8 border border-white/10 rounded-xl px-3 py-2 flex items-center justify-between shadow-md">
-      <div className="flex items-center gap-3">
-        {auctionData.currentBid.teamLogo ? (
-          <img
-            src={auctionData.currentBid.teamLogo}
-            alt="Team Logo"
-            className="w-12 h-12 rounded-lg object-contain border-2"
-          />
-        ) : (
-          <div className="bg-gray-200 border-2 border-dashed rounded-lg w-12 h-12" />
-        )}
-        <div className="text-left">
-          <p className="text-[10px] sm:text-xs opacity-75">Bid By</p>
-          <p className="text-sm sm:text-base font-semibold truncate">
-            {auctionData.currentBid.team}
-          </p>
-        </div>
-      </div>
-
-      <div className="text-right">
-        <p className="text-[10px] sm:text-xs opacity-75">Amount</p>
-        <p className="text-sm sm:text-base font-bold">
-          ₹{formatIndianNumber(auctionData.currentBid.amount)}
-        </p>
-      </div>
-    </div>
-  </div> */}
               <div className="absolute left-1/2 transform -translate-x-1/2 top-2 z-30 w-[72%] max-w-md md:w-[88%]">
                 <div className="backdrop-blur-md bg-white/8 border border-white/10 rounded-xl px-3 py-2 flex items-center gap-3 shadow-md">
                   {/* Team Logo */}
@@ -1868,21 +1684,6 @@ export default function AdminBiddingDashboard() {
             >
               Edit Bid
             </motion.button>
-            {/* <motion.button
-              onClick={handleStartBidding}
-              disabled={biddingStarted && !isPaused}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm shadow-md ${
-                biddingStarted && !isPaused
-                  ? "bg-gray-500 cursor-not-allowed opacity-50"
-                  : "bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600"
-              }`}
-              whileHover={!(biddingStarted && !isPaused) ? { scale: 1.05 } : {}}
-              whileTap={!(biddingStarted && !isPaused) ? { scale: 0.95 } : {}}
-            >
-              {biddingStarted && !isPaused
-                ? "Bidding Started"
-                : "Start Bidding"}
-            </motion.button> */}
 
             <motion.button
               onClick={handleStartBidding}
@@ -1900,27 +1701,6 @@ export default function AdminBiddingDashboard() {
                 : "Start Bidding"}
             </motion.button>
           </div>
-          {/* Add this for debugging */}
-          {/* Test RTM Button - Add this for testing purposes */}
-          {/* <motion.button
-            onClick={() => {
-              // Simulate an RTM request for testing
-              const testRTMRequest = {
-                playerName: "Test Player",
-                teamName: "Test Team",
-                bidAmount: 50000,
-                requestId: "test-123",
-              };
-              setPendingRTMRequest(testRTMRequest);
-              setShowRTMPopup(true);
-              toast.info("Test RTM request created");
-            }}
-            className="px-4 py-2 bg-gradient-to-r from-yellow-600 to-orange-500 rounded-xl hover:from-yellow-700 hover:to-orange-600 text-sm shadow-lg"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            🧪 Test RTM Request
-          </motion.button> */}
 
           {/* Your actual RTM reopen button */}
           {pendingRTMRequest && !showRTMPopup && (
@@ -1974,14 +1754,17 @@ export default function AdminBiddingDashboard() {
               <h2 className="font-bold text-sm truncate">
                 {auctionData.currentLot.name}
               </h2>
-              {auctionData.currentLot?.country &&
-                auctionData.currentLot?.country !== "INDIA" && (
-                  <span className="mt-2 mx-auto w-max text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full shadow-sm flex items-center justify-center">
-                    ✈️
-                  </span>
+
+              {/* Country indicator - Show airplane if country is not INDIA */}
+              {country &&
+                country.toLowerCase() !== "india" && (
+                  <div className="mt-2 mx-auto w-max text-xs font-medium text-white bg-blue-500/70 px-3 py-1 rounded-full shadow-sm flex items-center justify-center gap-1">
+                    <span>✈️</span>
+                    <span>{country}</span>
+                  </div>
                 )}
 
-              <p className="text-xs bg-blue-600/30 inline-block px-2 py-0.5 rounded-full">
+              <p className="text-xs bg-blue-600/30 inline-block px-2 py-0.5 rounded-full mt-1">
                 {auctionData.currentLot.role}
               </p>
               <p className="mt-1 text-[10px] opacity-75">
@@ -2016,25 +1799,6 @@ export default function AdminBiddingDashboard() {
               </h3>
             </div>
           </div>
-
-          {/* <div className="flex gap-4 mt-4">
-            <motion.button
-              onClick={handleManualSell}
-              className="w-32 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-500 rounded-xl hover:from-green-700 hover:to-emerald-600 text-sm sm:text-sm shadow-lg"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              Sell
-            </motion.button>
-            <motion.button
-              onClick={onMoveToUnsell}
-              className="md:hidden px-4 py-2 bg-gradient-to-r from-red-600 to-orange-500 rounded-xl hover:from-orange-700 hover:to-red-600 text-sm shadow-lg"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              Move to Unsell
-            </motion.button>
-          </div> */}
 
           <div className="flex gap-4 mt-4">
             <motion.button
@@ -2099,30 +1863,6 @@ export default function AdminBiddingDashboard() {
 
               {/* Main Toggle Switch */}
               <div className="relative h-10 w-full bg-indigo-800/30 rounded-full overflow-hidden">
-                {/* <motion.div
-                  className={`absolute top-0 h-full w-1/2 rounded-full z-0 ${
-                    selectionMode === "automatic"
-                      ? "bg-gradient-to-r from-emerald-500 to-cyan-400"
-                      : "bg-gradient-to-r from-amber-500 to-orange-400"
-                  }`}
-                  animate={{
-                    left: selectionMode === "automatic" ? "0" : "50%",
-                  }}
-                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                />
-
-                <button
-                  onClick={() => handleModeToggle("automatic")}
-                  disabled={biddingStarted}
-                  className={`relative h-full w-1/2 z-10 text-sm font-medium ${
-                    selectionMode === "automatic"
-                      ? "text-white"
-                      : "text-gray-300"
-                  }`}
-                >
-                  Auto
-                </button> */}
-
                 <button
                   onClick={() => handleModeToggle("manual")}
                   disabled={biddingStarted}
@@ -2135,61 +1875,6 @@ export default function AdminBiddingDashboard() {
                   Manual
                 </button>
               </div>
-
-              {/* Role Selector for Automatic Mode */}
-              {/* {selectionMode === "automatic" && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  transition={{ duration: 0.3 }}
-                  className="mt-3"
-                >
-                  <label className="text-xs block mb-1 opacity-80">
-                    Select Role:
-                  </label>
-                  <select
-                    value={role}
-                    onChange={(e) => handleRoleChange(e.target.value)}
-                    className="w-full rounded-full bg-indigo-800/50 border border-indigo-600 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="All">All</option>
-                    <option value="Batsman">Batsman</option>
-                    <option value="Fast all-rounder">Fast All Rounder</option>
-                    <option value="Spin all-rounder">Spin All Rounder</option>
-                    <option value="Wicket keeper batsman">
-                      Wicket Keeper Batsman
-                    </option>
-                    <option value="Spin bowler">Spin Bowler</option>
-                    <option value="Fast bowler">Fast Bowler</option>
-                  </select>
-                </motion.div>
-              )} */}
-
-              {/* Queue Status Display for Manual Mode */}
-              {/* {selectionMode === "manual" && manualPlayerQueue.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  transition={{ duration: 0.3 }}
-                  className="mt-3 p-2 bg-amber-900/30 rounded-lg"
-                >
-                  <p className="text-xs text-center text-amber-300">
-                    Queue: {currentQueuePosition + 1} of{" "}
-                    {manualPlayerQueue.length}
-                  </p>
-                  {manualPlayerQueue.length - currentQueuePosition <= 2 && (
-                    <p className="text-xs text-center text-red-300 mt-1">
-                      Queue running low! Add more players.
-                    </p>
-                  )}
-                  <button
-                    onClick={handleManualSelect}
-                    className="w-full mt-2 px-2 py-1 bg-amber-600 hover:bg-amber-700 rounded text-xs"
-                  >
-                    Add More Players
-                  </button>
-                </motion.div>
-              )} */}
 
               {selectionMode === "manual" && manualPlayerQueue.length > 0 && (
                 <motion.div
@@ -2264,14 +1949,17 @@ export default function AdminBiddingDashboard() {
             <h2 className="font-bold text-lg sm:text-xl">
               {auctionData.currentLot.name}
             </h2>
-            {auctionData.currentLot?.country &&
-              auctionData.currentLot?.country !== "INDIA" && (
-                <span className="mt-2 mx-auto w-max text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full shadow-sm flex items-center justify-center">
-                  ✈️
-                </span>
+
+            {/* Country indicator - Show airplane if country is not INDIA */}
+            {country &&
+              country.toLowerCase() !== "india" && (
+                <div className="mt-2 mx-auto w-max text-sm font-medium text-white bg-blue-500/70 px-4 py-2 rounded-full shadow-sm flex items-center justify-center gap-2">
+                  <span>✈️</span>
+                  <span>{country}</span>
+                </div>
               )}
 
-            <p className="text-sm bg-blue-600/30 inline-block px-2 py-1 rounded-full mt-1">
+            <p className="text-sm bg-blue-600/30 inline-block px-2 py-1 rounded-full mt-2">
               {auctionData.currentLot.role}
             </p>
             <div className="mt-3 flex justify-center gap-4">
@@ -2455,10 +2143,6 @@ export default function AdminBiddingDashboard() {
               Select Player Selection Mode
             </h2>
 
-            {/* If you don't already have this in parent scope, add:
-          const [popupSelection, setPopupSelection] = useState(null);
-      */}
-
             <div className="flex gap-4 justify-center my-4">
               <motion.button
                 onClick={() => setPopupSelection("manual")}
@@ -2473,10 +2157,6 @@ export default function AdminBiddingDashboard() {
               </motion.button>
             </div>
 
-            {/* Derived disabled state for Save */}
-            {/*
-        const isSaveDisabled = popupSelection !== "manual" || isSavingSelection;
-      */}
             {(() => {
               const isSaveDisabled =
                 popupSelection !== "manual" || isSavingSelection;
@@ -2630,224 +2310,6 @@ export default function AdminBiddingDashboard() {
           </div>
         </div>
       )}
-
-{showCelebration && winningTeamInfo && (
-  <div
-    style={{
-      position: "fixed",
-      top: 0,
-      left: 0,
-      width: "100vw",
-      height: "100vh",
-      backgroundColor: "rgba(15, 23, 42, 0.25)", // Much lighter background - 25% instead of 95%
-      color: "white",
-      display: "flex",
-      flexDirection: "column",
-      justifyContent: "center",
-      alignItems: "center",
-      zIndex: 9998, // Lower z-index than confetti
-      pointerEvents: "none",
-      userSelect: "none",
-      textAlign: "center",
-      padding: "20px",
-      backdropFilter: "blur(2px)", // Reduced blur
-    }}
-  >
-    <h1
-      style={{
-        fontSize: "clamp(3rem, 8vw, 6rem)",
-        fontWeight: "800",
-        marginBottom: "30px",
-        color: "#ffffff",
-        textShadow: "0 4px 20px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 255, 255, 0.5)", // Enhanced shadow for visibility
-        animation: "fadeInScale 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
-        letterSpacing: "2px",
-        WebkitTextStroke: "1px rgba(0, 0, 0, 0.5)", // Text outline for better visibility
-      }}
-    >
-      🎉 CONGRATULATIONS! 🎉
-    </h1>
-    <h2
-      style={{
-        fontSize: "clamp(2rem, 6vw, 4rem)",
-        fontWeight: "600",
-        color: "#FFD700", // Changed to gold for better visibility on light background
-        textShadow: "0 2px 15px rgba(0, 0, 0, 0.8), 0 0 25px rgba(255, 215, 0, 0.6)",
-        animation: "slideInUp 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s both",
-        letterSpacing: "1px",
-        WebkitTextStroke: "0.5px rgba(0, 0, 0, 0.3)", // Text outline
-      }}
-    >
-      {winningTeamInfo.teamName}
-    </h2>
-  </div>
-)}
-
-<style jsx>{`
-  @keyframes fadeInScale {
-    0% {
-      opacity: 0;
-      transform: scale(0.3) translateY(-50px);
-    }
-    60% {
-      opacity: 0.9;
-      transform: scale(1.05) translateY(-10px);
-    }
-    100% {
-      opacity: 1;
-      transform: scale(1) translateY(0);
-    }
-  }
-
-  @keyframes slideInUp {
-    0% {
-      opacity: 0;
-      transform: translateY(100px) scale(0.8);
-    }
-    100% {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-  }
-
-  /* Additional smooth entrance animation */
-  @keyframes gentleGlow {
-    0%, 100% {
-      text-shadow: 0 2px 15px rgba(0, 0, 0, 0.8), 0 0 25px rgba(255, 215, 0, 0.6);
-    }
-    50% {
-      text-shadow: 0 2px 25px rgba(0, 0, 0, 0.9), 0 0 35px rgba(255, 215, 0, 0.8);
-    }
-  }
-
-  /* Apply gentle glow to team name */
-  h2 {
-    animation: slideInUp 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s both,
-               gentleGlow 2s ease-in-out 1.3s infinite;
-  }
-`}</style>
-
     </div>
   );
-}
-
-{
-  /* <motion.div
-                className={`absolute top-0 h-full w-1/2 rounded-full z-0 ${
-                  selectionMode === "automatic"
-                    ? "bg-gradient-to-r from-emerald-500 to-cyan-400"
-                    : "bg-gradient-to-r from-amber-500 to-orange-400"
-                }`}
-                animate={{
-                  left: selectionMode === "automatic" ? "0" : "50%",
-                }}
-                transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              />
-              <button
-                onClick={() => handleModeToggle("automatic")}
-                className={`relative h-full w-1/2 z-10 text-sm font-medium ${
-                  selectionMode === "automatic" ? "text-white" : "text-gray-300"
-                }`}
-              >
-                Auto
-              </button> */
-}
-{
-  /* <button
-                  onClick={() => handleModeToggle("automatic")}
-                  disabled={!canChangeMode}
-                  className={`flex-1 px-2 py-1 rounded text-xs transition-colors ${
-                    selectionMode === "automatic"
-                      ? "bg-emerald-500 text-white"
-                      : canChangeMode
-                      ? "bg-gray-600 text-gray-300 hover:bg-gray-500"
-                      : "bg-gray-800 text-gray-600 cursor-not-allowed"
-                  }`}
-                >
-                  Auto
-                </button> */
-}
-{
-  /* <motion.button
-                onClick={() => setPopupSelection("automatic")}
-                className={`px-4 py-2 rounded-xl transition ${
-                  popupSelection === "automatic"
-                    ? "bg-gradient-to-r from-emerald-500 to-cyan-400 text-white"
-                    : "bg-gray-700 hover:bg-gray-600"
-                }`}
-                whileHover={{ scale: 1.05 }}
-              >
-                Automatic
-              </motion.button> */
-}
-{
-  /* {selectionMode === "automatic" && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              transition={{ duration: 0.3 }}
-              className="mt-3"
-            >
-              <label className="text-xs block mb-1 opacity-80">
-                Select Role:
-              </label>
-              <select
-                value={role}
-                onChange={(e) => handleRoleChange(e.target.value)}
-                className="w-full rounded-full bg-indigo-800/50 border border-indigo-600 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="All">All</option>
-                <option value="Batsman">Batsman</option>
-                <option value="Fast all-rounder">Fast-All-Rounder</option>
-                <option value="Spin all-rounder">Spin-All-Rounder</option>
-                <option value="Wicket keeper batsman">
-                  Wicket-keeper-batsman
-                </option>
-                <option value="Spin bowler">Spin Bowler</option>
-                <option value="Fast bowler">Fast Bowler</option>
-              </select>
-            </motion.div>
-          )} */
-}
-
-{
-  /* Role selector if automatic */
-}
-{
-  /* {popupSelection === "automatic" && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                transition={{ duration: 0.3 }}
-                className="mt-3"
-              >
-                <label className="text-xs block mb-2 opacity-80">
-                  Select Role Filter:
-                </label>
-                <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  className="w-full rounded-lg bg-gray-700 border border-gray-600 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="All">All</option>
-                  <option value="Batsman">Batsman</option>
-                  <option value="Fast all-rounder">Fast-All-Rounder</option>
-                  <option value="Spin all-rounder">Spin-All-Rounder</option>
-                  <option value="Wicket keeper batsman">
-                    Wicket-keeper-batsman
-                  </option>
-                  <option value="Spin bowler">Spin Bowler</option>
-                  <option value="Fast bowler">Fast Bowler</option>
-                </select>
-              </motion.div>
-            )} */
-}
-{
-  /* {popupSelection === "manual" && incoming.length === 0 && (
-              <div className="text-center p-3 bg-amber-900/30 rounded-lg">
-                <p className="text-xs text-amber-300 mb-2">
-                  No players selected for manual mode
-                </p>
-              </div>
-            )} */
 }

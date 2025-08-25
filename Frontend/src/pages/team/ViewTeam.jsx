@@ -130,6 +130,9 @@ export default function ViewTeam() {
               backgroundBlendMode: "overlay",
             }}
           >
+            {/* Enhanced dark overlay for better text contrast */}
+            <div className="absolute inset-0 bg-black bg-opacity-60"></div>
+
             <div className="absolute bottom-4 left-4 flex items-end">
               <div className="bg-white p-2 rounded-full shadow-lg">
                 <img
@@ -138,12 +141,27 @@ export default function ViewTeam() {
                   className="w-16 h-16 rounded-full object-contain"
                 />
               </div>
-              <h2 className="ml-4 text-2xl font-bold text-white drop-shadow-md">
-                {team.teamName}
-                <span className="block text-sm font-normal opacity-90">
+              <div className="ml-4">
+                {/* Enhanced text with stronger shadow and stroke */}
+                <h2
+                  className="text-2xl font-bold text-white"
+                  style={{
+                    textShadow:
+                      "2px 2px 4px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.6)",
+                    WebkitTextStroke: "1px rgba(0,0,0,0.5)",
+                  }}
+                >
+                  {team.teamName}
+                </h2>
+                <span
+                  className="block text-sm font-normal text-white opacity-90"
+                  style={{
+                    textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
+                  }}
+                >
                   {team.shortName}
                 </span>
-              </h2>
+              </div>
             </div>
           </div>
         </div>
@@ -179,6 +197,7 @@ export default function ViewTeam() {
                 </div>
               </div>
             </div>
+
             <div className="bg-purple-50 p-4 rounded-lg border border-purple-100">
               <div className="flex items-center">
                 <div className="p-2 bg-purple-100 rounded-full mr-3 text-purple-600">
@@ -264,7 +283,7 @@ export default function ViewTeam() {
                             {entry.player.name}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                          ₹{formatIndianNumber(entry.price)}
+                            ₹{formatIndianNumber(entry.price)}
                           </td>
                         </motion.tr>
                       ))}

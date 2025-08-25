@@ -123,25 +123,6 @@ function SmallPlayerCard({ player }) {
           <span className="text-2xl">👤</span>
         )}
       </motion.div>
-      {/* <div className="flex flex-col">
-        <h2 className="text-lg font-bold truncate">
-          {currentPlayer.name || "--/--"}
-        </h2>
-        <div className="flex items-center gap-2 mt-1">
-          <span className="text-xs bg-blue-600/30 px-2 py-1 rounded-full">
-            {currentPlayer.role || "--/--"}
-          </span>
-          <span className="text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full shadow-sm">
-            {currentPlayer.points || "--/--"}
-          </span>
-
-          <span className="text-xs bg-amber-600/30 px-2 py-1 rounded-full font-semibold">
-            {currentPlayer && currentPlayer.basePrice != null
-              ? `₹${formatIndianNumber(currentPlayer.basePrice)}`
-              : "--"}
-          </span>
-        </div>
-      </div> */}
 
       <div className="flex flex-col w-0 flex-1">
         {" "}
@@ -156,10 +137,13 @@ function SmallPlayerCard({ player }) {
           <span className="text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full shadow-sm">
             {currentPlayer.points || "--/--"}
           </span>
-          <span className="text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full shadow-sm">
-            {currentPlayer.country && currentPlayer.country !== "INDIA"
-              ? "✈️"
-              : null}
+          <span className="text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full shadow-sm flex items-center gap-1">
+            {currentPlayer.country && currentPlayer.country !== "INDIA" ? (
+              <>
+                <span>✈️</span>
+                <span>{currentPlayer.country}</span>
+              </>
+            ) : null}
           </span>
 
           <span className="text-xs bg-amber-600/30 px-2 py-1 rounded-full font-semibold">
@@ -552,10 +536,10 @@ export default function UserBiddingDashboardMobile() {
   useEffect(() => {
     if (showCelebration) {
       console.log("🎉 Starting mobile celebration!");
-      
+
       const duration = 4000; // 4 seconds celebration
       const end = Date.now() + duration;
-  
+
       (function frame() {
         // Multiple confetti bursts optimized for mobile
         confetti({
@@ -563,29 +547,50 @@ export default function UserBiddingDashboardMobile() {
           angle: 60,
           spread: 55,
           origin: { x: 0, y: 0.8 },
-          colors: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dda0dd'],
-          zIndex: 99999
+          colors: [
+            "#ff6b6b",
+            "#4ecdc4",
+            "#45b7d1",
+            "#96ceb4",
+            "#ffeaa7",
+            "#dda0dd",
+          ],
+          zIndex: 99999,
         });
-        
+
         confetti({
           particleCount: 12,
           angle: 120,
           spread: 55,
           origin: { x: 1, y: 0.8 },
-          colors: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dda0dd'],
-          zIndex: 99999
+          colors: [
+            "#ff6b6b",
+            "#4ecdc4",
+            "#45b7d1",
+            "#96ceb4",
+            "#ffeaa7",
+            "#dda0dd",
+          ],
+          zIndex: 99999,
         });
-  
+
         // Center burst
         confetti({
           particleCount: 15, // Slightly reduced for mobile
           angle: 90,
           spread: 100,
           origin: { x: 0.5, y: 0.7 },
-          colors: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dda0dd'],
-          zIndex: 99999
+          colors: [
+            "#ff6b6b",
+            "#4ecdc4",
+            "#45b7d1",
+            "#96ceb4",
+            "#ffeaa7",
+            "#dda0dd",
+          ],
+          zIndex: 99999,
         });
-  
+
         if (Date.now() < end) {
           requestAnimationFrame(frame);
         } else {
@@ -627,7 +632,7 @@ export default function UserBiddingDashboardMobile() {
       console.log("Received player:sold", payload);
       const winnerId = payload.soldTo;
       const teamId = userTeamIdRef.current;
-    
+
       if (teamId && winnerId) {
         if (winnerId === teamId) {
           setEmoteToPlay("BidWon");
@@ -636,21 +641,21 @@ export default function UserBiddingDashboardMobile() {
           setEmoteToPlay("LostBid");
           setShowCelebration(false); // 🛑 No celebration
         }
-    
+
         // Reset emote after 4 seconds to match celebration duration
         if (emoteTimeoutRef.current) {
           clearTimeout(emoteTimeoutRef.current);
         }
-    
+
         emoteTimeoutRef.current = setTimeout(() => {
           setEmoteToPlay(null);
           setShowCelebration(false);
           emoteTimeoutRef.current = null;
         }, 4000); // Changed from 3000 to 4000
       }
-    
+
       fetchAuctionData();
-    
+
       if (payload.amount != null) {
         // toast.success(`Sold for ₹${formatIndianNumber(payload.amount)}`);
       } else {
@@ -1636,240 +1641,290 @@ export default function UserBiddingDashboardMobile() {
 
             {/* Performance Stats */}
             <div className="mb-4">
-              <h3 className="text-lg font-semibold text-emerald-300 mb-2">
-                Performance Stats
+              <h3 className="text-lg font-semibold text-emerald-300 mb-3 flex items-center">
+                📊 Performance Statistics
               </h3>
+
               {(() => {
+                // Get performance stats from selectedPlayer first, then from auctionData.currentPlayer
+                const performanceStats =
+                  selectedPlayer.performanceStats ||
+                  auctionData?.currentPlayer?.performanceStats;
+
                 const role = selectedPlayer.role || "";
-                const isBatsman = ["Batsman", "Wicket keeper batsman"].includes(
-                  role
+
+                console.log("Modal Debug Info:");
+                console.log("Role:", role);
+                console.log("Performance Stats:", performanceStats);
+                console.log("Selected Player:", selectedPlayer);
+                console.log(
+                  "Auction Data Current Player:",
+                  auctionData?.currentPlayer
                 );
-                const isBowler = ["Fast bowler", "Spin bowler"].includes(role);
-                const isAllRounder = [
-                  "Fast all-rounder",
-                  "Spin all-rounder",
-                ].includes(role);
 
-                const stats = selectedPlayer.performanceStats || {};
-                const batting = stats.batting || {};
-                const bowling = stats.bowling || {};
-                const allRound = stats.allRounder || {};
+                if (!performanceStats) {
+                  return (
+                    <div className="text-center py-4">
+                      <div className="text-4xl mb-2">📊</div>
+                      <p className="text-gray-400 text-sm">
+                        Performance statistics not available.
+                      </p>
+                      <p className="text-gray-500 text-xs mt-2">
+                        Player may not be the current lot player.
+                      </p>
+                    </div>
+                  );
+                }
 
-                const StatItem = ({ label, value }) => (
-                  <div className="mb-2">
-                    <span className="block text-gray-400 text-xs">{label}</span>
-                    <span className="text-white font-medium">
-                      {value ?? "--"}
+                // Role-based logic
+                const isAllRounder =
+                  role === "Fast all-rounder" || role === "Spin all-rounder";
+                const isBatsman =
+                  role === "Batsman" || role === "Wicket keeper batsman";
+                const isBowler =
+                  role === "Fast bowler" || role === "Spin bowler";
+
+                const StatItem = ({ label, value, icon = "📈" }) => (
+                  <div className="flex justify-between items-center py-1.5 px-2 bg-white/5 rounded-lg mb-2">
+                    <span className="text-gray-400 text-xs flex items-center">
+                      <span className="mr-1">{icon}</span>
+                      {label}
+                    </span>
+                    <span className="text-white font-medium text-sm">
+                      {value !== null && value !== undefined && value !== ""
+                        ? value
+                        : "--"}
                     </span>
                   </div>
                 );
 
-                if (isBatsman) {
+                // All-Rounder Stats
+                if (isAllRounder && performanceStats.allRounder) {
+                  const stats = performanceStats.allRounder;
                   return (
-                    <>
-                      <StatItem label="Matches" value={batting.matches} />
+                    <div className="space-y-1">
+                      <div className="text-center mb-2">
+                        <span className="text-purple-400 text-xs font-semibold">
+                          🏏 ALL-ROUNDER STATS
+                        </span>
+                      </div>
+                      <StatItem
+                        label="Matches"
+                        value={stats.matches}
+                        icon="🏏"
+                      />
                       <StatItem
                         label="Runs"
-                        value={formatIndianNumber(batting.runs)}
+                        value={formatIndianNumber(stats.runs)}
+                        icon="🏃"
                       />
-                      <StatItem label="High Score" value={batting.highScore} />
-                      <StatItem label="Average" value={batting.average} />
                       <StatItem
-                        label="Strike Rate"
-                        value={batting.strikeRate}
+                        label="High Score"
+                        value={stats.highScore}
+                        icon="⚡"
                       />
-                      <StatItem label="Centuries" value={batting.centuries} />
-                      <StatItem label="Fifties" value={batting.fifties} />
-                    </>
-                  );
-                }
-
-                if (isBowler) {
-                  return (
-                    <>
-                      <StatItem label="Matches" value={bowling.matches} />
-                      <StatItem label="Wickets" value={bowling.wickets} />
-                      <StatItem
-                        label="Best Bowling"
-                        value={bowling.bestBowling}
-                      />
-                      <StatItem label="Average" value={bowling.average} />
-                      <StatItem label="Economy" value={bowling.economy} />
-                      <StatItem
-                        label="5W Hauls"
-                        value={bowling.fiveWicketHauls}
-                      />
-                    </>
-                  );
-                }
-
-                if (isAllRounder) {
-                  return (
-                    <>
-                      <StatItem label="Matches" value={allRound.matches} />
-                      <StatItem
-                        label="Runs"
-                        value={formatIndianNumber(allRound.runs)}
-                      />
-                      <StatItem label="High Score" value={allRound.highScore} />
                       <StatItem
                         label="Batting Avg"
-                        value={allRound.battingAverage}
+                        value={
+                          stats.battingAverage > 0
+                            ? stats.battingAverage.toFixed(1)
+                            : "0.0"
+                        }
+                        icon="📊"
                       />
                       <StatItem
-                        label="Batting S/R"
-                        value={allRound.battingStrikeRate}
+                        label="Strike Rate"
+                        value={
+                          stats.battingStrikeRate > 0
+                            ? stats.battingStrikeRate.toFixed(1)
+                            : "0.0"
+                        }
+                        icon="🎯"
                       />
-                      <StatItem label="Centuries" value={allRound.centuries} />
-                      <StatItem label="Fifties" value={allRound.fifties} />
-                      <StatItem label="Wickets" value={allRound.wickets} />
+                      <StatItem
+                        label="Centuries"
+                        value={stats.centuries}
+                        icon="💯"
+                      />
+                      <StatItem
+                        label="Fifties"
+                        value={stats.fifties}
+                        icon="5️⃣"
+                      />
+                      <StatItem
+                        label="Wickets"
+                        value={stats.wickets}
+                        icon="🎯"
+                      />
                       <StatItem
                         label="Best Bowling"
-                        value={allRound.bestBowling}
+                        value={stats.bestBowling || "0/0"}
+                        icon="⭐"
                       />
                       <StatItem
-                        label="Bowling Avg"
-                        value={allRound.bowlingAverage}
+                        label="Bowl Avg"
+                        value={
+                          stats.bowlingAverage > 0
+                            ? stats.bowlingAverage.toFixed(1)
+                            : "0.0"
+                        }
+                        icon="📈"
                       />
-                      <StatItem label="Economy" value={allRound.economy} />
                       <StatItem
-                        label="5W Hauls"
-                        value={allRound.fiveWicketHauls}
+                        label="Economy"
+                        value={
+                          stats.economy > 0 ? stats.economy.toFixed(1) : "0.0"
+                        }
+                        icon="💰"
                       />
-                    </>
+                      <StatItem
+                        label="5-Wickets"
+                        value={stats.fiveWicketHauls}
+                        icon="🔥"
+                      />
+                    </div>
                   );
                 }
 
+                // Batting Stats
+                if (isBatsman && performanceStats.batting) {
+                  const stats = performanceStats.batting;
+                  return (
+                    <div className="space-y-1">
+                      <div className="text-center mb-2">
+                        <span className="text-orange-400 text-xs font-semibold">
+                          🏏 BATTING STATS
+                        </span>
+                      </div>
+                      <StatItem
+                        label="Matches"
+                        value={stats.matches}
+                        icon="🏏"
+                      />
+                      <StatItem
+                        label="Runs"
+                        value={formatIndianNumber(stats.runs)}
+                        icon="🏃"
+                      />
+                      <StatItem
+                        label="High Score"
+                        value={stats.highScore}
+                        icon="⚡"
+                      />
+                      <StatItem
+                        label="Average"
+                        value={
+                          stats.average > 0
+                            ? stats.average.toFixed(1)
+                            : stats.average
+                        }
+                        icon="📊"
+                      />
+                      <StatItem
+                        label="Strike Rate"
+                        value={
+                          stats.strikeRate > 0
+                            ? stats.strikeRate.toFixed(1)
+                            : stats.strikeRate
+                        }
+                        icon="🎯"
+                      />
+                      <StatItem
+                        label="Centuries"
+                        value={stats.centuries}
+                        icon="💯"
+                      />
+                      <StatItem
+                        label="Fifties"
+                        value={stats.fifties}
+                        icon="5️⃣"
+                      />
+                    </div>
+                  );
+                }
+
+                // Bowling Stats
+                if (isBowler && performanceStats.bowling) {
+                  const stats = performanceStats.bowling;
+                  return (
+                    <div className="space-y-1">
+                      <div className="text-center mb-2">
+                        <span className="text-green-400 text-xs font-semibold">
+                          🏏 BOWLING STATS
+                        </span>
+                      </div>
+                      <StatItem
+                        label="Matches"
+                        value={stats.matches}
+                        icon="🏏"
+                      />
+                      <StatItem
+                        label="Wickets"
+                        value={stats.wickets}
+                        icon="🎯"
+                      />
+                      <StatItem
+                        label="Best Bowling"
+                        value={stats.bestBowling || "0/0"}
+                        icon="⭐"
+                      />
+                      <StatItem
+                        label="Average"
+                        value={
+                          stats.average > 0 ? stats.average.toFixed(1) : "0.0"
+                        }
+                        icon="📊"
+                      />
+                      <StatItem
+                        label="Economy"
+                        value={
+                          stats.economy > 0 ? stats.economy.toFixed(1) : "0.0"
+                        }
+                        icon="💰"
+                      />
+                      <StatItem
+                        label="5-Wickets"
+                        value={stats.fiveWicketHauls}
+                        icon="🔥"
+                      />
+                    </div>
+                  );
+                }
+
+                // No matching role or stats
                 return (
-                  <p className="text-gray-400 text-sm">
-                    No performance stats available for this role.
-                  </p>
+                  <div className="text-center py-4">
+                    <div className="text-4xl mb-2">📊</div>
+                    <p className="text-gray-400 text-sm">
+                      No performance stats available for {role}.
+                    </p>
+                    <div className="text-xs text-gray-500 mt-2 space-y-1">
+                      <p>Debug: Role = {role}</p>
+                      <p>
+                        Has allRounder:{" "}
+                        {performanceStats.allRounder ? "Yes" : "No"}
+                      </p>
+                      <p>
+                        Has batting: {performanceStats.batting ? "Yes" : "No"}
+                      </p>
+                      <p>
+                        Has bowling: {performanceStats.bowling ? "Yes" : "No"}
+                      </p>
+                    </div>
+                  </div>
                 );
               })()}
             </div>
 
             <button
               onClick={closePlayerModal}
-              className="w-full mt-3 py-2 bg-red-600 hover:bg-red-700 rounded-xl text-white font-semibold transition-all duration-200"
+              className="w-full mt-3 py-2 bg-red-600 hover:bg-red-700 rounded-xl text-white font-semibent transition-all duration-200"
             >
               Close
             </button>
           </motion.div>
         </motion.div>
       )}
-
-
-{showCelebration && (
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "100vw",
-          height: "100vh",
-          backgroundColor: "rgba(15, 23, 42, 0.25)",
-          color: "white",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
-          zIndex: 9998,
-          pointerEvents: "none",
-          userSelect: "none",
-          textAlign: "center",
-          padding: "15px", // Reduced padding for mobile
-          backdropFilter: "blur(2px)",
-        }}
-      >
-        <h1
-          style={{
-            fontSize: "clamp(2rem, 12vw, 4rem)", // Mobile-optimized sizing
-            fontWeight: "800",
-            marginBottom: "20px",
-            color: "#ffffff",
-            textShadow: "0 4px 20px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 255, 255, 0.5)",
-            animation: "fadeInScale 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
-            letterSpacing: "1px", // Reduced for mobile
-            WebkitTextStroke: "0.5px rgba(0, 0, 0, 0.5)", // Thinner stroke for mobile
-            lineHeight: "1.1", // Better mobile line height
-          }}
-        >
-          🎉 CONGRATULATIONS! 🎉
-        </h1>
-        <h2
-          style={{
-            fontSize: "clamp(1.2rem, 8vw, 2.5rem)", // Mobile-optimized sizing
-            fontWeight: "600",
-            color: "#FFD700",
-            textShadow: "0 2px 15px rgba(0, 0, 0, 0.8), 0 0 25px rgba(255, 215, 0, 0.6)",
-            animation: "slideInUp 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s both",
-            letterSpacing: "0.5px", // Reduced for mobile
-            WebkitTextStroke: "0.3px rgba(0, 0, 0, 0.3)", // Thinner stroke
-            lineHeight: "1.2",
-          }}
-        >
-          🏆 YOU WON! 🏆
-        </h2>
-      </div>
-    )}
-
-    <style jsx>{`
-      @keyframes fadeInScale {
-        0% {
-          opacity: 0;
-          transform: scale(0.3) translateY(-30px); /* Reduced translation for mobile */
-        }
-        60% {
-          opacity: 0.9;
-          transform: scale(1.03) translateY(-5px); /* Smaller scale for mobile */
-        }
-        100% {
-          opacity: 1;
-          transform: scale(1) translateY(0);
-        }
-      }
-
-      @keyframes slideInUp {
-        0% {
-          opacity: 0;
-          transform: translateY(60px) scale(0.8); /* Reduced translation for mobile */
-        }
-        100% {
-          opacity: 1;
-          transform: translateY(0) scale(1);
-        }
-      }
-
-      /* Mobile-optimized gentle glow */
-      @keyframes gentleGlow {
-        0%, 100% {
-          text-shadow: 0 2px 15px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 215, 0, 0.6);
-        }
-        50% {
-          text-shadow: 0 2px 20px rgba(0, 0, 0, 0.9), 0 0 25px rgba(255, 215, 0, 0.8);
-        }
-      }
-
-      /* Apply gentle glow to "YOU WON!" text */
-      h2 {
-        animation: slideInUp 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s both,
-                   gentleGlow 2s ease-in-out 1.3s infinite;
-      }
-
-      /* Mobile-specific optimizations */
-      @media (max-width: 768px) {
-        h1 {
-          margin-bottom: 15px !important;
-        }
-        
-        /* Ensure readability on small screens */
-        @supports (-webkit-text-stroke: 1px black) {
-          h1, h2 {
-            -webkit-text-stroke: 0.5px rgba(0, 0, 0, 0.7);
-          }
-        }
-      }
-    `}</style>
     </div>
   );
 }

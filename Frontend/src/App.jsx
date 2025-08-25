@@ -83,7 +83,21 @@ function App() {
 
   return (
     <Router>
-      <Toaster position="top-right" />
+      <Toaster
+        position="top-right"
+        containerStyle={{ zIndex: 99999 }}
+        toastOptions={{
+          style: {
+            fontSize: "14px",
+          },
+          success: {
+            duration: 4000,
+          },
+          error: {
+            duration: 4000,
+          },
+        }}
+      />
       <AutoLogout />
       <Routes>
         <Route

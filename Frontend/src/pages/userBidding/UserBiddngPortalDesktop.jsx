@@ -445,10 +445,10 @@ export default function UserBiddingDashboardDesktop() {
   useEffect(() => {
     if (showCelebration) {
       console.log("🎉 Starting user celebration!");
-      
+
       const duration = 4000; // 4 seconds celebration
       const end = Date.now() + duration;
-  
+
       (function frame() {
         // Multiple confetti bursts from different angles
         confetti({
@@ -456,29 +456,50 @@ export default function UserBiddingDashboardDesktop() {
           angle: 60,
           spread: 55,
           origin: { x: 0, y: 0.8 },
-          colors: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dda0dd'],
-          zIndex: 99999
+          colors: [
+            "#ff6b6b",
+            "#4ecdc4",
+            "#45b7d1",
+            "#96ceb4",
+            "#ffeaa7",
+            "#dda0dd",
+          ],
+          zIndex: 99999,
         });
-        
+
         confetti({
           particleCount: 15,
           angle: 120,
           spread: 55,
           origin: { x: 1, y: 0.8 },
-          colors: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dda0dd'],
-          zIndex: 99999
+          colors: [
+            "#ff6b6b",
+            "#4ecdc4",
+            "#45b7d1",
+            "#96ceb4",
+            "#ffeaa7",
+            "#dda0dd",
+          ],
+          zIndex: 99999,
         });
-  
+
         // Center burst
         confetti({
           particleCount: 20,
           angle: 90,
           spread: 100,
           origin: { x: 0.5, y: 0.7 },
-          colors: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dda0dd'],
-          zIndex: 99999
+          colors: [
+            "#ff6b6b",
+            "#4ecdc4",
+            "#45b7d1",
+            "#96ceb4",
+            "#ffeaa7",
+            "#dda0dd",
+          ],
+          zIndex: 99999,
         });
-  
+
         if (Date.now() < end) {
           requestAnimationFrame(frame);
         } else {
@@ -499,8 +520,8 @@ export default function UserBiddingDashboardDesktop() {
 
     const socket = io(
       "https://cricket-bidding-website-production.up.railway.app",
-      // const socket = io("http://localhost:6001", 
-      {
+    // const socket = io("http://localhost:6001", 
+    {
       auth: { token },
       transports: ["websocket"],
     });
@@ -521,7 +542,7 @@ export default function UserBiddingDashboardDesktop() {
       console.log("Received player:sold", payload);
       const winnerId = payload.soldTo;
       const teamId = userTeamIdRef.current;
-    
+
       if (teamId && winnerId) {
         if (winnerId === teamId) {
           setEmoteToPlay("BidWon");
@@ -530,21 +551,21 @@ export default function UserBiddingDashboardDesktop() {
           setEmoteToPlay("LostBid");
           setShowCelebration(false); // 🛑 No celebration
         }
-    
+
         // Reset emote after 4 seconds to match celebration duration
         if (emoteTimeoutRef.current) {
           clearTimeout(emoteTimeoutRef.current);
         }
-    
+
         emoteTimeoutRef.current = setTimeout(() => {
           setEmoteToPlay(null);
           setShowCelebration(false);
           emoteTimeoutRef.current = null;
         }, 4000); // Changed from 3000 to 4000
       }
-    
+
       fetchAuctionData();
-    
+
       if (payload.amount != null) {
         toast.success(`Sold for ₹${formatIndianNumber(payload.amount)}`);
       } else {
@@ -598,17 +619,6 @@ export default function UserBiddingDashboardDesktop() {
       );
     });
 
-    // socket.on("bid:placed", (payload) => {
-    //   console.log("bid:placed", payload);
-
-    //   clearTimeout(window.auctionDataTimeout);
-    //   window.auctionDataTimeout = setTimeout(() => {
-    //     fetchAuctionData();
-    //   }, 100);
-
-    //   toast.success(`New bid ₹${formatIndianNumber(payload.newBid.amount)}`);
-    // });
-
     socket.on("bid:placed", (payload) => {
       console.log("bid:placed", payload);
       clearTimeout(window.auctionDataTimeout);
@@ -617,26 +627,6 @@ export default function UserBiddingDashboardDesktop() {
       }, 100);
       toast.success(`New bid ₹${formatIndianNumber(payload.newBid.amount)}`);
     });
-
-    // socket.on("timer:update", (payload) => {
-    //   console.log("timer:update", payload);
-
-    //   if (payload.auctionId === id) {
-    //     const remainingTime = calculateRemainingTime(payload.timerExpiredAt);
-
-    //     setTimerData({
-    //       isActive: payload.isTimerActive,
-    //       remainingTime,
-    //       startedAt: payload.timerStartedAt,
-    //       expiresAt: payload.timerExpiredAt,
-    //       duration: payload.duration,
-    //     });
-
-    //     if (payload.resetTimer) {
-    //       toast.success(`Timer Reset - ${remainingTime} seconds remaining`);
-    //     }
-    //   }
-    // });
 
     socket.on("timer:update", (payload) => {
       console.log("timer:update", payload);
@@ -1001,44 +991,6 @@ export default function UserBiddingDashboardDesktop() {
       toast.error(err.response?.data?.message || "Failed to use RTM");
     }
   };
-  // const TimerDisplay = () => {
-  //   if (!timerData.isActive) return null;
-
-  //   const progress =
-  //     (timerData.remainingTime / (timerData.duration / 1000)) * 100;
-  //   const isLowTime = timerData.remainingTime <= 3;
-
-  //   return (
-  //     <div className="bg-gradient-to-r from-orange-900/50 to-red-800/50 rounded-xl p-3 mb-4 shadow-lg">
-  //       <div className="flex items-center justify-between mb-2">
-  //         <h3 className="text-sm font-medium text-orange-200">Bidding Timer</h3>
-  //         <span
-  //           className={`text-lg font-bold ${
-  //             isLowTime ? "text-red-400 animate-pulse" : "text-orange-300"
-  //           }`}
-  //         >
-  //           {timerData.remainingTime}s
-  //         </span>
-  //       </div>
-
-  //       {/* Progress Bar */}
-  //       <div className="w-full bg-gray-700 rounded-full h-2">
-  //         <div
-  //           className={`h-2 rounded-full transition-all duration-1000 ${
-  //             isLowTime ? "bg-red-500" : "bg-orange-500"
-  //           }`}
-  //           style={{ width: `${progress}%` }}
-  //         />
-  //       </div>
-
-  //       <p className="text-xs text-orange-200 mt-1 opacity-75">
-  //         {isBidDisabled
-  //           ? "Bidding disabled - Timer expired"
-  //           : "Place your bid before timer ends"}
-  //       </p>
-  //     </div>
-  //   );
-  // };
 
   const TimerDisplay = () => {
     if (!timerData.isActive) return null;
@@ -1075,8 +1027,6 @@ export default function UserBiddingDashboardDesktop() {
     );
   };
 
-  // ─── Render ───────────────────────────────────────────────────────
-  // Container classes
   const containerClasses = [
     "text-white bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900",
     fullScreen ? "fixed inset-0 z-[9999] overflow-auto" : "relative mx-auto",
@@ -1134,7 +1084,6 @@ export default function UserBiddingDashboardDesktop() {
               {info?.name ?? "--/--"}
             </p>
             <p className="text-xs opacity-80">
-              
               {info?.price != null
                 ? `₹${formatIndianNumber(info.price)}`
                 : "--/--"}{" "}
@@ -1186,19 +1135,20 @@ export default function UserBiddingDashboardDesktop() {
             </div>
           </div>
           <div className="mt-3 flex items-center justify-center gap-3">
-  <div className="flex flex-col items-center">
-    <span className="text-xs opacity-75">Rating</span>
-    <p className="text-sm">
-      {auctionData.currentPlayer?.points ?? "--/--"}
-    </p>
-  </div>
-  {auctionData.currentPlayer?.country &&
-    auctionData.currentPlayer?.country !== "INDIA" && (
-      <span className="text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full shadow-sm flex items-center">
-        ✈️
-      </span>
-    )}
-</div>
+            <div className="flex flex-col items-center">
+              <span className="text-xs opacity-75">Rating</span>
+              <p className="text-sm">
+                {auctionData.currentPlayer?.points ?? "--/--"}
+              </p>
+            </div>
+            {auctionData.currentPlayer?.country &&
+              auctionData.currentPlayer?.country !== "INDIA" && (
+                <span className="text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full shadow-sm flex items-center gap-1">
+                  <span>✈️</span>
+                  <span>{auctionData.currentPlayer.country}</span>
+                </span>
+              )}
+          </div>
 
           <p className="mt-3 text-base font-semibold bg-blue-900/50 py-1 rounded-lg border border-blue-700">
             Base Price:{" "}
@@ -1757,101 +1707,6 @@ export default function UserBiddingDashboardDesktop() {
           </div>
         </div>
       )}
-      {showCelebration && (
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "100vw",
-          height: "100vh",
-          backgroundColor: "rgba(15, 23, 42, 0.25)",
-          color: "white",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
-          zIndex: 9998,
-          pointerEvents: "none",
-          userSelect: "none",
-          textAlign: "center",
-          padding: "20px",
-          backdropFilter: "blur(2px)",
-        }}
-      >
-        <h1
-          style={{
-            fontSize: "clamp(3rem, 8vw, 6rem)",
-            fontWeight: "800",
-            marginBottom: "30px",
-            color: "#ffffff",
-            textShadow: "0 4px 20px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 255, 255, 0.5)",
-            animation: "fadeInScale 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
-            letterSpacing: "2px",
-            WebkitTextStroke: "1px rgba(0, 0, 0, 0.5)",
-          }}
-        >
-          🎉 CONGRATULATIONS! 🎉
-        </h1>
-        <h2
-          style={{
-            fontSize: "clamp(1.5rem, 5vw, 3rem)",
-            fontWeight: "600",
-            color: "#FFD700",
-            textShadow: "0 2px 15px rgba(0, 0, 0, 0.8), 0 0 25px rgba(255, 215, 0, 0.6)",
-            animation: "slideInUp 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s both",
-            letterSpacing: "1px",
-            WebkitTextStroke: "0.5px rgba(0, 0, 0, 0.3)",
-          }}
-        >
-          🏆 YOU WON! 🏆
-        </h2>
-      </div>
-    )}
-
-    <style jsx>{`
-      @keyframes fadeInScale {
-        0% {
-          opacity: 0;
-          transform: scale(0.3) translateY(-50px);
-        }
-        60% {
-          opacity: 0.9;
-          transform: scale(1.05) translateY(-10px);
-        }
-        100% {
-          opacity: 1;
-          transform: scale(1) translateY(0);
-        }
-      }
-
-      @keyframes slideInUp {
-        0% {
-          opacity: 0;
-          transform: translateY(100px) scale(0.8);
-        }
-        100% {
-          opacity: 1;
-          transform: translateY(0) scale(1);
-        }
-      }
-
-      /* Additional smooth entrance animation */
-      @keyframes gentleGlow {
-        0%, 100% {
-          text-shadow: 0 2px 15px rgba(0, 0, 0, 0.8), 0 0 25px rgba(255, 215, 0, 0.6);
-        }
-        50% {
-          text-shadow: 0 2px 25px rgba(0, 0, 0, 0.9), 0 0 35px rgba(255, 215, 0, 0.8);
-        }
-      }
-
-      /* Apply gentle glow to "YOU WON!" text */
-      h2 {
-        animation: slideInUp 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s both,
-                   gentleGlow 2s ease-in-out 1.3s infinite;
-      }
-    `}</style>
     </div>
   );
 }
