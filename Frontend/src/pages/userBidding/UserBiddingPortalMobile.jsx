@@ -536,14 +536,14 @@ export default function UserBiddingDashboardMobile() {
   useEffect(() => {
     if (showCelebration) {
       console.log("🎉 Starting mobile celebration!");
-
+  
       const duration = 4000; // 4 seconds celebration
       const end = Date.now() + duration;
-
+  
       (function frame() {
-        // Multiple confetti bursts optimized for mobile
+        // Left side confetti (slightly reduced for mobile)
         confetti({
-          particleCount: 12, // Slightly reduced for mobile performance
+          particleCount: 12,
           angle: 60,
           spread: 55,
           origin: { x: 0, y: 0.8 },
@@ -557,7 +557,8 @@ export default function UserBiddingDashboardMobile() {
           ],
           zIndex: 99999,
         });
-
+  
+        // Right side confetti (slightly reduced for mobile)
         confetti({
           particleCount: 12,
           angle: 120,
@@ -573,24 +574,9 @@ export default function UserBiddingDashboardMobile() {
           ],
           zIndex: 99999,
         });
-
-        // Center burst
-        confetti({
-          particleCount: 15, // Slightly reduced for mobile
-          angle: 90,
-          spread: 100,
-          origin: { x: 0.5, y: 0.7 },
-          colors: [
-            "#ff6b6b",
-            "#4ecdc4",
-            "#45b7d1",
-            "#96ceb4",
-            "#ffeaa7",
-            "#dda0dd",
-          ],
-          zIndex: 99999,
-        });
-
+  
+        // Center burst removed for side-only effect
+  
         if (Date.now() < end) {
           requestAnimationFrame(frame);
         } else {
@@ -600,6 +586,7 @@ export default function UserBiddingDashboardMobile() {
       })();
     }
   }, [showCelebration]);
+  
 
   useEffect(() => {
     const token = localStorage.getItem("token");

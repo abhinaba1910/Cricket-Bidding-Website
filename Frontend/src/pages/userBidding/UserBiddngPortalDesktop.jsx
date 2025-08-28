@@ -445,12 +445,12 @@ export default function UserBiddingDashboardDesktop() {
   useEffect(() => {
     if (showCelebration) {
       console.log("🎉 Starting user celebration!");
-
+  
       const duration = 4000; // 4 seconds celebration
       const end = Date.now() + duration;
-
+  
       (function frame() {
-        // Multiple confetti bursts from different angles
+        // Left side confetti
         confetti({
           particleCount: 15,
           angle: 60,
@@ -466,7 +466,8 @@ export default function UserBiddingDashboardDesktop() {
           ],
           zIndex: 99999,
         });
-
+  
+        // Right side confetti
         confetti({
           particleCount: 15,
           angle: 120,
@@ -482,24 +483,7 @@ export default function UserBiddingDashboardDesktop() {
           ],
           zIndex: 99999,
         });
-
-        // Center burst
-        confetti({
-          particleCount: 20,
-          angle: 90,
-          spread: 100,
-          origin: { x: 0.5, y: 0.7 },
-          colors: [
-            "#ff6b6b",
-            "#4ecdc4",
-            "#45b7d1",
-            "#96ceb4",
-            "#ffeaa7",
-            "#dda0dd",
-          ],
-          zIndex: 99999,
-        });
-
+  
         if (Date.now() < end) {
           requestAnimationFrame(frame);
         } else {
@@ -509,6 +493,7 @@ export default function UserBiddingDashboardDesktop() {
       })();
     }
   }, [showCelebration]);
+  
 
   // Desktop Version: Enhanced Socket Setup with Fixed RTM Handlers
   useEffect(() => {
