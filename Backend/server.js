@@ -130,7 +130,8 @@ const PORT = process.env.PORT || 8080; // Railway dynamic port
 // ── Fixed CORS Logic: Whitelist + Regex ────────────────
 const allowedOrigins = [
   "https://cricbid.sytes.net",
-  "https://cricket-bidding-website.vercel.app",
+  // "https://cricket-bidding-website.vercel.app",
+  "https://cricket-bidding-website-odez3nm7q.vercel.app",
   "http://localhost:5173",
 ];
 
