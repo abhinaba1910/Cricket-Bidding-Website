@@ -108,7 +108,7 @@
 
 
 
-require("dotenv").config();
+require("dotenv").config(); // MUST BE LINE 1
 const express = require("express");
 const mongoose = require("mongoose");
 const compression = require("compression");
@@ -125,58 +125,58 @@ const dashboardRoutes = require("./Routes/dasboardRoutes");
 const biddingRoutes = require("./Routes/biddingRoutes");
 
 const app = express();
-const PORT = process.env.PORT || 8080; // Railway dynamic port
+// Railway provides the PORT environment variable automatically
+const PORT = process.env.PORT || 8080;
 
-// ── Fixed CORS Logic: Whitelist + Regex ────────────────
+// ── Dynamic CORS Configuration ──────────────────────
 const allowedOrigins = [
   "https://cricbid.sytes.net",
-  // "https://cricket-bidding-website.vercel.app",
-  "https://cricket-bidding-website-odez3nm7q.vercel.app",
+  "https://cricket-bidding-website.vercel.app",
+  "https://cricket-bidding-website-beta.vercel.app", // Added your new beta URL
   "http://localhost:5173",
 ];
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // 1. Allow if no origin (like mobile apps/Postman)
+    // Allow requests with no origin (like mobile apps or curl)
     if (!origin) return callback(null, true);
-    
-    // 2. Allow if in the explicit whitelist
-    if (allowedOrigins.includes(origin)) return callback(null, true);
 
-    // 3. Allow ANY Vercel preview URL from your project
-    // This Regex matches your project name followed by anything .vercel.app
-    if (/^https:\/\/cricket-bidding-website.*\.vercel\.app$/.test(origin)) {
-      return callback(null, true);
+    const isWhitelisted = allowedOrigins.includes(origin);
+    const isVercelPreview = /^https:\/\/cricket-bidding-website.*\.vercel\.app$/.test(origin);
+
+    if (isWhitelisted || isVercelPreview) {
+      callback(null, true);
+    } else {
+      console.error(`CORS Blocked Origin: ${origin}`);
+      callback(new Error("Not allowed by CORS"));
     }
-
-    // Otherwise, block
-    console.error(`Blocked by CORS: ${origin}`);
-    callback(new Error("Not allowed by CORS"));
   },
   credentials: true,
   methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 };
 
-// ── Middleware ────────────────────────────────────────
-app.use(helmet({
-  crossOriginResourcePolicy: false, // Important for cross-origin assets
-}));
+// ── Middleware ──────────────────────────────────────
+app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(compression());
-app.use(cors(corsOptions)); // Using the updated options
+app.use(cors(corsOptions));
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
-app.get("/", (req, res) => res.status(200).send("Server is Live"));
+app.get("/", (req, res) => res.status(200).send("API is running..."));
 
-// ── MongoDB Connect ───────────────────────────────
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log("MongoDB connected successfully."))
-.catch((err) => console.error("MongoDB connection error:", err));
+// ── MongoDB Connect with Safety Check ───────────────
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://dasabhi1910:iamf00L@cricket-bidding.dugejrq.mongodb.net/";
 
-// ── Routes ───────────────────────────────────────
+if (!MONGO_URI) {
+  console.error("ERROR: MONGO_URI is undefined. Check Railway Environment Variables.");
+}
+
+mongoose.connect(MONGO_URI)
+  .then(() => console.log("MongoDB connected successfully."))
+  .catch((err) => console.error("MongoDB connection error:", err));
+
+// ── Routes ──────────────────────────────────────────
 app.use("/", personRoutes);
 app.use("/", playerRoutes);
 app.use("/", teamRoutes);
@@ -184,36 +184,29 @@ app.use("/", auctionRoutes);
 app.use("/", dashboardRoutes);
 app.use("/", biddingRoutes);
 
-// ── Socket.IO Setup ───────────────────────────────
+// ── Socket.IO Setup ─────────────────────────────────
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: corsOptions, // Use the same logic for Socket.IO
+  cors: corsOptions, // Reuse the same logic
 });
 
 app.set("io", io);
 
 io.on("connection", (socket) => {
-  console.log("A client connected:", socket.id);
+  console.log("Client connected:", socket.id);
 
   socket.on("join-auction", (auctionId) => {
     socket.join(auctionId);
-    console.log(`Socket joined room ${auctionId}`);
   });
 
   socket.on("timer:expired", ({ auctionId }) => {
     io.to(auctionId).emit("timer:expired", { auctionId });
   });
-  
-  socket.on("leave-auction", (auctionId) => {
-    socket.leave(auctionId);
-  });
 
-  socket.on("disconnect", () => {
-    console.log("Client disconnected");
-  });
+  socket.on("disconnect", () => console.log("Client disconnected"));
 });
 
-// ── Start Server ─────────────────────────────────
+// ── Start Server ────────────────────────────────────
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
