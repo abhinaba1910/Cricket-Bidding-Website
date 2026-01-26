@@ -131,8 +131,8 @@ const PORT = process.env.PORT || 8080;
 // ── Dynamic CORS Configuration ──────────────────────
 const allowedOrigins = [
   "https://cricbid.sytes.net",
-  "https://cricket-bidding-website.vercel.app",
-  "https://cricket-bidding-website-beta.vercel.app", // Added your new beta URL
+  // "https://cricket-bidding-website.vercel.app",
+  "https://cricket-bidding-website-beta.vercel.app/", // Added your new beta URL
   "http://localhost:5173",
 ];
 
