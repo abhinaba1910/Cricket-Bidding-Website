@@ -125,23 +125,25 @@ const dashboardRoutes = require("./Routes/dasboardRoutes");
 const biddingRoutes = require("./Routes/biddingRoutes");
 
 const app = express();
-// Railway provides the PORT environment variable automatically
 const PORT = process.env.PORT || 8080;
 
 // ── Dynamic CORS Configuration ──────────────────────
 const allowedOrigins = [
   "https://cricbid.sytes.net",
-  // "https://cricket-bidding-website.vercel.app",
-  "https://cricket-bidding-website-beta.vercel.app/", // Added your new beta URL
+  "https://cricket-bidding-website.vercel.app",
+  "https://cricket-bidding-website-beta.vercel.app", // FIXED: Removed trailing slash
   "http://localhost:5173",
 ];
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl)
+    // 1. Allow if no origin (like mobile apps or local Postman)
     if (!origin) return callback(null, true);
 
+    // 2. Exact match check
     const isWhitelisted = allowedOrigins.includes(origin);
+
+    // 3. Regex match for ANY Vercel preview/beta URL for this project
     const isVercelPreview = /^https:\/\/cricket-bidding-website.*\.vercel\.app$/.test(origin);
 
     if (isWhitelisted || isVercelPreview) {
@@ -153,11 +155,14 @@ const corsOptions = {
   },
   credentials: true,
   methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  allowedHeaders: ["Content-Type", "Authorization", "Origin", "Accept", "X-Requested-With"],
 };
 
 // ── Middleware ──────────────────────────────────────
-app.use(helmet({ crossOriginResourcePolicy: false }));
+app.use(helmet({ 
+  crossOriginResourcePolicy: false, // Essential for loading images/scripts across domains
+  contentSecurityPolicy: false      // Avoids conflict with some external scripts
+}));
 app.use(compression());
 app.use(cors(corsOptions));
 app.use(express.json({ limit: "1mb" }));
@@ -165,12 +170,8 @@ app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
 app.get("/", (req, res) => res.status(200).send("API is running..."));
 
-// ── MongoDB Connect with Safety Check ───────────────
+// ── MongoDB Connect ───────────────────────────────
 const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://dasabhi1910:iamf00L@cricket-bidding.dugejrq.mongodb.net/";
-
-if (!MONGO_URI) {
-  console.error("ERROR: MONGO_URI is undefined. Check Railway Environment Variables.");
-}
 
 mongoose.connect(MONGO_URI)
   .then(() => console.log("MongoDB connected successfully."))
@@ -187,7 +188,7 @@ app.use("/", biddingRoutes);
 // ── Socket.IO Setup ─────────────────────────────────
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: corsOptions, // Reuse the same logic
+  cors: corsOptions, // Reusing the same fixed logic
 });
 
 app.set("io", io);
