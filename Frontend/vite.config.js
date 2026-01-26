@@ -8,7 +8,7 @@ export default defineConfig({
   server:{
     proxy:{
       "/api":{
-        target: isLocal ? "http://localhost:6001":"https://cricket-bidding-website-production.up.railway.app", 
+        target: isLocal ? "http://localhost:6001":"https://cricket-bidding-website.railway.internal", 
         changeOrigin: true,
         secure: false,
       },
