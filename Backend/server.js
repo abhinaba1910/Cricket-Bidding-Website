@@ -20,7 +20,7 @@ const PORT = process.env.PORT;
 const allowedOrigins = [
   "https://cricbid.sytes.net",
   "https://cricket-bidding-website-ow8tnxsrv.vercel.app",
-  "https://cricket-bidding-website-odez3nm7q.vercel.app",
+  "https://cricket-bidding-website-beta.vercel.app",
   "http://localhost:5173",
 ];
 
