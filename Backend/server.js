@@ -112,6 +112,7 @@ const helmet = require("helmet");
 const http = require("http");
 const { Server } = require("socket.io");
 
+// Route Imports
 const personRoutes = require("./Routes/personRoutes");
 const playerRoutes = require("./Routes/playerRoutes");
 const teamRoutes = require("./Routes/teamRoutes");
@@ -122,60 +123,63 @@ const biddingRoutes = require("./Routes/biddingRoutes");
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// ── Fixed CORS Strategy ──────────────────────────────
+// ── 1. CORS CONFIGURATION ────────────────────────────
 const allowedOrigins = [
   "https://cricbid.sytes.net",
-  "https://cricket-bidding-website.vercel.app",
+  "https://cricket-bidding-website-ow8tnxsrv.vercel.app",
   "https://cricket-bidding-website-beta.vercel.app",
   "http://localhost:5173",
 ];
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // 1. Allow if no origin (Postman/Server-to-Server)
+    // Allow server-to-server or Postman (no origin)
     if (!origin) return callback(null, true);
 
-    // 2. Check if in whitelist OR matches a Vercel preview URL pattern
     const isWhitelisted = allowedOrigins.includes(origin);
-    const isVercel = /^https:\/\/cricket-bidding-website.*\.vercel\.app$/.test(
-      origin,
-    );
+    // Flexible check for Vercel deployment URLs
+    const isVercel = origin.includes("vercel.app") && origin.includes("cricket-bidding-website");
 
     if (isWhitelisted || isVercel) {
       callback(null, true);
     } else {
-      console.error(`Blocked by CORS: ${origin}`);
+      console.error(`Blocked by CORS policy: ${origin}`);
       callback(new Error("Not allowed by CORS"));
     }
   },
   credentials: true,
   methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: [
-    "Content-Type",
-    "Authorization",
-    "X-Requested-With",
-    "Accept",
-  ],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+  optionsSuccessStatus: 200, 
 };
 
-// ── Global Middleware ────────────────────────────────
-app.use(helmet({ crossOriginResourcePolicy: false }));
+// ── 2. MIDDLEWARE STACK (ORDER MATTERS) ──────────────
+
+// Essential for performance
 app.use(compression());
-app.use(cors(corsOptions)); // This is the fix for your Access-Control error
+
+// Handle Preflight (OPTIONS) requests globally before routes
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions)); 
+
+// Security headers (adjusted for cross-origin resources)
+app.use(helmet({ 
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: false // Disable if you're hitting issues with frontend scripts
+}));
+
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
-// ── Database ─────────────────────────────────────────
-const MONGO_URI =
-  process.env.MONGO_URI ||
-  "mongodb+srv://dasabhi1910:iamf00L@cricket-bidding.dugejrq.mongodb.net/";
+// ── 3. DATABASE CONNECTION ──────────────────────────
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://dasabhi1910:iamf00L@cricket-bidding.dugejrq.mongodb.net/";
 
 mongoose
   .connect(MONGO_URI)
-  .then(() => console.log("MongoDB connected successfully."))
-  .catch((err) => console.error("MongoDB connection error:", err));
+  .then(() => console.log("✅ MongoDB connected successfully."))
+  .catch((err) => console.error("❌ MongoDB connection error:", err));
 
-// ── Routes ──────────────────────────────────────────
+// ── 4. ROUTES ───────────────────────────────────────
 app.use("/", personRoutes);
 app.use("/", playerRoutes);
 app.use("/", teamRoutes);
@@ -185,20 +189,31 @@ app.use("/", biddingRoutes);
 
 app.get("/", (req, res) => res.status(200).send("Server Active"));
 
-// ── Socket.IO ───────────────────────────────────────
+// ── 5. SOCKET.IO & SERVER ───────────────────────────
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: corsOptions, // Ensures Socket.IO uses the same rules
+  cors: corsOptions, // Uses the same strict rules as the REST API
 });
 
 app.set("io", io);
 
 io.on("connection", (socket) => {
-  socket.on("join-auction", (auctionId) => socket.join(auctionId));
-  socket.on("timer:expired", ({ auctionId }) =>
-    io.to(auctionId).emit("timer:expired", { auctionId }),
-  );
-  socket.on("disconnect", () => console.log("Disconnected"));
+  console.log(`User connected: ${socket.id}`);
+  
+  socket.on("join-auction", (auctionId) => {
+    socket.join(auctionId);
+    console.log(`Socket ${socket.id} joined auction: ${auctionId}`);
+  });
+
+  socket.on("timer:expired", ({ auctionId }) => {
+    io.to(auctionId).emit("timer:expired", { auctionId });
+  });
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected");
+  });
 });
 
-server.listen(PORT, () => console.log(`Running on ${PORT}`));
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
