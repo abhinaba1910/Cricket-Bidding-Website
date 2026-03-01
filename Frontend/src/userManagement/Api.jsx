@@ -1,5 +1,5 @@
 import axios from "axios";
-const API_URL=window.location.hostname==="localhost"? "http://localhost:6001":"https://cricket-bidding-website-production.up.railway.app";
+const API_URL=window.location.hostname==="localhost"? "http://localhost:6001":"https://cricket-bidding-website.railway.internal";
 const Api=axios.create({
     baseURL: API_URL,
 });
