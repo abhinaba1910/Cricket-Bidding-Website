@@ -21,7 +21,6 @@ const allowedOrigins = [
   "https://cricbid.sytes.net",
   "https://cricket-bidding-website-ow8tnxsrv.vercel.app",
   "https://cricket-bidding-website-beta.vercel.app",
-  "https://cricket-bidding-website-axysl5lea.vercel.app",
   "http://localhost:5173",
 ];
 
